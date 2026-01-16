@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circus Dart Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #2c1810 0%, #4a2c1a 50%, #654321 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            color: #ffd700;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            font-family: 'Georgia', serif;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px 30px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.3em;
+            font-weight: bold;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .hud-label {
+            color: #ffd700;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+
+        .hud-value {
+            font-size: 1.5em;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        canvas {
+            border: 6px solid #8b4513;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 40%, #ffe4b5 40%, #d2b48c 100%);
+            display: block;
+            cursor: crosshair;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+        }
+
+        .game-over, .level-complete {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10;
+            border: 6px solid #ffd700;
+            color: white;
+        }
+
+        .game-over h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ff4444;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .level-complete h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #4CAF50;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-over p, .level-complete p {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+            border: 3px solid #8b4513;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 4px solid #ffd700;
+            border-radius: 10px;
+            color: #ffd700;
+            font-size: 1.1em;
+            max-width: 900px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .crosshair {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .crosshair::before,
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 0, 0, 0.8);
+        }
+
+        .crosshair::before {
+            width: 30px;
+            height: 2px;
+            top: 14px;
+        }
+
+        .crosshair::after {
+            width: 2px;
+            height: 30px;
+            left: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎯 CIRCUS DART SHOOTER 🎪</h1>
+        <div class="hud">
+            <div class="hud-item">
+                <div class="hud-label">Score</div>
+                <div class="hud-value" id="score">0</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Level</div>
+                <div class="hud-value" id="level">1</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Darts</div>
+                <div class="hud-value" id="darts">30</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Targets Hit</div>
+                <div class="hud-value"><span id="hits">0</span>/<span id="totalTargets">10</span></div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Time</div>
+                <div class="hud-value" id="time">60</div>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        <div class="controls">
+            🎯 Click/Tap to shoot darts at moving targets! 🎈 Pop balloons, hit targets, and avoid bombs! 💣
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>GAME OVER!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Level Reached: <span id="finalLevel">1</span></p>
+        <button onclick="restartGame()">Play Again</button>
+    </div>
+
+    <div class="level-complete" id="levelComplete">
+        <h2>🎉 LEVEL COMPLETE! 🎉</h2>
+        <p>Score: <span id="levelScore">0</span></p>
+        <p>Bonus: +<span id="bonus">0</span></p>
+        <button onclick="nextLevel()">Next Level</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let score = 0;
+        let level = 1;
+        let darts = 30;
+        let hits = 0;
+        let gameTime = 60;
+        let gameRunning = true;
+        let targets = [];
+        let dartProjectiles = [];
+        let particles = [];
+        let timerInterval;
+
+        // Target types
+        const TARGET_TYPES = {
+            BALLOON_RED: { points: 100, color: '#ff0000', radius: 25, speed: 1 },
+            BALLOON_BLUE: { points: 150, color: '#0066ff', radius: 20, speed: 1.5 },
+            BALLOON_YELLOW: { points: 200, color: '#ffff00', radius: 18, speed: 2 },
+            CIRCLE_TARGET: { points: 250, color: '#ff0066', radius: 30, speed: 1.2 },
+            STAR: { points: 300, color: '#ffd700', radius: 25, speed: 1.8 },
+            BOMB: { points: -200, color: '#000000', radius: 22, speed: 1 }
+        };
+
+        // Balloon class
+        class Balloon {
+            constructor(type) {
+                this.type = type;
+                this.config = TARGET_TYPES[type];
+                this.x = Math.random() * (canvas.width - 100) + 50;
+                this.y = canvas.height + 50;
+                this.radius = this.config.radius;
+                this.speedY = -(2 + Math.random() * 2) * this.config.speed;
+                this.speedX = (Math.random() - 0.5) * 3;
+                this.active = true;
+                this.oscillation = Math.random() * Math.PI * 2;
+                this.oscillationSpeed = 0.05 + Math.random() * 0.05;
+            }
+
+            update() {
+                this.y += this.speedY;
+                this.oscillation += this.oscillationSpeed;
+                this.x += Math.sin(this.oscillation) * 2 + this.speedX;
+
+                // Bounce off walls
+                if (this.x < this.radius || this.x > canvas.width - this.radius) {
+                    this.speedX *= -1;
+                }
+
+                // Remove if off screen
+                if (this.y < -50) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                if (this.type === 'BOMB') {
+                    this.drawBomb();
+                } else if (this.type === 'STAR') {
+                    this.drawStar();
+                } else if (this.type === 'CIRCLE_TARGET') {
+                    this.drawCircleTarget();
+                } else {
+                    this.drawBalloon();
+                }
+            }
+
+            drawBalloon() {
+                // Balloon body
+                ctx.fillStyle = this.config.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Balloon shine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius / 3, this.y - this.radius / 3, this.radius / 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // String
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + this.radius);
+                ctx.quadraticCurveTo(
+                    this.x + Math.sin(this.oscillation) * 10,
+                    this.y + this.radius + 20,
+                    this.x + Math.sin(this.oscillation) * 15,
+                    this.y + this.radius + 40
+                );
+                ctx.stroke();
+            }
+
+            drawBomb() {
+                // Bomb body
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Shine
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius / 3, this.y - this.radius / 3, this.radius / 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Fuse
+                ctx.strokeStyle = '#8b4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.radius);
+                ctx.lineTo(this.x + 5, this.y - this.radius - 10);
+                ctx.stroke();
+
+                // Spark
+                const sparkSize = 3 + Math.sin(Date.now() * 0.01) * 2;
+                ctx.fillStyle = '#ff6600';
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - this.radius - 10, sparkSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - this.radius - 10, sparkSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            drawStar() {
+                ctx.fillStyle = this.config.color;
+                ctx.strokeStyle = '#ff8c00';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                    const outerRadius = this.radius;
+                    const innerRadius = this.radius * 0.4;
+                    
+                    const xOuter = this.x + Math.cos(angle) * outerRadius;
+                    const yOuter = this.y + Math.sin(angle) * outerRadius;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(xOuter, yOuter);
+                    } else {
+                        ctx.lineTo(xOuter, yOuter);
+                    }
+                    
+                    const angleInner = angle + Math.PI / 5;
+                    const xInner = this.x + Math.cos(angleInner) * innerRadius;
+                    const yInner = this.y + Math.sin(angleInner) * innerRadius;
+                    ctx.lineTo(xInner, yInner);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            drawCircleTarget() {
+                // Outer ring
+                ctx.fillStyle = '#ff0066';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Middle ring
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Inner ring
+                ctx.fillStyle = '#ff0066';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Bullseye
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            checkHit(x, y) {
+                const dist = Math.hypot(x - this.x, y - this.y);
+                return dist < this.radius;
+            }
+
+            pop() {
+                this.active = false;
+                
+                // Create particles
+                const particleCount = this.type === 'BOMB' ? 30 : 15;
+                const particleColor = this.type === 'BOMB' ? ['#ff6600', '#ffff00', '#ff0000'] : [this.config.color, '#ffffff'];
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (Math.PI * 2 * i) / particleCount;
+                    const speed = 3 + Math.random() * 4;
+                    const color = particleColor[Math.floor(Math.random() * particleColor.length)];
+                    
+                    particles.push(new Particle(
+                        this.x,
+                        this.y,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        color,
+                        30 + Math.random() * 20
+                    ));
+                }
+
+                // Score
+                if (this.type !== 'BOMB') {
+                    score += this.config.points;
+                    hits++;
+                } else {
+                    score = Math.max(0, score + this.config.points);
+                    // Screen shake effect could be added here
+                }
+
+                updateHUD();
+            }
+        }
+
+        // Horizontal moving target
+        class MovingTarget {
+            constructor() {
+                this.width = 60;
+                this.height = 60;
+                this.y = 100 + Math.random() * 200;
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.x = this.direction > 0 ? -this.width : canvas.width + this.width;
+                this.speed = (3 + Math.random() * 3) * this.direction;
+                this.active = true;
+                this.type = Math.random() > 0.8 ? 'BOMB' : (Math.random() > 0.5 ? 'CIRCLE_TARGET' : 'STAR');
+                this.config = TARGET_TYPES[this.type];
+            }
+
+            update() {
+                this.x += this.speed;
+
+                if ((this.direction > 0 && this.x > canvas.width + this.width) ||
+                    (this.direction < 0 && this.x < -this.width)) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                if (this.type === 'BOMB') {
+                    // Draw bomb
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 25, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#8b4513';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + this.width / 2, this.y);
+                    ctx.lineTo(this.x + this.width / 2 + 5, this.y - 10);
+                    ctx.stroke();
+
+                    const sparkSize = 3 + Math.sin(Date.now() * 0.01) * 2;
+                    ctx.fillStyle = '#ff6600';
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2 + 5, this.y - 10, sparkSize, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Draw target
+                    const centerX = this.x + this.width / 2;
+                    const centerY = this.y + this.height / 2;
+
+                    if (this.type === 'STAR') {
+                        ctx.fillStyle = '#ffd700';
+                        ctx.strokeStyle = '#ff8c00';
+                        ctx.lineWidth = 2;
+                        
+                        ctx.beginPath();
+                        for (let i = 0; i < 5; i++) {
+                            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                            const outerRadius = 25;
+                            const innerRadius = 10;
+                            
+                            const xOuter = centerX + Math.cos(angle) * outerRadius;
+                            const yOuter = centerY + Math.sin(angle) * outerRadius;
+                            
+                            if (i === 0) {
+                                ctx.moveTo(xOuter, yOuter);
+                            } else {
+                                ctx.lineTo(xOuter, yOuter);
+                            }
+                            
+                            const angleInner = angle + Math.PI / 5;
+                            const xInner = centerX + Math.cos(angleInner) * innerRadius;
+                            const yInner = centerY + Math.sin(angleInner) * innerRadius;
+                            ctx.lineTo(xInner, yInner);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    } else {
+                        ctx.fillStyle = '#ff0066';
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, 28, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ff0066';
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            checkHit(x, y) {
+                return x > this.x && x < this.x + this.width &&
+                       y > this.y && y < this.y + this.height;
+            }
+
+            pop() {
+                this.active = false;
+                
+                const centerX = this.x + this.width / 2;
+                const centerY = this.y + this.height / 2;
+                
+                for (let i = 0; i < 20; i++) {
+                    const angle = (Math.PI * 2 * i) / 20;
+                    const speed = 3 + Math.random() * 4;
+                    const color = this.type === 'BOMB' ? ['#ff6600', '#ffff00'][Math.floor(Math.random() * 2)] : this.config.color;
+                    
+                    particles.push(new Particle(
+                        centerX,
+                        centerY,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        color,
+                        30 + Math.random() * 20
+                    ));
+                }
+
+                if (this.type !== 'BOMB') {
+                    score += this.config.points;
+                    hits++;
+                } else {
+                    score = Math.max(0, score + this.config.points);
+                }
+
+                updateHUD();
+            }
+        }
+
+        // Dart projectile
+        class Dart {
+            constructor(x, y, targetX, targetY) {
+                this.startX = x;
+                this.startY = y;
+                this.x = x;
+                this.y = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                
+                const angle = Math.atan2(targetY - y, targetX - x);
+                this.velocityX = Math.cos(angle) * 20;
+                this.velocityY = Math.sin(angle) * 20;
+                this.angle = angle;
+                this.active = true;
+                this.hasHit = false;
+            }
+
+            update() {
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                // Check if dart reached target or went off screen
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.active = false;
+                }
+
+                // Update angle for rotation
+                this.angle = Math.atan2(this.velocityY, this.velocityX);
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Dart body
+                ctx.fillStyle = '#c0c0c0';
+                ctx.fillRect(-15, -2, 30, 4);
+
+                // Dart point
+                ctx.fillStyle = '#8b0000';
+                ctx.beginPath();
+                ctx.moveTo(15, 0);
+                ctx.lineTo(20, -3);
+                ctx.lineTo(20, 3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Dart flights
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.moveTo(-15, 0);
+                ctx.lineTo(-20, -5);
+                ctx.lineTo(-18, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(-15, 0);
+                ctx.lineTo(-20, 5);
+                ctx.lineTo(-18, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            checkHit() {
+                if (this.hasHit) return;
+
+                // Check balloons
+                for (let target of targets) {
+                    if (target.active) {
+                        if (target instanceof Balloon) {
+                            if (target.checkHit(this.x, this.y)) {
+                                target.pop();
+                                this.hasHit = true;
+                                this.active = false;
+                                return;
+                            }
+                        } else if (target instanceof MovingTarget) {
+                            if (target.checkHit(this.x, this.y)) {
+                                target.pop();
+                                this.hasHit = true;
+                                this.active = false;
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Particle class
+        class Particle {
+            constructor(x, y, vx, vy, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+                this.size = 3 + Math.random() * 4;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.3; // Gravity
+                this.vx *= 0.98;
+                this.life--;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Spawn targets
+        function spawnTargets() {
+            // Spawn balloons
+            if (Math.random() < 0.02 + level * 0.005) {
+                const types = Object.keys(TARGET_TYPES);
+                const type = types[Math.floor(Math.random() * types.length)];
+                targets.push(new Balloon(type));
+            }
+
+            // Spawn horizontal moving targets
+            if (Math.random() < 0.005 + level * 0.002) {
+                targets.push(new MovingTarget());
+            }
+        }
+
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('darts').textContent = darts;
+            document.getElementById('hits').textContent = hits;
+        }
+
+        // Check level complete
+        function checkLevelComplete() {
+            const requiredHits = 10 + level * 5;
+            document.getElementById('totalTargets').textContent = requiredHits;
+            
+            if (hits >= requiredHits) {
+                levelComplete();
+            }
+        }
+
+        // Level complete
+        function levelComplete() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            
+            const bonus = gameTime * 10 + darts * 50;
+            score += bonus;
+            
+            document.getElementById('levelScore').textContent = score - bonus;
+            document.getElementById('bonus').textContent = bonus;
+            document.getElementById('levelComplete').style.display = 'block';
+        }
+
+        // Next level
+        function nextLevel() {
+            level++;
+            hits = 0;
+            darts = 30 + level * 5;
+            gameTime = 60 - level * 2;
+            if (gameTime < 30) gameTime = 30;
+            
+            targets = [];
+            dartProjectiles = [];
+            particles = [];
+            gameRunning = true;
+            
+            updateHUD();
+            document.getElementById('levelComplete').style.display = 'none';
+            
+            startTimer();
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // Restart game
+        function restartGame() {
+            score = 0;
+            level = 1;
+            darts = 30;
+            hits = 0;
+            gameTime = 60;
+            targets = [];
+            dartProjectiles = [];
+            particles = [];
+            gameRunning = true;
+            
+            updateHUD();
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('levelComplete').style.display = 'none';
+            
+            startTimer();
+        }
+
+        // Timer
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameRunning) {
+                    gameTime--;
+                    document.getElementById('time').textContent = gameTime;
+                    
+                    if (gameTime <= 0) {
+                        if (hits >= 10 + level * 5) {
+                            levelComplete();
+                        } else {
+                            gameOver();
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        // Draw background
+        function drawBackground() {
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.5);
+            skyGradient.addColorStop(0, '#1e3a8a');
+            skyGradient.addColorStop(0.5, '#3b82f6');
+            skyGradient.addColorStop(1, '#87ceeb');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height * 0.5);
+
+            // Stars in night sky
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 137) % canvas.width;
+                const y = (i * 73) % (canvas.height * 0.3);
+                const size = (i % 3) + 1;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Moon
+            ctx.fillStyle = '#fef9c3';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#fef9c3';
+            ctx.beginPath();
+            ctx.arc(canvas.width - 100, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Circus tent top stripes
+            const stripeColors = ['#dc2626', '#ffffff', '#fbbf24'];
+            const stripeWidth = 60;
+            for (let i = 0; i < canvas.width / stripeWidth + 1; i++) {
+                ctx.fillStyle = stripeColors[i % 3];
+                ctx.beginPath();
+                ctx.moveTo(i * stripeWidth, canvas.height * 0.5);
+                ctx.lineTo((i + 1) * stripeWidth, canvas.height * 0.5);
+                ctx.lineTo((i + 0.5) * stripeWidth, canvas.height * 0.35);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Stripe borders
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Tent center pole decorations
+            ctx.fillStyle = '#fbbf24';
+            for (let x = stripeWidth / 2; x < canvas.width; x += stripeWidth) {
+                ctx.beginPath();
+                ctx.arc(x, canvas.height * 0.35, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Main circus backdrop
+            const backdropGradient = ctx.createLinearGradient(0, canvas.height * 0.5, 0, canvas.height - 100);
+            backdropGradient.addColorStop(0, '#7c2d12');
+            backdropGradient.addColorStop(0.5, '#991b1b');
+            backdropGradient.addColorStop(1, '#7f1d1d');
+            ctx.fillStyle = backdropGradient;
+            ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5 - 100);
+
+            // Decorative curtain swags
+            ctx.fillStyle = '#dc2626';
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < canvas.width; i += 120) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height * 0.5);
+                ctx.quadraticCurveTo(i + 60, canvas.height * 0.5 + 40, i + 120, canvas.height * 0.5);
+                ctx.fill();
+                ctx.stroke();
+
+                // Gold tassels
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(i + 60, canvas.height * 0.5 + 40, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#dc2626';
+            }
+
+            // Side curtains
+            const curtainGradient = ctx.createLinearGradient(0, canvas.height * 0.5, 50, canvas.height * 0.5);
+            curtainGradient.addColorStop(0, '#7f1d1d');
+            curtainGradient.addColorStop(1, 'rgba(127, 29, 29, 0)');
+            ctx.fillStyle = curtainGradient;
+            ctx.fillRect(0, canvas.height * 0.5, 50, canvas.height * 0.5 - 100);
+
+            const rightCurtainGradient = ctx.createLinearGradient(canvas.width, canvas.height * 0.5, canvas.width - 50, canvas.height * 0.5);
+            rightCurtainGradient.addColorStop(0, '#7f1d1d');
+            rightCurtainGradient.addColorStop(1, 'rgba(127, 29, 29, 0)');
+            ctx.fillStyle = rightCurtainGradient;
+            ctx.fillRect(canvas.width - 50, canvas.height * 0.5, 50, canvas.height * 0.5 - 100);
+
+            // Stage/Platform
+            const stageGradient = ctx.createLinearGradient(0, canvas.height - 100, 0, canvas.height);
+            stageGradient.addColorStop(0, '#92400e');
+            stageGradient.addColorStop(0.3, '#b45309');
+            stageGradient.addColorStop(1, '#78350f');
+            ctx.fillStyle = stageGradient;
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            // Stage edge highlight
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 4);
+
+            // Stage planks with depth
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - 100);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+
+            // Stage front panel detail
+            for (let i = 0; i < canvas.width; i += 80) {
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(i + 10, canvas.height - 30, 60, 20);
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(i + 10, canvas.height - 30, 60, 20);
+            }
+
+            // Spotlights effect from top
+            ctx.save();
+            for (let i = 0; i < 3; i++) {
+                const x = canvas.width * (0.25 + i * 0.25);
+                const gradient = ctx.createRadialGradient(x, canvas.height * 0.35, 0, x, canvas.height * 0.7, 200);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.15)');
+                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(x, canvas.height * 0.35);
+                ctx.lineTo(x - 80, canvas.height - 100);
+                ctx.lineTo(x + 80, canvas.height - 100);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Decorative circus balls/props on stage
+            const props = [
+                { x: 50, y: canvas.height - 80, color: '#dc2626', size: 15 },
+                { x: 100, y: canvas.height - 70, color: '#fbbf24', size: 12 },
+                { x: canvas.width - 80, y: canvas.height - 75, color: '#3b82f6', size: 14 },
+                { x: canvas.width - 130, y: canvas.height - 68, color: '#10b981', size: 11 }
+            ];
+
+            props.forEach(prop => {
+                // Ball shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(prop.x, canvas.height - 55, prop.size, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball
+                const ballGradient = ctx.createRadialGradient(
+                    prop.x - prop.size / 3, prop.y - prop.size / 3, 0,
+                    prop.x, prop.y, prop.size
+                );
+                ballGradient.addColorStop(0, '#ffffff');
+                ballGradient.addColorStop(0.4, prop.color);
+                ballGradient.addColorStop(1, prop.color);
+                ctx.fillStyle = ballGradient;
+                ctx.beginPath();
+                ctx.arc(prop.x, prop.y, prop.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ball highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(prop.x - prop.size / 4, prop.y - prop.size / 4, prop.size / 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Confetti
+            ctx.globalAlpha = 0.7;
+            for (let i = 0; i < 30; i++) {
+                const x = (i * 87 + Date.now() * 0.05) % canvas.width;
+                const y = (i * 113 + Date.now() * 0.03) % (canvas.height - 100);
+                const rotation = (Date.now() * 0.001 + i) % (Math.PI * 2);
+                const colors = ['#dc2626', '#fbbf24', '#3b82f6', '#10b981', '#a855f7'];
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rotation);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fillRect(-3, -6, 6, 12);
+                ctx.restore();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Mouse click handler
+        canvas.addEventListener('click', (e) => {
+            if (!gameRunning || darts <= 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Shoot dart from bottom center
+            const startX = canvas.width / 2;
+            const startY = canvas.height - 50;
+
+            dartProjectiles.push(new Dart(startX, startY, x, y));
+            darts--;
+            updateHUD();
+
+            if (darts <= 0) {
+                setTimeout(() => {
+                    if (gameRunning && hits < 10 + level * 5) {
+                        gameOver();
+                    }
+                }, 2000);
+            }
+        });
+
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Draw
+            drawBackground();
+
+            // Spawn targets
+            spawnTargets();
+
+            // Update and draw targets
+            targets = targets.filter(t => t.active);
+            targets.forEach(t => {
+                t.update();
+                t.draw();
+            });
+
+            // Update and draw darts
+            dartProjectiles = dartProjectiles.filter(d => d.active);
+            dartProjectiles.forEach(d => {
+                d.update();
+                d.checkHit();
+                d.draw();
+            });
+
+            // Update and draw particles
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // Draw dart thrower (player at bottom)
+            ctx.fillStyle = '#ff6b6b';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height - 30, 20, 0, Math.PI, true);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height - 40, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Check level complete
+            checkLevelComplete();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        updateHUD();
+        startTimer();
+        gameLoop();
+    </script>
+</body>
+</html>
