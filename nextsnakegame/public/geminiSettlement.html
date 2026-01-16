@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Spiceward: Vertical Frontier</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            border: 4px solid #444;
+            background: #333;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            background: #5d8aa8;
+            image-rendering: pixelated;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            right: -220px;
+            width: 200px;
+            height: 100%;
+            background: #222;
+            padding: 10px;
+            border-left: 2px solid #444;
+        }
+
+        #log-layer {
+            position: absolute;
+            top: 0;
+            left: -220px;
+            width: 200px;
+            height: 100%;
+            background: #222;
+            padding: 10px;
+            border-right: 2px solid #444;
+            font-size: 12px;
+            overflow-y: hidden;
+        }
+
+        .stat {
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #333;
+            border-radius: 4px;
+            border-left: 4px solid #f1c40f;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            background: #444;
+            color: white;
+            border: 1px solid #666;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .btn:hover {
+            background: #555;
+        }
+
+        .btn.active {
+            border-color: #f1c40f;
+            background: #554a20;
+        }
+
+        .cost {
+            font-size: 10px;
+            color: #aaa;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div id="log-layer">
+            <h3 style="margin-top:0">Town Log</h3>
+            <div id="log-content"></div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div id="ui-layer">
+            <div class="stat"><b>Resources</b><br>
+                <span id="res-wood">Wood: 0</span><br>
+                <span id="res-stone">Stone: 0</span><br>
+                <span id="res-food">Food: 0</span>
+            </div>
+            <div class="stat"><b>Pantry</b><br>
+                <span id="res-monst">Drops: 0</span><br>
+                <span id="res-spice">Spice: 0</span><br>
+                <span id="res-sec">Security: 0</span>
+            </div>
+
+            <h4 style="margin: 10px 0 5px 0">Build Room</h4>
+            <button class="btn" id="b-housing" onclick="setTool('housing')">Housing <span
+                    class="cost">W:30</span></button>
+            <button class="btn" id="b-kitchen" onclick="setTool('kitchen')">Kitchen <span class="cost">W:40
+                    S:20</span></button>
+            <button class="btn" id="b-lab" onclick="setTool('lab')">Spice Lab <span class="cost">S:50</span></button>
+            <button class="btn" id="b-guard" onclick="setTool('guard')">Guard Post <span class="cost">W:20
+                    S:40</span></button>
+
+            <div style="margin-top:20px; font-size: 11px; color: #888;">
+                * Click icons then click grid.<br>
+                * Raids happen at sunset.<br>
+                * Each Sim adds productivity.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const logContent = document.getElementById('log-content');
+
+        // --- GAME DATA ---
+        let state = {
+            wood: 100, stone: 60, food: 20, monsterDrops: 0, spice: 0, security: 5,
+            day: 1, time: 0,
+            rooms: [{ x: 4, y: 0, type: 'gate' }],
+            sims: [],
+            tool: null,
+            raidAlert: 0
+        };
+
+        const ROOM_SIZE = 80;
+        const FLOOR_Y = 520;
+        const TYPES = {
+            gate: { color: '#4b4b4b', name: 'Main Gate' },
+            housing: { color: '#7d5c4c', name: 'Living Quarters', cost: { w: 30, s: 0 } },
+            kitchen: { color: '#d35400', name: 'Kitchen', cost: { w: 40, s: 20 } },
+            lab: { color: '#8e44ad', name: 'Spice Lab', cost: { w: 0, s: 50 } },
+            guard: { color: '#2c3e50', name: 'Guard Post', cost: { w: 20, s: 40 } }
+        };
+
+        // --- INITIALIZATION ---
+        function addSim() {
+            state.sims.push({
+                x: 400 + (Math.random() * 20 - 10),
+                y: FLOOR_Y,
+                targetY: FLOOR_Y,
+                state: 'idle',
+                timer: 0,
+                task: 'Waiting'
+            });
+        }
+        for (let i = 0; i < 3; i++) addSim();
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.innerText = `> ${msg}`;
+            logContent.prepend(div);
+            if (logContent.childNodes.length > 15) logContent.lastChild.remove();
+        }
+
+        // --- INPUT ---
+        function setTool(t) {
+            state.tool = t;
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('b-' + t).classList.add('active');
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const gx = Math.floor(mx / ROOM_SIZE);
+            const gy = Math.floor((FLOOR_Y + ROOM_SIZE - my) / ROOM_SIZE);
+
+            if (state.tool) {
+                const cost = TYPES[state.tool].cost;
+                if (state.wood >= cost.w && state.stone >= cost.s) {
+                    if (!state.rooms.find(r => r.x === gx && r.y === gy)) {
+                        state.wood -= cost.w; state.stone -= cost.s;
+                        state.rooms.push({ x: gx, y: gy, type: state.tool });
+                        if (state.tool === 'housing') { addSim(); log("New Sim moved in!"); }
+                        if (state.tool === 'guard') state.security += 10;
+                        log(`Built ${TYPES[state.tool].name}`);
+                    }
+                } else { log("Not enough resources!"); }
+            }
+        });
+
+        // --- CORE LOOP ---
+        function update() {
+            state.time += 1;
+
+            // Cycle Day/Night (roughly every 45 seconds)
+            if (state.time > 3000) {
+                state.time = 0; state.day++;
+                handleRaid();
+            }
+
+            state.sims.forEach(sim => {
+                if (sim.timer <= 0) {
+                    const room = state.rooms[Math.floor(Math.random() * state.rooms.length)];
+                    sim.targetY = FLOOR_Y - (room.y * ROOM_SIZE) + 40;
+                    sim.timer = 150 + Math.random() * 100;
+
+                    // Work Action
+                    if (room.type === 'gate') {
+                        state.wood += 0.5; state.stone += 0.2;
+                        if (Math.random() > 0.95) state.monsterDrops++;
+                    }
+                    if (room.type === 'lab' && state.stone > 2) {
+                        state.spice++; state.stone -= 1;
+                    }
+                    if (room.type === 'kitchen' && state.monsterDrops > 0 && state.spice > 0) {
+                        state.monsterDrops--; state.spice--; state.food += 10;
+                        log("A master meal was cooked!");
+                    }
+                } else {
+                    sim.timer--;
+                    const dy = sim.targetY - sim.y;
+                    if (Math.abs(dy) > 1) sim.y += dy * 0.05;
+                }
+            });
+
+            updateUI();
+        }
+
+        function handleRaid() {
+            const power = state.day * 12;
+            if (state.security >= power) {
+                log(`Day ${state.day}: Raid Repelled! +5 Monster Drops`);
+                state.monsterDrops += 5;
+            } else {
+                log(`Day ${state.day}: Raid Smashed the Gate! -15 Food`);
+                state.food = Math.max(0, state.food - 15);
+                state.raidAlert = 100;
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('res-wood').innerText = `Wood: ${Math.floor(state.wood)}`;
+            document.getElementById('res-stone').innerText = `Stone: ${Math.floor(state.stone)}`;
+            document.getElementById('res-food').innerText = `Food: ${state.food}`;
+            document.getElementById('res-monst').innerText = `Drops: ${state.monsterDrops}`;
+            document.getElementById('res-spice').innerText = `Spice: ${state.spice}`;
+            document.getElementById('res-sec').innerText = `Security: ${state.security}`;
+        }
+
+        function draw() {
+            // Sky gradient based on time
+            const skyTone = 100 - (state.time / 30);
+            ctx.fillStyle = `rgb(${skyTone}, ${skyTone + 50}, ${skyTone + 100})`;
+            ctx.fillRect(0, 0, 800, 600);
+
+            // Sun/Moon
+            ctx.fillStyle = state.time < 2000 ? "#f1c40f" : "#ecf0f1";
+            ctx.beginPath();
+            ctx.arc(700 - (state.time / 5), 100, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ground
+            ctx.fillStyle = "#27ae60";
+            ctx.fillRect(0, FLOOR_Y + 80, 800, 100);
+
+            // Grid Highlight
+            ctx.strokeStyle = "rgba(255,255,255,0.05)";
+            for (let x = 0; x < 10; x++) {
+                for (let y = 0; y < 6; y++) {
+                    ctx.strokeRect(x * ROOM_SIZE, FLOOR_Y - (y * ROOM_SIZE), ROOM_SIZE, ROOM_SIZE);
+                }
+            }
+
+            // Draw Rooms
+            state.rooms.forEach(r => {
+                const rx = r.x * ROOM_SIZE;
+                const ry = FLOOR_Y - (r.y * ROOM_SIZE);
+
+                ctx.fillStyle = TYPES[r.type].color;
+                ctx.fillRect(rx + 4, ry + 4, ROOM_SIZE - 8, ROOM_SIZE - 8);
+
+                // Interior Detail
+                ctx.fillStyle = "rgba(255,255,255,0.1)";
+                ctx.fillRect(rx + 10, ry + 40, ROOM_SIZE - 20, 5);
+
+                ctx.fillStyle = "white";
+                ctx.font = "bold 9px Arial";
+                ctx.fillText(r.type.toUpperCase(), rx + 10, ry + 20);
+            });
+
+            // Draw Sims
+            state.sims.forEach(s => {
+                ctx.fillStyle = "#f3dcbb";
+                ctx.fillRect(s.x - 4, s.y - 10, 8, 16);
+                ctx.fillStyle = "#3498db";
+                ctx.fillRect(s.x - 4, s.y, 8, 8); // Clothes
+            });
+
+            // Raid Flash
+            if (state.raidAlert > 0) {
+                ctx.fillStyle = `rgba(255,0,0,${state.raidAlert / 100})`;
+                ctx.fillRect(0, 0, 800, 600);
+                state.raidAlert--;
+            }
+
+            requestAnimationFrame(() => { update(); draw(); });
+        }
+
+        log("Town founded. Assign sims to gather wood.");
+        draw();
+    </script>
+</body>
+
+</html>

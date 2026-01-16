@@ -1,0 +1,105 @@
+.gameContainer {
+    text-align: center;
+    position: relative;
+    width: 800px;
+    margin: 0 auto;
+}
+
+.hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 15px 30px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    color: white;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.hudItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.coin {
+    color: #ffd700;
+}
+
+.lives {
+    color: #ff6b6b;
+}
+
+.canvas {
+    border: 4px solid #000;
+    background: #5c94fc;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    margin: 0 auto;
+}
+
+.overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 50px;
+    border-radius: 20px;
+    text-align: center;
+    z-index: 10;
+    border: 4px solid #ffd700;
+    color: white;
+    min-width: 300px;
+}
+
+.gameOverTitle {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: #ff6b6b;
+}
+
+.victoryTitle {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: #4ade80;
+}
+
+.overlayText {
+    font-size: 1.5em;
+    margin-bottom: 30px;
+}
+
+.button {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #333;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.2em;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-weight: bold;
+    margin: 5px;
+}
+
+.button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+}
+
+.button:active {
+    transform: translateY(0);
+}
+
+.controls {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    color: white;
+    font-size: 0.9em;
+}
