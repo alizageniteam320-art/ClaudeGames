@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOCCUS POCCUS: The Ritual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #d00;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* UI Layer */
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        #crosshair.active {
+            transform: translate(-50%, -50%) scale(2);
+            background: #f00;
+        }
+
+        #interactPrompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #fff;
+            text-shadow: 0 0 5px #f00;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        #message {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #fff;
+            text-align: center;
+            max-width: 600px;
+            background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.8), transparent);
+            padding: 10px 50px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 10px #f00;
+        }
+
+        #clock {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 32px;
+            color: #a00;
+            text-shadow: 0 0 10px #500;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+
+        /* Loading & Menu Screens */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 1s;
+            pointer-events: all;
+        }
+
+        .title {
+            font-size: 48px;
+            color: #d00;
+            text-shadow: 0 0 20px #f00;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #startBtn {
+            padding: 15px 40px;
+            background: #200;
+            color: #d00;
+            border: 1px solid #500;
+            font-family: inherit;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #startBtn:hover {
+            background: #500;
+            color: #fff;
+            box-shadow: 0 0 20px #f00;
+        }
+
+        #startBtn:disabled {
+            background: #111;
+            color: #333;
+            border-color: #222;
+            cursor: wait;
+        }
+
+        /* Post-Processing Filters */
+        #vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.95) 100%);
+        }
+
+        #grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0.12;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #phoneOverlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            width: 300px;
+            height: 500px;
+            background: #000;
+            border: 5px solid #222;
+            z-index: 20;
+            display: none;
+            box-shadow: 0 0 50px #f00;
+        }
+
+        #phoneOverlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #phoneOverlay p {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #f00;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 0 0 5px #000;
+        }
+
+        .show {
+            opacity: 1 !important;
+        }
+
+        .hide {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .glitch-effect {
+            animation: shake 0.2s infinite, invert 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(5px, 5px);
+            }
+
+            50% {
+                transform: translate(-5px, -5px);
+            }
+
+            75% {
+                transform: translate(5px, -5px);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        @keyframes invert {
+            0% {
+                filter: invert(0);
+            }
+
+            50% {
+                filter: invert(1);
+            }
+
+            100% {
+                filter: invert(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Post Processing -->
+    <div id="vignette"></div>
+    <div id="grain"></div>
+
+    <!-- Phone Overlay -->
+    <div id="phoneOverlay">
+        <img src="/assets/textures/witch_sleeping_photo.png" alt="You Sleeping">
+        <p>SENT: NOW</p>
+    </div>
+
+    <!-- UI -->
+    <div id="ui">
+        <div id="crosshair"></div>
+        <div id="clock">3:00 AM</div>
+        <div id="interactPrompt"></div>
+        <div id="message"></div>
+    </div>
+
+    <!-- Loading / Menu -->
+    <div id="overlay">
+        <h1 class="title">HOCCUS POCCUS</h1>
+        <p id="loadingText" class="subtitle">LOADING NIGHTMARE...</p>
+        <button id="startBtn" disabled>INITIALIZING...</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        /**
+         * HOCCUS POCCUS CORE ENGINE
+         * Phase 1: Stability & Foundation
+         */
+
+        class AudioController {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.connect(this.ctx.destination);
+                this.masterGain.gain.value = 0.5;
+            }
+
+            resume() {
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type, duration, vol = 0.1) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playAmbience(type) {
+                // Procedural ambience
+                if (type === 'hum') {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.value = 40;
+                    gain.gain.value = 0.02;
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start();
+                    this.humOsc = osc; // Store to stop later
+                }
+            }
+
+            stopAmbience() {
+                if (this.humOsc) {
+                    this.humOsc.stop();
+                    this.humOsc = null;
+                }
+            }
+
+            playBuffer(buffer, vol = 0.5) {
+                if (!buffer) return;
+                const source = this.ctx.createBufferSource();
+                source.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.value = vol;
+                source.connect(gain);
+                gain.connect(this.masterGain);
+                source.start();
+            }
+
+            playLaugh() {
+                // Procedural Evil Laughter: Series of falling pitch saw waves
+                const now = this.ctx.currentTime;
+                for (let i = 0; i < 5; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(400 - (i * 50), now + i * 0.15);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + i * 0.15 + 0.2);
+
+                    gain.gain.setValueAtTime(0, now + i * 0.15);
+                    gain.gain.linearRampToValueAtTime(0.3, now + i * 0.15 + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.3);
+                }
+            }
+
+            playWhisper(word) {
+                // Scary whisper effect (Filtered Noise)
+                const bufferSize = this.ctx.sampleRate * 1.5; // 1.5 sec
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.Q.value = 5;
+
+                const gain = this.ctx.createGain();
+
+                // Formant simulation for "H" vs "P"
+                if (word === 'hoccus') {
+                    filter.frequency.setValueAtTime(200, this.ctx.currentTime);
+                    filter.frequency.linearRampToValueAtTime(500, this.ctx.currentTime + 1);
+                    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.5);
+                } else {
+                    // Poccus (sharper)
+                    filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.5);
+                    gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0, this.ctx.currentTime + 1);
+                }
+
+
+
+            }
+
+            playPing() {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1500, this.ctx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.container = document.getElementById('gameCanvas');
+
+                // Three.js Core
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.FogExp2(0x050505, 0.1);
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+                this.renderer = new THREE.WebGLRenderer({ canvas: this.container, antialias: false }); // False for gritty look
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // Input
+                this.move = { f: false, b: false, l: false, r: false };
+                this.velocity = new THREE.Vector3();
+                this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
+                this.isLocked = false;
+
+                // Mechanics
+                this.hasPhone = false;
+                this.flashlightOn = false;
+                // Stronger, wider beam for specific "FNAF" style look
+                this.flashlight = new THREE.SpotLight(0xffffff, 0, 60, Math.PI / 5, 0.3, 1);
+                this.flashlight.position.set(0.2, -0.2, 0); // Offset to right (hand holding phone)
+                this.flashlight.target.position.set(0, 0, -1);
+
+                // Volumetric Beam Fake (Cone)
+                // Make it more visible when on
+                const beamGeo = new THREE.ConeGeometry(0.6, 12, 32, 1, true);
+                beamGeo.translate(0, -6, 0); // Pivot
+                beamGeo.rotateX(-Math.PI / 2);
+                const beamMat = new THREE.MeshBasicMaterial({
+                    color: 0xccffff, // Slightly blue-ish white
+                    transparent: true,
+                    opacity: 0,
+                    side: THREE.FrontSide,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                });
+                this.flashBeam = new THREE.Mesh(beamGeo, beamMat);
+                this.flashBeam.position.set(0.2, -0.2, 0); // Match flashlight source
+
+                this.camera.add(this.flashlight);
+                this.camera.add(this.flashlight.target);
+                this.camera.add(this.flashBeam);
+                this.scene.add(this.camera); // Add camera to scene so flashlight moves with it
+                this.act = 1;
+                this.sceneNum = 1;
+                this.flags = {
+                    doorChecked: false,
+                    windowChecked: false,
+                    clockChecked: false,
+                    napsTaken: 0,
+                    trinkets: new Set()
+                };
+
+                // Interactables
+                this.interactables = [];
+                this.lookTarget = null;
+
+                // Audio
+                this.audio = new AudioController();
+
+                // Bindings
+                this.onKeyDown = this.onKeyDown.bind(this);
+                this.onKeyUp = this.onKeyUp.bind(this);
+                this.onMouseMove = this.onMouseMove.bind(this);
+                this.animate = this.animate.bind(this);
+                this.onResize = this.onResize.bind(this);
+
+                this.init();
+            }
+
+            init() {
+                // Asset Loading
+                const manager = new THREE.LoadingManager();
+                const loader = new THREE.TextureLoader(manager);
+                const basePath = '/assets/textures/';
+
+                this.assets = {
+                    wall: loader.load(basePath + 'scary_wall.jpg'),
+                    phone: loader.load(basePath + 'phone_screen.jpg'),
+                    static: loader.load(basePath + 'tv_static.jpg'),
+                    letters: loader.load(basePath + 'letters.jpg')
+                };
+
+                const audioLoader = new THREE.AudioLoader(manager);
+                this.audioAssets = {};
+
+                audioLoader.load('/assets/sounds/door_laugh.mp3', (buffer) => { this.audioAssets.laugh = buffer; });
+                audioLoader.load('/assets/sounds/hocus_whisper.mp3', (buffer) => { this.audioAssets.whisper = buffer; });
+                audioLoader.load('/assets/sounds/pocus_whisper.mp3', (buffer) => { this.audioAssets.pocus = buffer; });
+                audioLoader.load('/assets/sounds/crying.mp3', (buffer) => { this.audioAssets.crying = buffer; });
+
+                // Act 2 & 3 Assets (Reusing generated ones)
+                // Assuming 'creepy_sleeping_photo.png' is in textures, but we need it for the <img> tag too.
+                // It stays as an <img> source, no need to load as THREE texture unless used in 3D.
+
+                manager.onLoad = () => {
+                    document.getElementById('loadingText').innerText = "THE LOOP IS READY.";
+                    const btn = document.getElementById('startBtn');
+                    btn.disabled = false;
+                    btn.innerText = "ENTER NIGHTMARE";
+                    btn.onclick = () => this.start();
+                };
+
+                manager.onError = (url) => {
+                    console.error('Error loading:', url);
+                    // Fallback to start anyway if assets fail (so game isn't stuck)
+                    document.getElementById('loadingText').innerText = "ASSETS COMPROMISED. PROCEED WITH CAUTION.";
+                    const btn = document.getElementById('startBtn');
+                    btn.disabled = false;
+                    btn.innerText = "ENTER ANYWAY";
+                    btn.onclick = () => this.start();
+                };
+
+                // Events
+                window.addEventListener('resize', this.onResize);
+                document.addEventListener('keydown', this.onKeyDown);
+                document.addEventListener('keyup', this.onKeyUp);
+                document.addEventListener('mousemove', this.onMouseMove);
+
+                document.addEventListener('pointerlockchange', () => {
+                    this.isLocked = document.pointerLockElement === this.container;
+                });
+
+                this.container.addEventListener('click', () => {
+                    if (!this.isLocked) this.container.requestPointerLock();
+                });
+            }
+
+            start() {
+                document.getElementById('overlay').classList.add('hide');
+                this.audio.resume();
+                this.audio.playAmbience('hum');
+                this.container.requestPointerLock();
+                this.loadScene(1);
+                this.animate();
+
+                // 7 Minute Crying Timer
+                setInterval(() => {
+                    this.audio.playBuffer(this.audioAssets.crying, 0.4);
+                    this.showMessage("Someone is crying...", 4000);
+                }, 7 * 60 * 1000); // 7 minutes
+            }
+
+            loadScene(n) {
+                // Cleanup
+                while (this.scene.children.length > 0) {
+                    this.scene.remove(this.scene.children[0]);
+                }
+                this.interactables = [];
+                this.sceneNum = n;
+                // Fog: Reduced density to see down the hallway
+                this.scene.fog = new THREE.FogExp2(0x050505, 0.03);
+
+                if (n === 1 || n === 2) this.buildBedroom(n);
+
+                // CRITICAL: Re-add camera to scene because it holds the flashlight!
+                this.scene.add(this.camera);
+
+                // Reset Player
+                this.camera.position.set(0, 1.7, 0);
+                this.camera.rotation.set(0, 0, 0); // Looking -Z
+                this.euler.set(0, 0, 0);
+                this.velocity.set(0, 0, 0);
+
+                // For Hallway (Scene 4), spawn slightly back so we see the hall start
+                if (n === 4) {
+                    this.camera.position.set(0, 1.7, 5);
+                }
+
+                // Intro Text
+                if (n === 1) this.showMessage("3:00 AM. Again.", 3000);
+                if (n === 2) this.showMessage("Something is different...", 3000);
+                if (n === 3) {
+                    this.showMessage("3:00 AM. The room feels... wrong.", 3000);
+                    this.camera.fov = 90; // Distorted FOV
+                    this.camera.updateProjectionMatrix();
+                }
+
+                if (n === 1 || n === 2 || n === 3) this.buildBedroom(n);
+                if (n === 4) this.buildHallway();
+                if (n === 5) this.buildRitualRoom();
+            }
+
+            buildHallway() {
+                // Check progression
+                const count = this.flags.trinkets.size || 0; // Assuming I switch to Set, or just integer logic upgrade
+
+                if (count >= 3) {
+                    // TRIAD COMPLETE - Transition
+                    this.showMessage("THE TRIAD IS COMPLETE. AWAKENING...", 2000);
+                    setTimeout(() => this.loadScene(5), 3000);
+                    return;
+                }
+
+                if (count > 0 && count < 3) {
+                    const remaining = 3 - count;
+                    this.showMessage(`TRUTH RECOVERED. ${remaining} REMAINING.`, 4000);
+                } else if (count === 0) {
+                    this.showMessage("The Hallway. It never ends.", 3000);
+                }
+
+                // Infinite Hallway (Long tunnel, broken reality)
+                this.camera.fov = 75; // Reset FOV
+                this.camera.updateProjectionMatrix();
+
+                // Floor (Stretched) - Extending along -Z
+                const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 200), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 }));
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.z = -50; // Centered at -50, so +50 to -150
+                this.scene.add(floor);
+
+                // Ceiling
+                const ceil = new THREE.Mesh(new THREE.PlaneGeometry(10, 200), new THREE.MeshStandardMaterial({ color: 0x020202, roughness: 1 }));
+                ceil.rotation.x = Math.PI / 2;
+                ceil.position.y = 8; // High ceiling
+                ceil.position.z = -50;
+                this.scene.add(ceil);
+
+                // Walls
+                const wallGeo = new THREE.PlaneGeometry(200, 8);
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111 }); // Dark walls
+                const left = new THREE.Mesh(wallGeo, wallMat);
+                left.rotation.y = Math.PI / 2;
+                left.position.set(-5, 4, -50);
+                this.scene.add(left);
+
+                const right = new THREE.Mesh(wallGeo, wallMat);
+                right.rotation.y = -Math.PI / 2;
+                right.position.set(5, 4, -50);
+                this.scene.add(right);
+
+                // Ambient Light (Brighter for better visibility)
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+
+                // Hallway Lighting (Dim, repetitive, leading forward)
+                for (let i = 0; i < 5; i++) {
+                    const l = new THREE.PointLight(0xaa0000, 0.5, 20); // Brighter red markers
+                    l.position.set(0, 5, -(i * 25));
+                    this.scene.add(l);
+                }
+
+                // Doors (The 3 Memories) - Located along the path
+                // Door 1: TV (Glass Eye) - Left Wall
+                this.createDoor(1, "MEMORY: THE FLICKERING TV", -4.8, -15, 0x555555, 0x00aaff, "Static flickering inside...", 0x222222);
+                // Door 2: Kitchen (Lead Heart) - Right Wall
+                this.createDoor(2, "MEMORY: THE COLD KITCHEN", 4.8, -35, 0x444455, 0x88ccff, "Cold air radiates from it...", 0x111122);
+                // Door 3: Closet (Golden Key) - End / Left
+                this.createDoor(3, "MEMORY: THE ENDLESS CLOSET", -4.8, -55, 0x111111, 0xffff00, "Darkness deeper than night.", 0x111100);
+
+                this.showMessage("The Hallway. It never ends.", 3000);
+            }
+
+            createDoor(id, label, x, z, color, lightColor = 0xffffff, desc = "", emissive = 0x000000) {
+                // Door Frame - Larger and glowing to enable spotting in dark
+                const frameGeo = new THREE.BoxGeometry(0.3, 3.8, 2.4);
+                const frameMat = new THREE.MeshStandardMaterial({
+                    color: 0x222222,
+                    emissive: lightColor,
+                    emissiveIntensity: 0.5
+                });
+                const frame = new THREE.Mesh(frameGeo, frameMat);
+                frame.position.set(x, 1.75, z);
+                this.scene.add(frame);
+
+                // Door Mesh
+                const d = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.2, 3.5, 2),
+                    new THREE.MeshStandardMaterial({ color: color, roughness: 0.2, emissive: emissive, emissiveIntensity: 0.4 })
+                );
+                d.position.set(x, 1.75, z); // Flush with frame center (X wise, frame is 0.3, door 0.2)
+
+                // Door Light - Bright and noticeable
+                const doorLight = new THREE.PointLight(lightColor, 2.0, 15);
+                doorLight.position.set(x * 0.7, 3, z); // Moved slightly away from wall
+                this.scene.add(doorLight);
+
+                this.scene.add(d);
+                this.addInteractable(d, `${label}`, () => {
+                    this.enterMemory(id);
+                });
+            }
+
+            enterMemory(id) {
+                // Clear scene
+                while (this.scene.children.length > 0) {
+                    this.scene.remove(this.scene.children[0]);
+                }
+                this.interactables = [];
+                this.scene.add(this.camera);
+
+                // Common Audio
+                this.audio.playTone(50, 'sine', 2.0);
+
+                // EXIT MECHANIC
+                this.showMessage("PRESS [X] TO LEAVE MEMORY", 4000);
+
+                if (this.exitHandler) document.removeEventListener('keydown', this.exitHandler);
+
+                this.exitHandler = (e) => {
+                    if (e.code === 'KeyX') {
+                        this.returnToHallway();
+                    }
+                };
+                document.addEventListener('keydown', this.exitHandler);
+
+
+                if (id === 1) { // MEMORY 1: TV (Childhood / Eye)
+                    this.scene.background = new THREE.Color(0x000000);
+
+                    // TV Mesh
+                    const tv = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 1), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+                    tv.position.set(0, 1.5, -3);
+                    this.scene.add(tv);
+
+                    // Dynamic Screen Texture (Canvas)
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 128; canvas.height = 128;
+                    const ctx = canvas.getContext('2d');
+
+                    // Draw Static
+                    const drawStatic = () => {
+                        const imgData = ctx.createImageData(128, 128);
+                        for (let i = 0; i < imgData.data.length; i += 4) {
+                            const val = Math.random() * 255;
+                            imgData.data[i] = val; // R
+                            imgData.data[i + 1] = val; // G
+                            imgData.data[i + 2] = val; // B
+                            imgData.data[i + 3] = 255; // Alpha
+                        }
+                        ctx.putImageData(imgData, 0, 0);
+                    };
+                    drawStatic();
+
+                    const screenTex = new THREE.CanvasTexture(canvas);
+                    const screen = new THREE.Mesh(
+                        new THREE.PlaneGeometry(1.8, 1.3),
+                        new THREE.MeshBasicMaterial({ map: screenTex })
+                    );
+                    screen.position.set(0, 1.5, -2.48);
+                    this.scene.add(screen);
+
+                    // Animate Static Loop
+                    const staticInt = setInterval(() => {
+                        drawStatic();
+                        screenTex.needsUpdate = true;
+                    }, 50);
+
+                    // HITBOX (Large)
+                    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshBasicMaterial({ visible: false }));
+                    hitBox.position.set(0, 1.5, -3);
+                    this.scene.add(hitBox);
+
+                    // Logic: Watch -> Eye Appears -> Reach
+                    this.showMessage("It's playing old memories...", 2000);
+
+                    setTimeout(() => {
+                        clearInterval(staticInt); // Stop static
+                        // Draw Eye
+                        ctx.fillStyle = "#000";
+                        ctx.fillRect(0, 0, 128, 128); // Black bg
+                        // Sclera
+                        ctx.fillStyle = "#f00";
+                        ctx.beginPath();
+                        ctx.arc(64, 64, 40, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Pupil
+                        ctx.fillStyle = "#000"; // Vertical slit
+                        ctx.beginPath();
+                        ctx.ellipse(64, 64, 5, 30, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        screenTex.needsUpdate = true;
+
+                        this.audio.playTone(100, 'sawtooth', 1.0); // Shock sound
+                        this.showMessage("IT SEES YOU. REACH IN.", 3000);
+
+                        this.addInteractable(hitBox, "REACH INTO SCREEN [E]", () => {
+                            this.audio.playTone(600, 'sawtooth', 0.5); // Glitch sound
+                            this.showMessage("It feels like liquid...", 1000);
+
+                            // Store timeout so X key can cancel it
+                            this.memoryTimeout = setTimeout(() => {
+                                this.showMessage("Collected: GLASS EYE", 3000);
+                                this.giveTrinket("Glass Eye");
+                                this.memoryTimeout = setTimeout(() => this.returnToHallway(), 4000);
+                            }, 2000);
+                        });
+                    }, 3000); // Wait 3s before eye appears
+                }
+
+                if (id === 2) { // MEMORY 2: Kitchen (Heart)
+                    this.scene.fog = new THREE.FogExp2(0x000510, 0.1);
+                    this.scene.background = new THREE.Color(0x000510);
+
+                    // Fridge (Open)
+                    const fridge = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshStandardMaterial({ color: 0x8899aa }));
+                    fridge.position.set(0, 2, -3);
+                    this.scene.add(fridge);
+
+                    // Dark interior
+                    const inner = new THREE.Mesh(new THREE.BoxGeometry(1.8, 3.8, 1.8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                    inner.position.set(0, 2, -2.9);
+                    this.scene.add(inner);
+
+                    // HEART Visual (2 Spheres + Cone = Heart-ish)
+                    const heartGroup = new THREE.Group();
+                    const hMat = new THREE.MeshStandardMaterial({ color: 0x3366ff, emissive: 0x002255, roughness: 0.1 });
+
+                    const lobe1 = new THREE.Mesh(new THREE.SphereGeometry(0.3), hMat);
+                    lobe1.position.set(-0.2, 0.2, 0);
+                    const lobe2 = new THREE.Mesh(new THREE.SphereGeometry(0.3), hMat);
+                    lobe2.position.set(0.2, 0.2, 0);
+                    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 16), hMat);
+                    tip.position.set(0, -0.2, 0);
+                    tip.rotation.z = Math.PI;
+
+                    heartGroup.add(lobe1, lobe2, tip);
+                    heartGroup.position.set(0, 2, -2);
+                    this.scene.add(heartGroup);
+
+                    // Light for heart
+                    const l = new THREE.PointLight(0x00ffff, 1, 5);
+                    l.position.set(0, 2.5, -1.5);
+                    this.scene.add(l);
+
+                    // HITBOX (Large)
+                    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), new THREE.MeshBasicMaterial({ visible: false }));
+                    hitBox.position.set(0, 2, -2);
+                    this.scene.add(hitBox);
+
+                    this.showMessage("The fridge... full of letters.", 2000);
+
+                    this.addInteractable(hitBox, "THAW FROZEN HEART [E]", () => {
+                        this.audio.playBuffer(this.audioAssets.crying, 0.6);
+                        this.showMessage("It burns... thawing...", 1000);
+
+                        // Fake thaw loop
+                        let pulses = 0;
+                        const pInt = setInterval(() => {
+                            pulses++;
+                            heartGroup.scale.multiplyScalar(0.95);
+                            this.audio.playTone(100 + pulses * 10, 'square', 0.05);
+                            if (pulses > 10) {
+                                clearInterval(pInt);
+                                this.showMessage("Collected: LEAD HEART", 3000);
+                                this.giveTrinket("Lead Heart");
+                                // Store timeout so X key can cancel it
+                                this.memoryTimeout = setTimeout(() => this.returnToHallway(), 4000);
+                            }
+                        }, 200);
+                    });
+                }
+
+                if (id === 3) { // MEMORY 3: Closet (Key)
+                    this.scene.fog = new THREE.FogExp2(0x000000, 0.5);
+                    this.scene.background = new THREE.Color(0x000000);
+
+                    // Hanger
+                    const hanger = new THREE.Mesh(
+                        new THREE.TorusGeometry(0.4, 0.02, 8, 20, Math.PI),
+                        new THREE.MeshBasicMaterial({ color: 0xaaaaaa })
+                    );
+                    hanger.position.set(0, 1.8, -2.5);
+                    hanger.rotation.z = Math.PI / 2;
+                    this.scene.add(hanger);
+
+                    // Key
+                    const key = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.1, 0.4, 0.05),
+                        new THREE.MeshBasicMaterial({ color: 0xffcc00 })
+                    );
+                    key.position.set(0, 1.4, -2.5);
+                    this.scene.add(key);
+
+                    // HITBOX (Large)
+                    const hitBox = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), new THREE.MeshBasicMaterial({ visible: false }));
+                    hitBox.position.set(0, 1.5, -2.5);
+                    this.scene.add(hitBox);
+
+                    // Footsteps
+                    let f = 0;
+                    const fInt = setInterval(() => {
+                        f++;
+                        this.audio.playTone(60, 'noise', 0.1);
+                        if (f > 5) clearInterval(fInt);
+                    }, 500);
+
+                    this.showMessage("A single hanger in the void...", 2000);
+                    this.addInteractable(hitBox, "TAKE KEY [E]", () => {
+                        this.audio.playTone(1200, 'sine', 1.0);
+                        this.showMessage("Collected: GOLDEN KEY", 3000);
+                        this.giveTrinket("Golden Key");
+                        // Store timeout so X key can cancel it
+                        this.memoryTimeout = setTimeout(() => this.returnToHallway(), 4000);
+                    });
+                }
+            }
+
+            returnToHallway() {
+                // CANCEL ANY AUTO-RETURN TIMEOUT
+                if (this.memoryTimeout) {
+                    clearTimeout(this.memoryTimeout);
+                    this.memoryTimeout = null;
+                }
+
+                if (this.exitHandler) {
+                    document.removeEventListener('keydown', this.exitHandler);
+                    this.exitHandler = null;
+                }
+                this.loadScene(4);
+            }
+
+            giveTrinket(name) {
+                this.flags.trinkets++;
+                this.audio.playTone(880 + (this.flags.trinkets * 100), 'sine', 0.3); // Ascending chime
+            }
+
+            buildBedroom(variant) {
+                // Room Shell
+                // Act 2 Distortion: Taller room
+                const roomHeight = variant === 3 ? 8 : 4;
+                const geo = new THREE.BoxGeometry(8, roomHeight, 8);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0x222222,
+                    side: THREE.BackSide,
+                    roughness: 0.8
+                });
+                const room = new THREE.Mesh(geo, mat);
+                room.position.y = 2;
+                this.scene.add(room);
+
+                // Floor
+                const floorColor = variant === 3 ? 0x001100 : 0x1a1a1a; // Grass green for Act 2
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(8, 8),
+                    new THREE.MeshStandardMaterial({
+                        color: floorColor,
+                        roughness: 0.9,
+                        // Ideally we'd map a grass texture here, but for now color shift
+                    })
+                );
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.z = 40; // Wait, why 40? Copypaste error from hallway? No buildBedroom uses local coords usually.
+                // Checking previous code... buildBedroom uses scene.add directly. 
+                // Previous code: floor.rotation.x = -Math.PI / 2; this.scene.add(floor); (Implicit 0,0,0)
+                // Wait, in buildHallway I put z=40. In buildBedroom it should be 0.
+                floor.position.set(0, 0, 0);
+                this.scene.add(floor);
+
+                // Lighting
+                const ambient = new THREE.AmbientLight(0xffffff, 0.05); // Very dim
+                this.scene.add(ambient);
+
+                const lamp = new THREE.PointLight(0xffaa55, 1, 15); // Increased intensity & range
+                lamp.position.set(-3, 2, -3);
+                lamp.castShadow = true;
+                this.scene.add(lamp);
+
+                // Add a dim fill light for the other side of the room to ensure table is visible
+                const fillLight = new THREE.PointLight(0x334455, 0.3, 10);
+                fillLight.position.set(3, 3, 3);
+                this.scene.add(fillLight);
+
+                // Objects
+
+                // Door
+                const door = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.2, 2.5, 0.1),
+                    new THREE.MeshStandardMaterial({ color: 0x2a1a1a })
+                );
+                door.position.set(0, 1.25, 4);
+                this.scene.add(door);
+                this.addInteractable(door, "DOOR", () => {
+                    this.audio.playTone(100, 'sawtooth', 0.2); // Rattle sound
+                    this.audio.playBuffer(this.audioAssets.laugh, 0.8); // Evil Laugh
+                    this.showMessage("It's locked... and someone is laughing.");
+                    this.flags.doorChecked = true;
+                });
+
+                // Window
+                const win = new THREE.Mesh(
+                    new THREE.PlaneGeometry(2, 1.5),
+                    new THREE.MeshStandardMaterial({ color: 0x051122, emissive: 0x010510 })
+                );
+                win.position.set(0, 2, -4);
+                this.scene.add(win);
+                this.addInteractable(win, "WINDOW", () => {
+                    this.showMessage("Pitch black. Nothing out there.");
+                    this.flags.windowChecked = true;
+                });
+
+                // Bed
+                const bed = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.8, 0.5, 2.5),
+                    new THREE.MeshStandardMaterial({ color: 0x442222 })
+                );
+                bed.position.set(2.5, 0.25, -2.5);
+                this.scene.add(bed);
+                this.addInteractable(bed, "BED", () => {
+                    if (this.sceneNum === 1) {
+                        // Act 1 Logic: Must check door first
+                        if (this.flags.doorChecked) {
+                            this.showMessage("Going back to sleep...", 2000);
+                            setTimeout(() => this.loadScene(2), 2000);
+                        } else {
+                            this.showMessage("I should check the door.");
+                        }
+                    } else {
+                        this.showMessage("Can't sleep now.");
+                    }
+                });
+
+                // Side Table (Adjusted position to be closer and visible)
+                const table = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 0.6, 0.8),
+                    new THREE.MeshStandardMaterial({ color: 0x554433 }) // Lighter color
+                );
+                table.position.set(3.2, 0.3, -2.5);
+                this.scene.add(table);
+
+                // Phone (if not already picked up)
+                if (!this.hasPhone) {
+                    const phone = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.02, 0.35),
+                        new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x111111 }) // Slight emissive to see in dark
+                    );
+                    phone.position.set(3.2, 0.61, -2.5); // On top of table
+                    this.scene.add(phone);
+                    this.addInteractable(phone, "MESSAGE FROM 'SELF'", () => {
+                        this.hasPhone = true;
+                        this.scene.remove(phone);
+                        // Refresh interactables to remove phone logic
+                        this.interactables = this.interactables.filter(i => i !== phone);
+
+                        this.showMessage("Picked up Phone. Press [P] to toggle screen. [F] for Light.");
+
+                        // Show the creepy message if Act 2
+                        if (this.sceneNum === 3) {
+                            document.getElementById('phoneOverlay').style.display = 'block';
+                            document.exitPointerLock(); // Let them see it
+                            this.audio.playTone(150, 'sawtooth', 0.5); // Shock sound
+                            setTimeout(() => {
+                                document.getElementById('phoneOverlay').style.display = 'none';
+                                this.container.requestPointerLock();
+                                this.showMessage("That's... me. right now.", 3000);
+                            }, 3000);
+                        }
+                    });
+                }
+
+                // Act 2: The Vent (Hidden Camera)
+                if (variant === 3) {
+                    const vent = new THREE.Mesh(
+                        new THREE.PlaneGeometry(0.8, 0.4),
+                        new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 0.9 })
+                    );
+                    vent.position.set(0, 3.5, -3.95); // High up on wall
+                    this.scene.add(vent);
+                    this.addInteractable(vent, "VENT", () => {
+                        this.audio.playTone(50, 'square', 0.2);
+                        this.showMessage("Found it. A camera.", 2000);
+                        setTimeout(() => {
+                            if (this.audioAssets.pocus) {
+                                this.audio.playBuffer(this.audioAssets.pocus, 1.0);
+                            } else {
+                                this.audio.playWhisper('poccus');
+                            }
+                            this.showMessage("Voice: \"...POCCUS.\"", 3000);
+
+                            // Transition to Act 3 after this
+                            setTimeout(() => this.loadScene(4), 5000);
+                        }, 2000);
+                    });
+                }
+
+                // Clock
+                const clock = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.4, 0.2, 0.1),
+                    new THREE.MeshStandardMaterial({ color: 0x111, emissive: 0x300 })
+                );
+                clock.position.set(-2.5, 1, -3); // Near lamp
+                clock.rotation.y = Math.PI / 4;
+                this.scene.add(clock);
+                this.addInteractable(clock, "ALARM CLOCK", () => {
+                    this.showMessage("3:00 AM. It never changes.");
+                });
+
+                // Mirror (Act 1 Scene 2+)
+                if (variant >= 2) {
+                    const mirrorGeo = new THREE.PlaneGeometry(1, 2);
+                    const mirrorMat = new THREE.MeshStandardMaterial({
+                        color: 0x000000,
+                        roughness: 0,
+                        metalness: 0.8
+                    });
+                    const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
+                    mirror.position.set(-3.9, 1.5, 0);
+                    mirror.rotation.y = Math.PI / 2;
+                    this.scene.add(mirror);
+                    this.addInteractable(mirror, "MIRROR", () => {
+                        this.audio.playTone(800, 'sine', 0.1);
+                        this.showMessage("My reflection is gone...", 2000);
+
+                        setTimeout(() => {
+                            this.audio.playWhisper('hoccus');
+                            this.showMessage("Voice: \"HOCCUS...\"", 1000);
+
+                            // GLITCH TRANSITION
+                            setTimeout(() => {
+                                document.body.classList.add('glitch-effect');
+                                this.audio.playTone(50, 'sawtooth', 2.0); // Loud static/glitch sound
+
+                                setTimeout(() => {
+                                    document.body.classList.remove('glitch-effect');
+                                    this.loadScene(3); // Go to Act 2
+                                }, 2000);
+                            }, 1500);
+
+                        }, 2500);
+                    });
+                }
+            }
+
+            buildRitualRoom() {
+                // Room Reset
+                this.buildBedroom(1); // Shell
+
+                // Remove Lamp, add Candles
+                const candles = [];
+                for (let i = 0; i < 20; i++) {
+                    const c = new THREE.PointLight(0xffaa00, 0.5, 3);
+                    c.position.set((Math.random() - 0.5) * 6, 0.5, (Math.random() - 0.5) * 6);
+                    this.scene.add(c);
+                }
+
+                // Doppelganger on Bed
+                const dop = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.5, 0.2, 1.7),
+                    new THREE.MeshStandardMaterial({ color: 0x330000 })
+                );
+                dop.position.set(2.5, 0.6, -2.5); // On bed
+                this.scene.add(dop);
+
+                this.showMessage("3:01 AM. There is someone in my bed.");
+
+                // Add Interaction for Ending
+                this.addInteractable(dop, "YOURSELF [RECLAIM]", () => this.triggerEnding('reclaim'));
+
+                // Add "Scroll" for Exorcise
+                const scroll = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.3), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                scroll.position.set(-2, 0.1, 0); // Floor
+                this.scene.add(scroll);
+                this.addInteractable(scroll, "INCANTATION [EXORCISE]", () => this.triggerEnding('exorcise'));
+            }
+
+            triggerEnding(type) {
+                if (type === 'reclaim') {
+                    this.audio.playLaugh();
+                    this.showMessage("ENDING 1: THE CYCLE CONTINUES. YOU ARE THE MONSTER NOW.", 5000);
+                    setTimeout(() => location.reload(), 5000);
+                }
+                if (type === 'exorcise') {
+                    this.audio.playWhisper('hoccus');
+                    this.audio.playWhisper('poccus');
+                    this.showMessage("ENDING 2: THE LOOP IS BROKEN. YOU ARE FREE.", 5000);
+                    setTimeout(() => location.reload(), 5000);
+                }
+            }
+            addInteractable(mesh, label, action) {
+                mesh.userData = { isInteractable: true, label, action };
+                this.interactables.push(mesh);
+            }
+
+            // --- CORE LOOP ---
+            animate() {
+                requestAnimationFrame(this.animate);
+
+                const time = performance.now();
+                const delta = (time - this.prevTime) / 1000 || 0.016;
+                this.prevTime = time;
+
+                if (this.isLocked) {
+                    // Raycast
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
+                    const intersects = raycaster.intersectObjects(this.interactables);
+
+                    const prompt = document.getElementById('interactPrompt');
+                    const crosshair = document.getElementById('crosshair');
+
+                    if (intersects.length > 0 && intersects[0].distance < 3.5) {
+                        this.lookTarget = intersects[0].object;
+                        prompt.innerText = `[E] ${this.lookTarget.userData.label}`;
+                        prompt.classList.add('show');
+                        crosshair.classList.add('active');
+                    } else {
+                        this.lookTarget = null;
+                        prompt.classList.remove('show');
+                        crosshair.classList.remove('active');
+                    }
+
+                    // Movement Physics (Source-engine style feel)
+                    const ACCEL = 60.0;
+                    const FRICTION = 10.0; // High friction for snappy stops, lower for ice
+                    const MAX_SPEED = 5.0; // Accel / Friction = 6.0 approx natural max
+
+                    // 1. Apply Friction (Damping)
+                    this.velocity.x -= this.velocity.x * FRICTION * delta;
+                    this.velocity.z -= this.velocity.z * FRICTION * delta;
+
+                    // 2. Input processing
+                    const inputDir = new THREE.Vector3();
+                    inputDir.z = Number(this.move.f) - Number(this.move.b);
+                    inputDir.x = Number(this.move.r) - Number(this.move.l);
+                    inputDir.normalize(); // Prevent fast diagonals
+
+                    // 3. Apply Acceleration
+                    if (this.move.f || this.move.b) {
+                        this.velocity.z -= inputDir.z * ACCEL * delta;
+                    }
+                    if (this.move.l || this.move.r) {
+                        this.velocity.x -= inputDir.x * ACCEL * delta;
+                    }
+
+                    // 4. Soft Clamp (Optional, keeps physics from exploding if framerate hiccups)
+                    // We let friction handle the natural cap, but this prevents "infinite" speed glitches
+                    this.velocity.clampLength(0, MAX_SPEED * 2);
+
+                    // Robust XZ Plane Movement Vectors
+                    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+                    forward.y = 0;
+                    forward.normalize();
+
+                    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+                    right.y = 0;
+                    right.normalize();
+
+                    // Apply to Camera (Invert Z logic because earlier code treats -Z as forward speed addition)
+                    // Actually, let's stick to the current convention: 
+                    // velocity.z is "Speed along Forward Vector". Negative means forward?
+                    // Original: this.velocity.z -= dir.z * speed * delta; (Forward input -> Negative Vel Z)
+                    // Apply: addScaledVector(forward, -this.velocity.z * delta) -> addScaled(forward, positive) -> Move Forward
+                    // New logic maintains this sign convention.
+
+                    this.camera.position.addScaledVector(forward, -this.velocity.z * delta);
+                    this.camera.position.addScaledVector(right, -this.velocity.x * delta);
+
+                    // Head bob
+                    if (this.velocity.lengthSq() > 0.1) {
+                        this.camera.position.y = 1.7 + Math.sin(time * 10) * 0.05; // Faster bob
+                    } else {
+                        // Breathe
+                        this.camera.position.y = 1.7 + Math.sin(time * 2) * 0.02;
+                    }
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            togglePhone() {
+                if (!this.hasPhone) return;
+
+                const overlay = document.getElementById('phoneOverlay');
+                // Check if currently visible
+                if (overlay.style.display === 'block') {
+                    // Hide
+                    overlay.style.display = 'none';
+                    this.container.requestPointerLock();
+                    this.showMessage("Photo... taken from above?", 3000); // Hint
+                } else {
+                    // Show
+                    document.exitPointerLock();
+                    overlay.style.display = 'block';
+                }
+            }
+
+            // --- INPUT ---
+            onKeyDown(e) {
+                switch (e.code) {
+                    case 'KeyW': this.move.f = true; break;
+                    case 'KeyS': this.move.b = true; break;
+                    case 'KeyA': this.move.l = true; break;
+                    case 'KeyD': this.move.r = true; break;
+                    case 'KeyE':
+                        if (this.lookTarget) this.lookTarget.userData.action();
+                        break;
+                    case 'KeyP':
+                        this.togglePhone();
+                        break;
+                    case 'KeyF':
+                        if (this.hasPhone) {
+                            this.flashlightOn = !this.flashlightOn;
+                            // Update Light - Much brighter to cut through dark
+                            this.flashlight.intensity = this.flashlightOn ? 8 : 0;
+                            // Update Beam Visibility
+                            this.flashBeam.material.opacity = this.flashlightOn ? 0.15 : 0;
+
+                            this.audio.playTone(2000, 'sine', 0.05, 0.05); // Click sound
+                        } else {
+                            this.showMessage("I need a light source.");
+                        }
+                        break;
+                }
+            }
+
+            onKeyUp(e) {
+                switch (e.code) {
+                    case 'KeyW': this.move.f = false; break;
+                    case 'KeyS': this.move.b = false; break;
+                    case 'KeyA': this.move.l = false; break;
+                    case 'KeyD': this.move.r = false; break;
+                }
+            }
+
+            onMouseMove(e) {
+                if (!this.isLocked) return;
+                this.euler.setFromQuaternion(this.camera.quaternion);
+                this.euler.y -= e.movementX * 0.002;
+                this.euler.x -= e.movementY * 0.002;
+                this.euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.euler.x));
+                this.camera.quaternion.setFromEuler(this.euler);
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            showMessage(text, duration = 3000) {
+                const el = document.getElementById('message');
+                el.innerText = text;
+                el.classList.add('show');
+                if (this.msgTimeout) clearTimeout(this.msgTimeout);
+                this.msgTimeout = setTimeout(() => el.classList.remove('show'), duration);
+            }
+        }
+
+        // Start
+        window.onload = () => {
+            const game = new Game();
+        };
+
+    </script>
+</body>
+
+</html>

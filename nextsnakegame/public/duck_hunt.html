@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duck Hunt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            cursor: none;
+        }
+        
+        #gameContainer {
+            position: relative;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        canvas {
+            display: block;
+            border: 4px solid #333;
+            image-rendering: pixelated;
+        }
+        
+        #crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #hud {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 80px;
+            background: #000;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bullets {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .bullet {
+            width: 30px;
+            height: 30px;
+            background: #ff0000;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+        
+        .bullet.used {
+            background: #333;
+        }
+        
+        #roundInfo {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px 40px;
+            font-size: 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 50;
+            text-align: center;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            padding: 40px 60px;
+            font-size: 24px;
+            border-radius: 15px;
+            display: none;
+            z-index: 50;
+            text-align: center;
+            border: 4px solid #ff0000;
+        }
+        
+        #gameOver h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff0000;
+        }
+        
+        #gameOver button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gameOver button:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="crosshair"></div>
+        <div id="hud">
+            <div>
+                <div>SCORE: <span id="score">0</span></div>
+                <div>ROUND: <span id="round">1</span></div>
+            </div>
+            <div class="bullets" id="bulletsDisplay"></div>
+            <div>
+                <div>HIT: <span id="hit">0</span></div>
+                <div>MISS: <span id="miss">0</span></div>
+            </div>
+        </div>
+        <div id="roundInfo"></div>
+        <div id="gameOver">
+            <h2>GAME OVER</h2>
+            <p id="finalScore"></p>
+            <button onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const crosshair = document.getElementById('crosshair');
+        
+        canvas.width = 800;
+        canvas.height = 600;
+        
+        // Game state
+        let gameState = 'playing'; // 'playing', 'roundEnd', 'gameOver'
+        let score = 0;
+        let round = 1;
+        let hits = 0;
+        let misses = 0;
+        let bullets = 3;
+        const maxBullets = 3;
+        const ducksPerRound = 10;
+        let ducksShot = 0;
+        let currentDucks = [];
+        let dog = null;
+        let showDog = false;
+        let dogTimer = 0;
+        
+        // Colors (NES palette inspired)
+        const colors = {
+            sky: '#5c94fc',
+            ground: '#d84820',
+            grass: '#00a800',
+            tree: '#006400',
+            cloud: '#fcfcfc'
+        };
+        
+        // Duck class
+        class Duck {
+            constructor() {
+                this.x = Math.random() < 0.5 ? -50 : canvas.width + 50;
+                this.y = 100 + Math.random() * 300;
+                this.size = 50;
+                this.speed = 2 + Math.random() * 2 + (round * 0.3);
+                this.direction = this.x < 0 ? 1 : -1;
+                this.angle = 0;
+                this.alive = true;
+                this.falling = false;
+                this.fallSpeed = 0;
+                this.color = Math.random() > 0.5 ? '#8B4513' : '#000';
+                this.flapSpeed = 0.2;
+                this.flapAngle = 0;
+            }
+            
+            update() {
+                if (this.falling) {
+                    this.y += this.fallSpeed;
+                    this.fallSpeed += 0.5;
+                    this.angle += 5;
+                } else {
+                    this.x += this.speed * this.direction;
+                    this.y += Math.sin(Date.now() * 0.003) * 0.5;
+                    this.flapAngle += this.flapSpeed;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.falling) {
+                    ctx.rotate(this.angle * Math.PI / 180);
+                }
+                
+                // Duck body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size * 0.6, this.size * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Duck head
+                ctx.beginPath();
+                ctx.ellipse(this.size * 0.4 * this.direction, -this.size * 0.2, this.size * 0.3, this.size * 0.35, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Duck beak
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo((this.size * 0.6) * this.direction, -this.size * 0.2);
+                ctx.lineTo((this.size * 0.8) * this.direction, -this.size * 0.15);
+                ctx.lineTo((this.size * 0.6) * this.direction, -this.size * 0.1);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Duck eye
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc((this.size * 0.45) * this.direction, -this.size * 0.25, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc((this.size * 0.47) * this.direction, -this.size * 0.25, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (!this.falling) {
+                    // Wings
+                    const wingFlap = Math.sin(this.flapAngle) * 15;
+                    
+                    // Left wing
+                    ctx.fillStyle = this.color;
+                    ctx.save();
+                    ctx.translate(-this.size * 0.3 * this.direction, 0);
+                    ctx.rotate((-30 + wingFlap) * Math.PI / 180);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size * 0.4, this.size * 0.15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                    
+                    // Right wing
+                    ctx.save();
+                    ctx.translate(-this.size * 0.3 * this.direction, 0);
+                    ctx.rotate((30 - wingFlap) * Math.PI / 180);
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size * 0.4, this.size * 0.15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                
+                ctx.restore();
+            }
+            
+            shoot() {
+                if (this.alive && !this.falling) {
+                    this.alive = false;
+                    this.falling = true;
+                    return true;
+                }
+                return false;
+            }
+            
+            isOffScreen() {
+                return this.y > canvas.height || 
+                       this.x < -100 || 
+                       this.x > canvas.width + 100;
+            }
+            
+            containsPoint(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx * dx + dy * dy) < this.size;
+            }
+        }
+        
+        // Dog class
+        class Dog {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 150;
+                this.size = 60;
+                this.state = 'sniff'; // 'sniff', 'jump', 'laugh'
+                this.jumpY = 0;
+                this.duckCount = 0;
+            }
+            
+            show(state, duckCount = 0) {
+                this.state = state;
+                this.duckCount = duckCount;
+                this.jumpY = 0;
+                showDog = true;
+                dogTimer = 120;
+            }
+            
+            update() {
+                if (this.state === 'jump') {
+                    this.jumpY = Math.sin(Date.now() * 0.01) * 20 - 20;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y + this.jumpY);
+                
+                // Dog body
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-this.size * 0.4, 0, this.size * 0.8, this.size * 0.6);
+                
+                // Dog head
+                ctx.fillRect(-this.size * 0.35, -this.size * 0.5, this.size * 0.7, this.size * 0.5);
+                
+                // Dog ears
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(-this.size * 0.5, -this.size * 0.5, this.size * 0.15, this.size * 0.4);
+                ctx.fillRect(this.size * 0.35, -this.size * 0.5, this.size * 0.15, this.size * 0.4);
+                
+                // Dog nose
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(0, -this.size * 0.25, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Dog eyes
+                ctx.fillStyle = '#000';
+                if (this.state === 'laugh') {
+                    // Laughing eyes (^_^)
+                    ctx.beginPath();
+                    ctx.arc(-this.size * 0.15, -this.size * 0.35, 3, 0, Math.PI);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(this.size * 0.15, -this.size * 0.35, 3, 0, Math.PI);
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(-this.size * 0.15, -this.size * 0.35, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(this.size * 0.15, -this.size * 0.35, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Show ducks if jumping
+                if (this.state === 'jump' && this.duckCount > 0) {
+                    for (let i = 0; i < this.duckCount; i++) {
+                        ctx.save();
+                        ctx.translate((i - this.duckCount / 2) * 30 + 15, -this.size * 0.8);
+                        ctx.fillStyle = '#8B4513';
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        // Draw background
+        function drawBackground() {
+            // Sky
+            ctx.fillStyle = colors.sky;
+            ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
+            
+            // Clouds
+            ctx.fillStyle = colors.cloud;
+            for (let i = 0; i < 3; i++) {
+                const x = 150 + i * 250;
+                const y = 50 + i * 30;
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI * 2);
+                ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
+                ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Ground
+            ctx.fillStyle = colors.ground;
+            ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
+            
+            // Grass
+            ctx.fillStyle = colors.grass;
+            ctx.fillRect(0, canvas.height * 0.7, canvas.width, 40);
+            
+            // Trees
+            for (let i = 0; i < 5; i++) {
+                const x = 100 + i * 180;
+                const y = canvas.height * 0.7;
+                
+                // Tree trunk
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(x - 10, y - 60, 20, 60);
+                
+                // Tree leaves
+                ctx.fillStyle = colors.tree;
+                ctx.beginPath();
+                ctx.arc(x, y - 70, 35, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x - 20, y - 55, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x + 20, y - 55, 25, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Spawn ducks
+        function spawnDucks() {
+            const numDucks = Math.min(2, round); // 1-2 ducks at a time
+            for (let i = 0; i < numDucks; i++) {
+                currentDucks.push(new Duck());
+            }
+        }
+        
+        // Update bullets display
+        function updateBulletsDisplay() {
+            const display = document.getElementById('bulletsDisplay');
+            display.innerHTML = '';
+            for (let i = 0; i < maxBullets; i++) {
+                const bullet = document.createElement('div');
+                bullet.className = 'bullet' + (i >= bullets ? ' used' : '');
+                display.appendChild(bullet);
+            }
+        }
+        
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('round').textContent = round;
+            document.getElementById('hit').textContent = hits;
+            document.getElementById('miss').textContent = misses;
+            updateBulletsDisplay();
+        }
+        
+        // Draw crosshair
+        function drawCrosshair(x, y) {
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y - 25);
+            ctx.lineTo(x, y - 15);
+            ctx.moveTo(x, y + 25);
+            ctx.lineTo(x, y + 15);
+            ctx.moveTo(x - 25, y);
+            ctx.lineTo(x - 15, y);
+            ctx.moveTo(x + 25, y);
+            ctx.lineTo(x + 15, y);
+            ctx.stroke();
+        }
+        
+        // Mouse tracking
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = e.clientX - rect.left;
+            mouseY = e.clientY - rect.top;
+        });
+        
+        // Shooting
+        canvas.addEventListener('click', (e) => {
+            if (gameState !== 'playing' || bullets <= 0) return;
+            
+            bullets--;
+            updateBulletsDisplay();
+            
+            // Check if hit a duck
+            let hit = false;
+            for (let duck of currentDucks) {
+                if (duck.containsPoint(mouseX, mouseY) && duck.shoot()) {
+                    score += 500;
+                    hits++;
+                    ducksShot++;
+                    hit = true;
+                    
+                    // Show dog jumping with duck
+                    setTimeout(() => {
+                        if (dog) {
+                            dog.show('jump', 1);
+                        }
+                    }, 500);
+                    break;
+                }
+            }
+            
+            if (!hit && bullets === 0 && currentDucks.some(d => d.alive && !d.falling)) {
+                misses++;
+                // Show laughing dog
+                setTimeout(() => {
+                    if (dog) {
+                        dog.show('laugh');
+                    }
+                }, 500);
+            }
+            
+            updateHUD();
+        });
+        
+        // Show round info
+        function showRoundInfo(message) {
+            const roundInfo = document.getElementById('roundInfo');
+            roundInfo.textContent = message;
+            roundInfo.style.display = 'block';
+            setTimeout(() => {
+                roundInfo.style.display = 'none';
+            }, 2000);
+        }
+        
+        // End round
+        function endRound() {
+            if (ducksShot >= ducksPerRound * 0.6) {
+                showRoundInfo(`ROUND ${round} COMPLETE!`);
+                round++;
+                ducksShot = 0;
+                setTimeout(() => {
+                    gameState = 'playing';
+                    spawnDucks();
+                }, 2500);
+            } else {
+                gameOver();
+            }
+        }
+        
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            document.getElementById('finalScore').innerHTML = 
+                `Final Score: ${score}<br>Rounds Completed: ${round - 1}`;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Restart game
+        function restartGame() {
+            gameState = 'playing';
+            score = 0;
+            round = 1;
+            hits = 0;
+            misses = 0;
+            bullets = maxBullets;
+            ducksShot = 0;
+            currentDucks = [];
+            document.getElementById('gameOver').style.display = 'none';
+            updateHUD();
+            spawnDucks();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            // Draw background
+            drawBackground();
+            
+            // Update and draw ducks
+            for (let i = currentDucks.length - 1; i >= 0; i--) {
+                const duck = currentDucks[i];
+                duck.update();
+                duck.draw();
+                
+                if (duck.isOffScreen()) {
+                    currentDucks.splice(i, 1);
+                }
+            }
+            
+            // Update and draw dog
+            if (dog && showDog) {
+                dog.update();
+                dog.draw();
+                dogTimer--;
+                if (dogTimer <= 0) {
+                    showDog = false;
+                }
+            }
+            
+            // Draw crosshair
+            drawCrosshair(mouseX, mouseY);
+            
+            // Check if all ducks are gone and bullets used
+            if (gameState === 'playing' && currentDucks.length === 0) {
+                bullets = maxBullets;
+                updateBulletsDisplay();
+                
+                if (ducksShot >= ducksPerRound) {
+                    gameState = 'roundEnd';
+                    endRound();
+                } else {
+                    spawnDucks();
+                }
+            }
+            
+            // Check if bullets depleted with alive ducks
+            if (gameState === 'playing' && bullets === 0 && currentDucks.some(d => d.alive && !d.falling)) {
+                // Let ducks fly away
+                setTimeout(() => {
+                    currentDucks = currentDucks.filter(d => d.falling);
+                }, 1000);
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize
+        dog = new Dog();
+        updateHUD();
+        spawnDucks();
+        
+        // Show starting dog
+        setTimeout(() => {
+            dog.show('sniff');
+        }, 500);
+        
+        gameLoop();
+    </script>
+</body>
+</html>

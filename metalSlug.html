@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metal Slug Style Game</title>
+    <title>Metal Slug - Infinite Runner</title>
     <style>
         * {
             margin: 0;
@@ -17,7 +18,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);
+            background: #1a1a1a;
             font-family: 'Courier New', monospace;
             overflow: hidden;
         }
@@ -76,6 +77,11 @@
             transition: width 0.3s ease;
         }
 
+        .distance-counter {
+            font-size: 1.2em;
+            color: #ffd700;
+        }
+
         canvas {
             border: 4px solid #000;
             background: #87ceeb;
@@ -84,7 +90,7 @@
             image-rendering: crisp-edges;
         }
 
-        .game-over, .victory {
+        .game-over {
             display: none;
             position: fixed;
             top: 50%;
@@ -106,14 +112,7 @@
             text-shadow: 3px 3px 0 #000;
         }
 
-        .victory h2 {
-            font-size: 3em;
-            margin-bottom: 20px;
-            color: #4CAF50;
-            text-shadow: 3px 3px 0 #000;
-        }
-
-        .game-over p, .victory p {
+        .game-over p {
             font-size: 1.5em;
             margin-bottom: 30px;
         }
@@ -165,9 +164,15 @@
         }
     </style>
 </head>
+
 <body>
     <div class="game-container">
         <div class="hud">
+            <div class="hud-item">
+                <span>DISTANCE:</span>
+                <span id="distance" class="distance-counter">0m</span>
+                <span style="color:red; font-size:10px; margin-left:10px;">DEBUG V5: RED CIRCLES</span>
+            </div>
             <div class="hud-item">
                 <span>SCORE:</span>
                 <span id="score">0</span>
@@ -192,7 +197,7 @@
         </div>
         <canvas id="gameCanvas" width="900" height="500"></canvas>
         <div class="controls">
-            <strong>🎮 CONTROLS</strong>
+            <strong>🎮 INFINITE RUNNER MODE - SURVIVE AS LONG AS YOU CAN!</strong>
             <div class="controls-grid">
                 <div class="control-item">← → : MOVE</div>
                 <div class="control-item">SPACE : JUMP</div>
@@ -202,675 +207,748 @@
                 <div class="control-item">C : KNIFE</div>
             </div>
         </div>
+
+        <div id="startOverlay"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 1000;">
+            <div style="text-align: center; color: white;">
+                <h1 style="font-size: 40px; color: #ffd700; text-shadow: 2px 2px #000; margin-bottom: 20px;">METAL SLUG
+                </h1>
+                <h2 style="font-size: 32px; color: #ff4444; text-shadow: 2px 2px #000; margin-bottom: 20px;">INFINITE
+                    RUNNER</h2>
+                <div style="font-size: 24px; animation: blink 1s infinite;">CLICK TO START</div>
+                <div style="margin-top: 20px; color: #aaa;">HOW FAR CAN YOU GO?</div>
+            </div>
+        </div>
     </div>
+
+    <style>
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
 
     <div class="game-over" id="gameOver">
         <h2>MISSION FAILED</h2>
-        <p>Score: <span id="finalScore">0</span></p>
+        <p>Distance Traveled: <span id="finalDistance">0m</span></p>
+        <p>Final Score: <span id="finalScore">0</span></p>
         <button onclick="restartGame()">TRY AGAIN</button>
     </div>
 
-    <div class="victory" id="victory">
-        <h2>MISSION COMPLETE!</h2>
-        <p>Total Score: <span id="victoryScore">0</span></p>
-        <button onclick="restartGame()">PLAY AGAIN</button>
-    </div>
-
     <script>
+        // ============================================================
+        // 🎮 GAME ASSET CONFIGURATION - CHANGE YOUR SPRITES HERE! 🎮
+        // ============================================================
+
+        const ASSET_CONFIG = {
+            background: 'ms_bg.png',
+            tankBoss: 'tank_boss.png',
+            enemySoldier: 'stat_enemy.png',
+        };
+
+        // ============================================================
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Game constants
-        const GRAVITY = 0.7;
-        const JUMP_POWER = -13;
-        const MOVE_SPEED = 5;
-        const TILE_SIZE = 40;
-
         // Game state
-        let score = 0;
         let gameRunning = true;
-        let keys = {};
+        let score = 0;
+        let distance = 0;
         let cameraX = 0;
+        let difficulty = 1;
+
+        const GRAVITY = 0.8;
+        const GROUND_LEVEL = canvas.height - 100;
+        const GROUND_OFFSET = 100;
+
+        // Infinite runner config
+        const SPAWN_DISTANCE = 1000; // How far ahead to spawn new objects
+        const CLEANUP_DISTANCE = -200; // Remove objects this far behind camera
+        let lastPlatformX = 0;
+        let lastEnemyX = 0;
+
+        // Load sprite images
+        const tankSprite = new Image();
+        const enemySprite = new Image();
+        const bgImage = new Image();
+
+        let spritesLoaded = false;
+
+        Promise.all([
+            new Promise((resolve) => {
+                tankSprite.onload = resolve;
+                tankSprite.onerror = () => { console.warn('Tank sprite failed to load'); resolve(); };
+                tankSprite.src = ASSET_CONFIG.tankBoss;
+            }),
+            new Promise((resolve) => {
+                enemySprite.onload = resolve;
+                enemySprite.onerror = () => { console.warn('Enemy sprite failed to load'); resolve(); };
+                enemySprite.src = ASSET_CONFIG.enemySoldier;
+            }),
+            new Promise((resolve) => {
+                // Background is handled separately in drawBackground but good to track
+                bgImage.onload = resolve;
+                bgImage.onerror = resolve;
+                bgImage.src = ASSET_CONFIG.background;
+            })
+        ]).then(() => {
+            spritesLoaded = true;
+            console.log('All sprites loaded!');
+        });
+
+        // Game Objects
+        let platforms = [];
+        let enemies = [];
+        let bullets = [];
+        let grenades = [];
+        let enemyBullets = [];
         let particles = [];
         let explosions = [];
+        let powerups = [];
 
-        // Player class
+        const keys = {};
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
         class Player {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.width = 32;
-                this.height = 40;
+                this.width = 40;
+                this.height = 50;
                 this.velocityX = 0;
                 this.velocityY = 0;
+                this.speed = 5;
+                this.jumpPower = 15;
                 this.onGround = false;
-                this.facing = 1;
+                this.facingRight = true;
                 this.health = 100;
                 this.maxHealth = 100;
                 this.ammo = 30;
                 this.maxAmmo = 30;
                 this.grenades = 5;
+                this.canShoot = true;
                 this.shootCooldown = 0;
-                this.grenadeCooldown = 0;
-                this.knifeCooldown = 0;
-                this.isCrouching = false;
-                this.invincible = false;
-                this.invincibleTimer = 0;
+                this.crouching = false;
+                this.animFrame = 0;
+                this.animTimer = 0;
+                this.muzzleFlash = false;
             }
 
             update() {
-                // Horizontal movement
-                if (keys['ArrowLeft']) {
-                    this.velocityX = -MOVE_SPEED;
-                    this.facing = -1;
-                } else if (keys['ArrowRight']) {
-                    this.velocityX = MOVE_SPEED;
-                    this.facing = 1;
-                } else {
-                    this.velocityX *= 0.8;
+                this.velocityX = 0;
+                this.crouching = keys['arrowdown'] || keys['s'];
+
+                if (!this.crouching) {
+                    if (keys['arrowleft'] || keys['a']) {
+                        this.velocityX = -this.speed;
+                        this.facingRight = false;
+                    }
+                    if (keys['arrowright'] || keys['d']) {
+                        this.velocityX = this.speed;
+                        this.facingRight = true;
+                    }
                 }
 
-                // Crouch
-                this.isCrouching = keys['ArrowDown'] && this.onGround;
-
-                // Jump
-                if (keys[' '] && this.onGround && !this.isCrouching) {
-                    this.velocityY = JUMP_POWER;
+                if ((keys[' '] || keys['arrowup'] || keys['w']) && this.onGround) {
+                    this.velocityY = -this.jumpPower;
                     this.onGround = false;
                 }
 
-                // Shoot
-                if (keys['z'] && this.shootCooldown === 0 && this.ammo > 0) {
+                if (keys['z'] && this.canShoot && this.ammo > 0) {
                     this.shoot();
-                    this.shootCooldown = 10;
-                    this.ammo--;
-                    updateHUD();
                 }
 
-                // Grenade
-                if (keys['x'] && this.grenadeCooldown === 0 && this.grenades > 0) {
+                if (keys['x'] && this.grenades > 0 && this.canShoot) {
                     this.throwGrenade();
-                    this.grenadeCooldown = 40;
                     this.grenades--;
-                    updateHUD();
+                    this.canShoot = false;
+                    this.shootCooldown = 30;
                 }
 
-                // Knife
-                if (keys['c'] && this.knifeCooldown === 0) {
-                    this.knife();
-                    this.knifeCooldown = 20;
+                if (keys['c'] && this.canShoot) {
+                    this.knifeAttack();
                 }
 
-                // Cooldowns
-                if (this.shootCooldown > 0) this.shootCooldown--;
-                if (this.grenadeCooldown > 0) this.grenadeCooldown--;
-                if (this.knifeCooldown > 0) this.knifeCooldown--;
+                if (!this.canShoot) {
+                    this.shootCooldown--;
+                    if (this.shootCooldown <= 0) {
+                        this.canShoot = true;
+                    }
+                }
 
-                // Apply gravity
                 this.velocityY += GRAVITY;
-
-                // Apply velocity
                 this.x += this.velocityX;
                 this.y += this.velocityY;
 
-                // Ground collision
-                if (this.y >= canvas.height - 100 - this.height) {
-                    this.y = canvas.height - 100 - this.height;
+                if (this.y + this.height >= GROUND_LEVEL) {
+                    this.y = GROUND_LEVEL - this.height;
                     this.velocityY = 0;
                     this.onGround = true;
                 } else {
                     this.onGround = false;
                 }
 
-                // Platform collision
                 platforms.forEach(platform => {
-                    if (this.intersects(platform) && this.velocityY > 0) {
-                        if (this.y + this.height - this.velocityY <= platform.y) {
-                            this.y = platform.y - this.height;
-                            this.velocityY = 0;
-                            this.onGround = true;
+                    const playerWorldX = this.x + cameraX;
+                    if (this.velocityY > 0 &&
+                        playerWorldX + this.width > platform.x &&
+                        playerWorldX < platform.x + platform.width &&
+                        this.y + this.height >= platform.y &&
+                        this.y + this.height <= platform.y + 20) {
+                        this.y = platform.y - this.height;
+                        this.velocityY = 0;
+                        this.onGround = true;
+                    }
+                });
+
+                if (this.x < 0) this.x = 0;
+                if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+
+                const camThreshold = canvas.width * 0.4;
+                if (this.x > camThreshold) {
+                    cameraX = this.x - camThreshold;
+                }
+                if (cameraX < 0) cameraX = 0;
+
+                // Update distance traveled
+                distance = Math.floor(cameraX / 10);
+
+                if (Math.abs(this.velocityX) > 0) {
+                    this.animTimer++;
+                    if (this.animTimer > 5) {
+                        this.animFrame = (this.animFrame + 1) % 4;
+                        this.animTimer = 0;
+                    }
+                }
+
+                if (this.muzzleFlash) {
+                    this.muzzleFlash = false;
+                }
+
+                if (this.health <= 0) {
+                    gameOver();
+                }
+
+                // Check powerup collection
+                powerups.forEach(powerup => {
+                    if (!powerup.collected) {
+                        const playerWorldX = this.x + cameraX;
+                        if (playerWorldX < powerup.x + powerup.width &&
+                            playerWorldX + this.width > powerup.x &&
+                            this.y < powerup.y + powerup.height &&
+                            this.y + this.height > powerup.y) {
+                            powerup.collect();
                         }
                     }
                 });
 
-                // Boundary
-                if (this.x < 0) this.x = 0;
-                if (this.x > levelWidth - this.width) this.x = levelWidth - this.width;
-
-                // Camera follow
-                cameraX = this.x - canvas.width / 3;
-                if (cameraX < 0) cameraX = 0;
-                if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
-
-                // Invincibility
-                if (this.invincible) {
-                    this.invincibleTimer--;
-                    if (this.invincibleTimer <= 0) {
-                        this.invincible = false;
-                    }
-                }
-
-                // Ammo reload
-                if (this.onGround && this.ammo < this.maxAmmo) {
-                    if (Math.random() < 0.01) {
-                        this.ammo++;
-                        updateHUD();
-                    }
-                }
+                updateHUD();
             }
 
             shoot() {
-                const offsetY = this.isCrouching ? 15 : 10;
                 bullets.push(new Bullet(
-                    this.x + (this.facing > 0 ? this.width : 0),
-                    this.y + offsetY,
-                    this.facing
+                    this.x + (this.facingRight ? this.width : 0),
+                    this.y + this.height / 2,
+                    this.facingRight ? 1 : -1
                 ));
+                this.ammo--;
+                this.canShoot = false;
+                this.shootCooldown = 10;
+                this.muzzleFlash = true;
             }
 
             throwGrenade() {
                 grenades.push(new Grenade(
                     this.x + this.width / 2,
-                    this.y + 10,
-                    this.facing
+                    this.y + this.height / 2,
+                    this.facingRight ? 1 : -1
                 ));
             }
 
-            knife() {
-                const knifeRange = 40;
-                const knifeX = this.x + (this.facing > 0 ? this.width : -knifeRange);
-                const knifeY = this.y;
-                
+            knifeAttack() {
+                const attackRange = 60;
+                const attackX = this.facingRight ? this.x + this.width : this.x - attackRange;
+
                 enemies.forEach(enemy => {
-                    if (!enemy.dead && 
-                        enemy.x < knifeX + knifeRange && 
-                        enemy.x + enemy.width > knifeX &&
-                        enemy.y < knifeY + this.height &&
-                        enemy.y + enemy.height > knifeY) {
+                    const enemyScreenX = enemy.x - cameraX;
+                    if (!enemy.dead &&
+                        enemyScreenX >= attackX && enemyScreenX <= attackX + attackRange &&
+                        Math.abs(enemy.y - this.y) < 60) {
                         enemy.takeDamage(50);
+                        score += 50;
                     }
                 });
 
-                // Knife visual effect
-                for (let i = 0; i < 3; i++) {
-                    particles.push(new Particle(
-                        knifeX + knifeRange / 2,
-                        knifeY + this.height / 2,
-                        (Math.random() - 0.5) * 4 + this.facing * 3,
-                        (Math.random() - 0.5) * 4,
-                        '#ffffff',
-                        10
-                    ));
-                }
-            }
-
-            takeDamage(amount) {
-                if (this.invincible) return;
-                
-                this.health -= amount;
-                this.invincible = true;
-                this.invincibleTimer = 60;
-                
-                if (this.health <= 0) {
-                    this.health = 0;
-                    gameOver();
-                }
-                updateHUD();
-            }
-
-            intersects(rect) {
-                return this.x < rect.x + rect.width &&
-                       this.x + this.width > rect.x &&
-                       this.y < rect.y + rect.height &&
-                       this.y + this.height > rect.y;
+                this.canShoot = false;
+                this.shootCooldown = 20;
             }
 
             draw() {
                 ctx.save();
-                ctx.translate(-cameraX, 0);
+                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over';
 
-                if (!this.invincible || Math.floor(this.invincibleTimer / 5) % 2 === 0) {
-                    const drawHeight = this.isCrouching ? this.height - 15 : this.height;
-                    const drawY = this.isCrouching ? this.y + 15 : this.y;
-
-                    // Body (military green)
-                    ctx.fillStyle = '#4a5f3a';
-                    ctx.fillRect(this.x + 8, drawY + 12, 16, drawHeight - 12);
-
-                    // Head
-                    ctx.fillStyle = '#ffdbac';
-                    ctx.fillRect(this.x + 10, drawY + 4, 12, 10);
-
-                    // Helmet
-                    ctx.fillStyle = '#3d4f2f';
-                    ctx.fillRect(this.x + 8, drawY, 16, 6);
-
-                    // Eyes
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(this.x + 12, drawY + 7, 2, 2);
-                    ctx.fillRect(this.x + 18, drawY + 7, 2, 2);
-
-                    // Gun
-                    ctx.fillStyle = '#2c3e50';
-                    if (this.facing > 0) {
-                        ctx.fillRect(this.x + 24, drawY + 16, 12, 4);
-                    } else {
-                        ctx.fillRect(this.x - 4, drawY + 16, 12, 4);
-                    }
-
-                    // Legs
-                    if (!this.isCrouching) {
-                        ctx.fillStyle = '#4a5f3a';
-                        ctx.fillRect(this.x + 10, this.y + drawHeight - 12, 5, 12);
-                        ctx.fillRect(this.x + 17, this.y + drawHeight - 12, 5, 12);
-                    }
-
-                    // Boots
-                    ctx.fillStyle = '#2c2c2c';
-                    ctx.fillRect(this.x + 8, this.y + drawHeight - 4, 7, 4);
-                    ctx.fillRect(this.x + 17, this.y + drawHeight - 4, 7, 4);
-                }
-
-                ctx.restore();
-            }
-        }
-
-        // Bullet class
-        class Bullet {
-            constructor(x, y, direction) {
-                this.x = x;
-                this.y = y;
-                this.width = 8;
-                this.height = 3;
-                this.speed = 12 * direction;
-                this.direction = direction;
-                this.active = true;
-            }
-
-            update() {
-                this.x += this.speed;
-
-                // Check enemy collision
-                enemies.forEach(enemy => {
-                    if (this.active && !enemy.dead && this.intersects(enemy)) {
-                        enemy.takeDamage(25);
-                        this.active = false;
-                        
-                        // Hit particles
-                        for (let i = 0; i < 5; i++) {
-                            particles.push(new Particle(
-                                this.x, this.y,
-                                (Math.random() - 0.5) * 6,
-                                (Math.random() - 0.5) * 6,
-                                '#ffff00',
-                                15
-                            ));
-                        }
-                    }
-                });
-
-                // Remove if off screen
-                if (this.x < cameraX - 50 || this.x > cameraX + canvas.width + 50) {
-                    this.active = false;
-                }
-            }
-
-            intersects(rect) {
-                return this.x < rect.x + rect.width &&
-                       this.x + this.width > rect.x &&
-                       this.y < rect.y + rect.height &&
-                       this.y + this.height > rect.y;
-            }
-
-            draw() {
-                if (!this.active) return;
-                
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
-                ctx.fillStyle = '#ffff00';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                // Muzzle flash effect
-                ctx.fillStyle = 'rgba(255, 200, 0, 0.5)';
-                ctx.fillRect(this.x - 3 * this.direction, this.y - 2, 6, 7);
-                
-                ctx.restore();
-            }
-        }
-
-        // Grenade class
-        class Grenade {
-            constructor(x, y, direction) {
-                this.x = x;
-                this.y = y;
-                this.width = 8;
-                this.height = 8;
-                this.velocityX = 8 * direction;
-                this.velocityY = -10;
-                this.timer = 90;
-                this.active = true;
-            }
-
-            update() {
-                this.velocityY += GRAVITY;
-                this.x += this.velocityX;
-                this.y += this.velocityY;
-
-                // Ground bounce
-                if (this.y >= canvas.height - 100 - this.height) {
-                    this.y = canvas.height - 100 - this.height;
-                    this.velocityY = -this.velocityY * 0.5;
-                    this.velocityX *= 0.8;
-                }
-
-                this.timer--;
-                if (this.timer <= 0) {
-                    this.explode();
-                    this.active = false;
-                }
-            }
-
-            explode() {
-                explosions.push(new Explosion(this.x, this.y, 80));
-                
-                // Check enemies in blast radius
-                enemies.forEach(enemy => {
-                    const dist = Math.hypot(enemy.x + enemy.width/2 - this.x, enemy.y + enemy.height/2 - this.y);
-                    if (dist < 80 && !enemy.dead) {
-                        enemy.takeDamage(75);
-                    }
-                });
-            }
-
-            draw() {
-                if (!this.active) return;
-                
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
-                // Blinking effect when about to explode
-                if (this.timer < 30 && Math.floor(this.timer / 3) % 2 === 0) {
-                    ctx.fillStyle = '#ff0000';
+                if (this.crouching) {
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(this.x, this.y + 20, this.width, this.height - 20);
                 } else {
-                    ctx.fillStyle = '#2c3e50';
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(this.x + 10, this.y + 15, this.width - 20, this.height - 25);
+                    ctx.fillStyle = '#FFA07A';
+                    ctx.fillRect(this.x + 12, this.y + 5, this.width - 24, 15);
+                    ctx.fillStyle = '#2E7D32';
+                    ctx.fillRect(this.x + 10, this.y, this.width - 20, 10);
+                    ctx.fillStyle = '#333';
+                    if (this.facingRight) {
+                        ctx.fillRect(this.x + this.width - 10, this.y + 25, 15, 5);
+                    } else {
+                        ctx.fillRect(this.x - 5, this.y + 25, 15, 5);
+                    }
+                    const legOffset = Math.sin(this.animFrame * Math.PI / 2) * 5;
+                    ctx.fillStyle = '#1B5E20';
+                    ctx.fillRect(this.x + 12, this.y + this.height - 10, 8, 10 + legOffset);
+                    ctx.fillRect(this.x + this.width - 20, this.y + this.height - 10, 8, 10 - legOffset);
                 }
-                
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
+
+                if (this.muzzleFlash) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    const flashX = this.facingRight ? this.x + this.width : this.x;
+                    ctx.arc(flashX, this.y + 25, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 ctx.restore();
             }
         }
 
-        // Enemy class
         class Enemy {
             constructor(x, y, type = 'soldier') {
                 this.x = x;
                 this.y = y;
-                this.width = 32;
-                this.height = 40;
+                this.width = 40;
+                this.height = 50;
                 this.type = type;
-                this.health = type === 'soldier' ? 50 : 100;
-                this.maxHealth = this.health;
-                this.velocityX = type === 'soldier' ? -2 : -1;
                 this.velocityY = 0;
-                this.facing = -1;
+                this.onGround = false;
+                this.facingRight = false;
+                this.patrolStart = x;
+                this.patrolEnd = x + 200;
+                this.speed = 1;
+                this.shootTimer = Math.random() * 60;
+                this.shootCooldown = type === 'tank' ? 60 : 120;
                 this.dead = false;
-                this.shootCooldown = 0;
-                this.detectionRange = 400;
+                this.animFrame = 0;
+                this.animTimer = 0;
+
+                if (type === 'tank') {
+                    this.width = 80;
+                    this.height = 60;
+                    this.health = 200;
+                    this.maxHealth = 200;
+                } else if (type === 'elite') {
+                    this.health = 50;
+                    this.maxHealth = 50;
+                } else {
+                    this.health = 30;
+                    this.maxHealth = 30;
+                }
             }
 
             update() {
                 if (this.dead) return;
 
-                // AI behavior
-                const distToPlayer = player.x - this.x;
-                
-                if (Math.abs(distToPlayer) < this.detectionRange) {
-                    // Face player
-                    this.facing = distToPlayer > 0 ? 1 : -1;
-                    
-                    // Shoot at player
-                    if (Math.abs(distToPlayer) > 50 && this.shootCooldown === 0) {
-                        this.shoot();
-                        this.shootCooldown = 60;
-                    }
-                    
-                    // Move toward player
-                    if (Math.abs(distToPlayer) > 100) {
-                        this.velocityX = this.facing * (this.type === 'soldier' ? 1.5 : 1);
-                    } else {
-                        this.velocityX = 0;
-                    }
-                } else {
-                    // Patrol
-                    this.velocityX = this.facing * (this.type === 'soldier' ? 1 : 0.5);
-                }
+                const screenX = this.x - cameraX;
+                if (screenX < -200 || screenX > canvas.width + 200) return;
 
-                this.x += this.velocityX;
-
-                // Apply gravity
                 this.velocityY += GRAVITY;
                 this.y += this.velocityY;
 
-                // Ground collision
-                if (this.y >= canvas.height - 100 - this.height) {
-                    this.y = canvas.height - 100 - this.height;
+                if (this.y + this.height >= GROUND_LEVEL) {
+                    this.y = GROUND_LEVEL - this.height;
                     this.velocityY = 0;
+                    this.onGround = true;
                 }
 
-                if (this.shootCooldown > 0) this.shootCooldown--;
+                platforms.forEach(platform => {
+                    if (this.velocityY > 0 &&
+                        this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height >= platform.y &&
+                        this.y + this.height <= platform.y + 20) {
+                        this.y = platform.y - this.height;
+                        this.velocityY = 0;
+                        this.onGround = true;
+                    }
+                });
 
-                // Turn around at edges
-                if (this.x < 0 || this.x > levelWidth - this.width) {
-                    this.facing *= -1;
+                if (this.type !== 'tank') {
+                    if (this.facingRight) {
+                        this.x += this.speed;
+                        if (this.x >= this.patrolEnd) {
+                            this.facingRight = false;
+                        }
+                    } else {
+                        this.x -= this.speed;
+                        if (this.x <= this.patrolStart) {
+                            this.facingRight = true;
+                        }
+                    }
+                }
+
+                this.shootTimer++;
+                if (this.shootTimer >= this.shootCooldown) {
+                    this.shoot();
+                    this.shootTimer = 0;
+                }
+
+                this.animTimer++;
+                if (this.animTimer > 10) {
+                    this.animFrame = (this.animFrame + 1) % 2;
+                    this.animTimer = 0;
                 }
             }
 
             shoot() {
-                enemyBullets.push(new EnemyBullet(
-                    this.x + (this.facing > 0 ? this.width : 0),
-                    this.y + 15,
-                    this.facing
-                ));
+                const bulletX = this.x + (this.facingRight ? this.width : 0);
+                const bulletY = this.y + this.height / 2;
+                const direction = this.facingRight ? 1 : -1;
+                enemyBullets.push(new EnemyBullet(bulletX, bulletY, direction));
             }
 
-            takeDamage(amount) {
-                if (this.dead) return;
-                
-                this.health -= amount;
-                
-                // Hit effect
-                for (let i = 0; i < 3; i++) {
-                    particles.push(new Particle(
-                        this.x + this.width / 2,
-                        this.y + this.height / 2,
-                        (Math.random() - 0.5) * 4,
-                        (Math.random() - 0.5) * 4,
-                        '#ff0000',
-                        20
-                    ));
-                }
-                
+            takeDamage(damage) {
+                this.health -= damage;
+                createParticles(this.x - cameraX, this.y, '#ff0000', 8);
+
                 if (this.health <= 0) {
                     this.dead = true;
-                    score += this.type === 'soldier' ? 100 : 250;
-                    updateHUD();
-                    
-                    // Death explosion
-                    for (let i = 0; i < 10; i++) {
-                        particles.push(new Particle(
-                            this.x + this.width / 2,
-                            this.y + this.height / 2,
-                            (Math.random() - 0.5) * 8,
-                            (Math.random() - 0.5) * 8,
-                            Math.random() > 0.5 ? '#ff4444' : '#ffaa00',
-                            30
-                        ));
-                    }
+                    score += this.type === 'tank' ? 500 : (this.type === 'elite' ? 200 : 100);
+                    createExplosion(this.x - cameraX, this.y + this.height / 2);
                 }
             }
 
             draw() {
                 if (this.dead) return;
-                
+                const screenX = this.x - cameraX;
+                if (screenX < -100 || screenX > canvas.width + 100) return;
+
                 ctx.save();
-                ctx.translate(-cameraX, 0);
+                ctx.globalAlpha = 1.0;
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.imageSmoothingEnabled = true;
 
-                const color = this.type === 'soldier' ? '#8b4513' : '#4a0e0e';
+                try {
 
-                // Body
-                ctx.fillStyle = color;
-                ctx.fillRect(this.x + 8, this.y + 12, 16, 28);
+                    if (this.type === 'tank') {
+                        // Check if tank sprite is actually loaded and valid
+                        if (spritesLoaded && tankSprite.complete && tankSprite.naturalWidth > 0) {
+                            if (this.facingRight) {
+                                ctx.drawImage(tankSprite, screenX, this.y, this.width, this.height);
+                            } else {
+                                ctx.save();
+                                ctx.scale(-1, 1);
+                                ctx.drawImage(tankSprite, -screenX - this.width, this.y, this.width, this.height);
+                                ctx.restore();
+                            }
+                        } else {
+                            // Fallback for tank
+                            ctx.fillStyle = '#555';
+                            ctx.fillRect(screenX, this.y + 20, this.width, this.height - 20);
+                            ctx.fillStyle = '#444';
+                            ctx.fillRect(screenX + 20, this.y + 10, 40, 20);
+                            ctx.fillStyle = '#333';
+                            ctx.fillRect(screenX + (this.facingRight ? 60 : 0), this.y + 18, 20, 6);
+                            ctx.fillStyle = '#222';
+                            ctx.fillRect(screenX, this.y + this.height, this.width, 8);
+                        }
 
-                // Head
-                ctx.fillStyle = '#ffdbac';
-                ctx.fillRect(this.x + 10, this.y + 4, 12, 10);
+                        ctx.fillStyle = '#ff0000';
+                        ctx.fillRect(screenX, this.y - 10, this.width, 5);
+                        ctx.fillStyle = '#00ff00';
+                        ctx.fillRect(screenX, this.y - 10, this.width * (this.health / this.maxHealth), 5);
+                    } else {
+                        // Check if enemy sprite is actually loaded and valid
+                        if (spritesLoaded && enemySprite.complete && enemySprite.naturalWidth > 0) {
+                            if (this.type === 'elite') {
+                                ctx.globalAlpha = 1.0; // Draw elite with normal opacity but filter
+                            }
 
-                // Helmet
-                ctx.fillStyle = '#2c2c2c';
-                ctx.fillRect(this.x + 8, this.y, 16, 6);
+                            // Aspect ratio scaling
+                            const ratio = enemySprite.naturalWidth / enemySprite.naturalHeight;
+                            const targetRatio = this.width / this.height;
+                            let drawW = this.width;
+                            let drawH = this.height;
+                            let offsetX = 0;
+                            let offsetY = 0;
 
-                // Eyes
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(this.x + 12, this.y + 7, 2, 2);
-                ctx.fillRect(this.x + 18, this.y + 7, 2, 2);
+                            if (ratio > targetRatio) {
+                                drawH = this.width / ratio;
+                                offsetY = (this.height - drawH); // Align bottom
+                            } else {
+                                drawW = this.height * ratio;
+                                offsetX = (this.width - drawW) / 2;
+                            }
 
-                // Gun
-                ctx.fillStyle = '#2c3e50';
-                if (this.facing > 0) {
-                    ctx.fillRect(this.x + 24, this.y + 20, 10, 4);
-                } else {
-                    ctx.fillRect(this.x - 2, this.y + 20, 10, 4);
+                            if (this.facingRight) {
+                                ctx.drawImage(enemySprite, screenX + offsetX, this.y + offsetY, drawW, drawH);
+                            } else {
+                                ctx.save();
+                                ctx.scale(-1, 1);
+                                ctx.drawImage(enemySprite, -screenX - this.width + offsetX, this.y + offsetY, drawW, drawH);
+                                ctx.restore();
+                            }
+
+                            if (this.type === 'elite') {
+                                // Red tint for elite
+                                ctx.globalCompositeOperation = 'source-atop';
+                                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                                if (this.facingRight) {
+                                    ctx.fillRect(screenX, this.y, this.width, this.height);
+                                } else {
+                                    // Handle fill rect for flipped context if needed, but simpler to just tint afterwards if not simple
+                                    // For simplicity in this structure, we just tint the bounding box area
+                                    // Ideally we'd use an offscreen canvas for perfect tinting, but this is a quick fix
+                                    ctx.fillRect(screenX, this.y, this.width, this.height);
+                                }
+                                ctx.globalCompositeOperation = 'source-over';
+                            }
+                        } else {
+                            // Fallback for soldiers/elites
+                            const color = this.type === 'elite' ? '#8B0000' : '#DC143C'; // Dark red for elite, crimson for soldier
+                            ctx.fillStyle = color;
+                            ctx.fillRect(screenX + 10, this.y + 15, this.width - 20, this.height - 25);
+                            ctx.fillStyle = '#FFA07A';
+                            ctx.fillRect(screenX + 12, this.y + 5, this.width - 24, 15); // Face
+                            ctx.fillStyle = '#8B0000';
+                            ctx.fillRect(screenX + 10, this.y, this.width - 20, 10); // Helmet
+                            ctx.fillStyle = '#333';
+                            if (this.facingRight) {
+                                ctx.fillRect(screenX + this.width - 10, this.y + 25, 15, 5); // Gun
+                            } else {
+                                ctx.fillRect(screenX - 5, this.y + 25, 15, 5); // Gun
+                            }
+                            const legOffset = this.animFrame * 5;
+                            ctx.fillStyle = '#660000';
+                            ctx.fillRect(screenX + 12, this.y + this.height - 10, 8, 10 + legOffset);
+                            ctx.fillRect(screenX + this.width - 20, this.y + this.height - 10, 8, 10 - legOffset);
+                        }
+                    }
+
+                    // SAFETY OUTLINE - Guaranteed visibility
+                    ctx.strokeStyle = this.type === 'elite' ? '#ff00ff' : '#00ffff'; // Magenta for elite, Cyan for others
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(screenX, this.y, this.width, this.height);
+
+                } catch (e) {
+                    console.error("Enemy draw error:", e);
+                    // Absolute fallback if error occurs
+                    ctx.fillStyle = '#FF00FF'; // Magenta blocks of doom
+                    ctx.fillRect(screenX, this.y, this.width, this.height);
                 }
-
-                // Health bar
-                ctx.fillStyle = '#333';
-                ctx.fillRect(this.x, this.y - 8, this.width, 4);
-                ctx.fillStyle = '#ff0000';
-                ctx.fillRect(this.x, this.y - 8, this.width * (this.health / this.maxHealth), 4);
 
                 ctx.restore();
             }
-        }
 
-        // Enemy bullet class
-        class EnemyBullet {
+        class Bullet {
             constructor(x, y, direction) {
                 this.x = x;
                 this.y = y;
-                this.width = 6;
-                this.height = 3;
-                this.speed = 8 * direction;
+                this.width = 10;
+                this.height = 4;
+                this.speed = 15 * direction;
                 this.active = true;
             }
 
             update() {
                 this.x += this.speed;
 
-                // Check player collision
-                if (this.active && player.intersects(this)) {
-                    player.takeDamage(10);
+                if (this.x < -cameraX || this.x > canvas.width - cameraX + 3000) {
                     this.active = false;
                 }
 
-                // Remove if off screen
-                if (this.x < cameraX - 50 || this.x > cameraX + canvas.width + 50) {
+                enemies.forEach(enemy => {
+                    if (!enemy.dead) {
+                        const enemyScreenX = enemy.x - cameraX;
+                        if (this.x >= enemyScreenX && this.x <= enemyScreenX + enemy.width &&
+                            this.y >= enemy.y && this.y <= enemy.y + enemy.height) {
+                            enemy.takeDamage(10);
+                            this.active = false;
+                        }
+                    }
+                });
+            }
+
+            draw() {
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.fillRect(this.x - 10, this.y, 10, this.height);
+            }
+        }
+
+        class EnemyBullet {
+            constructor(x, y, direction) {
+                this.x = x;
+                this.y = y;
+                this.width = 8;
+                this.height = 4;
+                this.speed = 10 * direction;
+                this.active = true;
+            }
+
+            update() {
+                this.x += this.speed;
+                const screenX = this.x - cameraX;
+
+                if (screenX < -50 || screenX > canvas.width + 50) {
                     this.active = false;
+                }
+
+                if (this.active &&
+                    screenX >= player.x && screenX <= player.x + player.width &&
+                    this.y >= player.y && this.y <= player.y + player.height) {
+                    player.health -= 5;
+                    this.active = false;
+                    createParticles(player.x, player.y, '#ff0000', 5);
                 }
             }
 
             draw() {
-                if (!this.active) return;
-                
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
-                ctx.fillStyle = '#ff6600';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                ctx.restore();
+                const screenX = this.x - cameraX;
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(screenX, this.y, this.width, this.height);
             }
         }
 
-        // Particle class
-        class Particle {
-            constructor(x, y, vx, vy, color, life) {
+        class Grenade {
+            constructor(x, y, direction) {
                 this.x = x;
                 this.y = y;
-                this.vx = vx;
-                this.vy = vy;
-                this.color = color;
-                this.life = life;
-                this.maxLife = life;
+                this.velocityX = 8 * direction;
+                this.velocityY = -10;
+                this.radius = 6;
+                this.active = true;
+                this.fuseTime = 60;
             }
 
             update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += 0.3;
+                this.velocityY += GRAVITY;
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                if (this.y >= GROUND_LEVEL) {
+                    this.y = GROUND_LEVEL;
+                    this.velocityY *= -0.5;
+                    this.velocityX *= 0.7;
+                }
+
+                this.fuseTime--;
+                if (this.fuseTime <= 0) {
+                    this.explode();
+                }
+            }
+
+            explode() {
+                this.active = false;
+                const explosionRadius = 80;
+                const screenX = this.x - cameraX;
+
+                createExplosion(screenX, this.y);
+
+                enemies.forEach(enemy => {
+                    const enemyScreenX = enemy.x - cameraX;
+                    const dist = Math.sqrt((enemyScreenX - screenX) ** 2 + (enemy.y - this.y) ** 2);
+                    if (dist < explosionRadius) {
+                        enemy.takeDamage(50);
+                    }
+                });
+            }
+
+            draw() {
+                const screenX = this.x - cameraX;
+                ctx.fillStyle = this.fuseTime < 20 ? '#ff0000' : '#333';
+                ctx.beginPath();
+                ctx.arc(screenX, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (this.fuseTime < 30) {
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(screenX - 2, this.y - 10, 4, 6);
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.velocityX = (Math.random() - 0.5) * 6;
+                this.velocityY = (Math.random() - 0.5) * 6;
+                this.life = 30;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+
+            update() {
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                this.velocityY += 0.3;
                 this.life--;
             }
 
             draw() {
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
-                ctx.globalAlpha = this.life / this.maxLife;
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 3, 3);
+                ctx.globalAlpha = this.life / 30;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
                 ctx.globalAlpha = 1;
-                
-                ctx.restore();
             }
         }
 
-        // Explosion class
         class Explosion {
-            constructor(x, y, radius) {
+            constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.radius = radius;
-                this.currentRadius = 0;
-                this.maxRadius = radius;
+                this.radius = 10;
+                this.maxRadius = 60;
                 this.life = 20;
             }
 
             update() {
-                this.currentRadius += this.maxRadius / 10;
+                this.radius += (this.maxRadius - this.radius) * 0.3;
                 this.life--;
-                
-                if (this.currentRadius >= this.maxRadius) {
-                    this.currentRadius = this.maxRadius;
-                }
             }
 
             draw() {
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
                 ctx.globalAlpha = this.life / 20;
-                
-                // Outer circle
-                ctx.fillStyle = '#ff6600';
+                ctx.fillStyle = '#ff4444';
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // Inner circle
                 ctx.fillStyle = '#ffff00';
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.currentRadius * 0.6, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
                 ctx.fill();
-                
                 ctx.globalAlpha = 1;
-                ctx.restore();
             }
         }
 
-        // Platform class
         class Platform {
             constructor(x, y, width, height) {
                 this.x = x;
@@ -880,59 +958,165 @@
             }
 
             draw() {
-                ctx.save();
-                ctx.translate(-cameraX, 0);
-                
+                const screenX = this.x - cameraX;
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(screenX, this.y, this.width, this.height);
                 ctx.fillStyle = '#654321';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                
-                ctx.strokeStyle = '#8b7355';
-                ctx.strokeRect(this.x, this.y, this.width, this.height);
-                
+                for (let i = 0; i < this.width; i += 20) {
+                    ctx.fillRect(screenX + i, this.y, 2, this.height);
+                }
+                ctx.strokeStyle = '#3d2817';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(screenX, this.y, this.width, this.height);
+            }
+        }
+
+        class Powerup {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 30;
+                this.type = type; // 'health', 'ammo', 'grenade'
+                this.collected = false;
+                this.bobTimer = 0;
+            }
+
+            update() {
+                this.bobTimer += 0.1;
+            }
+
+            collect() {
+                this.collected = true;
+                if (this.type === 'health') {
+                    player.health = Math.min(player.maxHealth, player.health + 30);
+                } else if (this.type === 'ammo') {
+                    player.ammo = Math.min(player.maxAmmo, player.ammo + 15);
+                } else if (this.type === 'grenade') {
+                    player.grenades += 2;
+                }
+                createParticles(this.x - cameraX, this.y, '#ffff00', 10);
+            }
+
+            draw() {
+                if (this.collected) return;
+                const screenX = this.x - cameraX;
+                const bobOffset = Math.sin(this.bobTimer) * 5;
+
+                ctx.save();
+                if (this.type === 'health') {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(screenX + 10, this.y + bobOffset, 10, 20);
+                    ctx.fillRect(screenX + 5, this.y + bobOffset + 5, 20, 10);
+                } else if (this.type === 'ammo') {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(screenX + 5, this.y + bobOffset + 5, 20, 20);
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(screenX + 8, this.y + bobOffset + 8, 5, 14);
+                    ctx.fillRect(screenX + 17, this.y + bobOffset + 8, 5, 14);
+                } else if (this.type === 'grenade') {
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.arc(screenX + 15, this.y + bobOffset + 15, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(screenX + 13, this.y + bobOffset + 5, 4, 6);
+                }
                 ctx.restore();
             }
         }
 
-        // Initialize game objects
-        const levelWidth = 3000;
-        let player = new Player(100, 100);
-        let bullets = [];
-        let grenades = [];
-        let enemyBullets = [];
-        let enemies = [];
-        let platforms = [];
-
-        // Create level
-        function createLevel() {
-            // Platforms
-            platforms = [
-                new Platform(300, 350, 150, 20),
-                new Platform(550, 300, 120, 20),
-                new Platform(800, 250, 150, 20),
-                new Platform(1100, 320, 180, 20),
-                new Platform(1400, 280, 140, 20),
-                new Platform(1700, 340, 160, 20),
-                new Platform(2000, 300, 150, 20),
-                new Platform(2300, 250, 200, 20),
-            ];
-
-            // Enemies
-            enemies = [
-                new Enemy(400, 100, 'soldier'),
-                new Enemy(650, 100, 'soldier'),
-                new Enemy(900, 100, 'soldier'),
-                new Enemy(1200, 100, 'elite'),
-                new Enemy(1500, 100, 'soldier'),
-                new Enemy(1800, 100, 'soldier'),
-                new Enemy(2100, 100, 'elite'),
-                new Enemy(2400, 100, 'soldier'),
-                new Enemy(2700, 100, 'elite'),
-            ];
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
         }
 
-        createLevel();
+        function createExplosion(x, y) {
+            explosions.push(new Explosion(x, y));
+            createParticles(x, y, '#ff4444', 20);
+            createParticles(x, y, '#ffff00', 15);
+        }
+
+        let player = new Player(100, 100);
+
+        // Procedural generation functions
+        function spawnPlatform() {
+            const x = lastPlatformX + 200 + Math.random() * 300;
+            const y = 250 + Math.random() * 150;
+            const width = 80 + Math.random() * 150;
+            platforms.push(new Platform(x, y, width, 20));
+            lastPlatformX = x;
+        }
+
+        function spawnEnemy() {
+            const x = lastEnemyX + 300 + Math.random() * 400;
+            const types = ['soldier', 'soldier', 'elite', 'tank'];
+            const rand = Math.random();
+            let type;
+
+            if (rand < 0.5) type = 'soldier';
+            else if (rand < 0.8) type = 'elite';
+            else type = 'tank';
+
+            enemies.push(new Enemy(x, 300, type));
+            lastEnemyX = x;
+        }
+
+        function spawnPowerup() {
+            const x = cameraX + canvas.width + Math.random() * 500;
+            const y = 200 + Math.random() * 150;
+            const types = ['health', 'ammo', 'grenade'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            powerups.push(new Powerup(x, y, type));
+        }
+
+        function updateWorld() {
+            // Spawn platforms ahead
+            while (lastPlatformX < cameraX + SPAWN_DISTANCE) {
+                spawnPlatform();
+            }
+
+            // Spawn enemies ahead
+            while (lastEnemyX < cameraX + SPAWN_DISTANCE) {
+                spawnEnemy();
+            }
+
+            // Spawn powerups occasionally
+            if (Math.random() < 0.01 && powerups.length < 3) {
+                spawnPowerup();
+            }
+
+            // Cleanup objects behind camera
+            platforms = platforms.filter(p => p.x > cameraX + CLEANUP_DISTANCE);
+            enemies = enemies.filter(e => e.x > cameraX + CLEANUP_DISTANCE);
+            powerups = powerups.filter(p => p.x > cameraX + CLEANUP_DISTANCE || !p.collected);
+
+            // Increase difficulty over time
+            difficulty = 1 + (distance / 1000);
+        }
+
+        function initializeWorld() {
+            platforms = [];
+            enemies = [];
+            powerups = [];
+            lastPlatformX = 300;
+            lastEnemyX = 500;
+
+            // DEBUG: Force visible enemy right at start
+            enemies.push(new Enemy(400, 300, 'soldier'));
+            console.log("DEBUGGER: Spawning forced enemy at 400");
+
+            for (let i = 0; i < 10; i++) {
+                spawnPlatform();
+            }
+            for (let i = 0; i < 5; i++) {
+                spawnEnemy();
+            }
+        }
 
         function updateHUD() {
+            document.getElementById('distance').textContent = distance + 'm';
             document.getElementById('score').textContent = score;
             document.getElementById('healthFill').style.width = (player.health / player.maxHealth * 100) + '%';
             document.getElementById('ammoFill').style.width = (player.ammo / player.maxAmmo * 100) + '%';
@@ -942,134 +1126,132 @@
 
         function gameOver() {
             gameRunning = false;
+            document.getElementById('finalDistance').textContent = distance + 'm';
             document.getElementById('finalScore').textContent = score;
             document.getElementById('gameOver').style.display = 'block';
         }
 
-        function checkVictory() {
-            if (enemies.every(e => e.dead)) {
-                gameRunning = false;
-                score += 1000; // Victory bonus
-                document.getElementById('victoryScore').textContent = score;
-                document.getElementById('victory').style.display = 'block';
-            }
-        }
-
         function restartGame() {
             score = 0;
+            distance = 0;
             gameRunning = true;
             cameraX = 0;
+            difficulty = 1;
             bullets = [];
             grenades = [];
             enemyBullets = [];
             particles = [];
             explosions = [];
-            
+
             player = new Player(100, 100);
-            createLevel();
-            
+            initializeWorld();
+
             updateHUD();
             document.getElementById('gameOver').style.display = 'none';
-            document.getElementById('victory').style.display = 'none';
         }
 
         function drawBackground() {
-            // Sky
-            ctx.fillStyle = '#87ceeb';
-            ctx.fillRect(0, 0, canvas.width, canvas.height - 100);
+            ctx.imageSmoothingEnabled = false;
 
-            // Distant mountains
-            ctx.fillStyle = '#5a7d9a';
-            ctx.beginPath();
-            ctx.moveTo(-100, canvas.height - 100);
-            for (let i = 0; i < canvas.width + 200; i += 50) {
-                ctx.lineTo(i - (cameraX * 0.1) % 100, canvas.height - 150 - Math.sin(i * 0.01) * 30);
-            }
-            ctx.lineTo(canvas.width + 100, canvas.height - 100);
-            ctx.fill();
-
-            // Ground
-            ctx.fillStyle = '#8b7355';
-            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-            
-            // Ground texture
-            ctx.fillStyle = '#654321';
-            for (let i = 0; i < canvas.width; i += 20) {
-                ctx.fillRect(i, canvas.height - 100, 10, 5);
-                ctx.fillRect(i + 5, canvas.height - 95, 10, 5);
-            }
-
-            // Clouds
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            for (let i = 0; i < 5; i++) {
-                const cloudX = (i * 300 - cameraX * 0.3) % (canvas.width + 200);
-                ctx.beginPath();
-                ctx.arc(cloudX, 50 + i * 30, 25, 0, Math.PI * 2);
-                ctx.arc(cloudX + 30, 50 + i * 30, 30, 0, Math.PI * 2);
-                ctx.arc(cloudX + 60, 50 + i * 30, 25, 0, Math.PI * 2);
-                ctx.fill();
+            if (bgImage.complete && bgImage.naturalWidth > 0) {
+                ctx.save();
+                ctx.imageSmoothingEnabled = true;
+                ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+                ctx.imageSmoothingEnabled = false;
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#87ceeb';
+                ctx.fillRect(0, 0, canvas.width, canvas.height - GROUND_OFFSET);
+                ctx.fillStyle = '#8b7355';
+                ctx.fillRect(0, canvas.height - GROUND_OFFSET, canvas.width, GROUND_OFFSET);
             }
         }
 
         function gameLoop() {
             if (!gameRunning) return;
 
-            // Clear and draw background
+            if (isPaused) {
+                drawBackground();
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
             drawBackground();
+            ctx.imageSmoothingEnabled = false;
 
-            // Update and draw platforms
-            platforms.forEach(platform => platform.draw());
+            // Update world generation
+            updateWorld();
 
-            // Update and draw all entities
+            // Update entities
             player.update();
-            
             bullets.forEach(b => b.update());
             bullets = bullets.filter(b => b.active);
-            
             grenades.forEach(g => g.update());
             grenades = grenades.filter(g => g.active);
-            
             enemyBullets.forEach(b => b.update());
             enemyBullets = enemyBullets.filter(b => b.active);
-            
             enemies.forEach(e => e.update());
-            
             particles.forEach(p => p.update());
             particles = particles.filter(p => p.life > 0);
-            
             explosions.forEach(e => e.update());
             explosions = explosions.filter(e => e.life > 0);
+            powerups.forEach(p => p.update());
 
             // Draw everything
+            platforms.forEach(platform => platform.draw());
             bullets.forEach(b => b.draw());
             grenades.forEach(g => g.draw());
             enemyBullets.forEach(b => b.draw());
-            enemies.forEach(e => e.draw());
             explosions.forEach(e => e.draw());
             particles.forEach(p => p.draw());
-            player.draw();
+            powerups.forEach(p => p.draw());
 
-            // Check victory condition
-            checkVictory();
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            enemies.forEach(e => e.draw());
+            player.draw();
+            ctx.restore();
+
+            // GLOBAL DEBUG OVERLAY - BYPASSING ALL CLASS LOGIC
+            // This is drawn LAST to ensure it is on top of everything
+            ctx.save();
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
+            enemies.forEach(e => {
+                const sx = e.x - cameraX;
+                if (sx > -100 && sx < canvas.width + 100 && !e.dead) {
+                    ctx.beginPath();
+                    ctx.arc(sx + e.width / 2, e.y + e.height / 2, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                    // Draw X coordinate text check
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(`ID: ${e.type}`, sx, e.y - 10);
+                }
+            });
+            ctx.restore();
 
             requestAnimationFrame(gameLoop);
         }
 
-        // Controls
-        document.addEventListener('keydown', (e) => {
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
-                e.preventDefault();
-            }
-            keys[e.key.toLowerCase()] = true;
+        window.addEventListener('click', () => { window.focus(); });
+
+        let isPaused = true;
+
+        const overlay = document.getElementById('startOverlay');
+        overlay.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            isPaused = false;
+            window.focus();
+            initializeWorld();
         });
 
-        document.addEventListener('keyup', (e) => {
-            keys[e.key.toLowerCase()] = false;
-        });
-
-        // Start game
         updateHUD();
         gameLoop();
     </script>
 </body>
+
 </html>

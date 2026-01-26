@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Racer Turbo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-style: italic;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            pointer-events: none;
+        }
+
+        .hud-value {
+            font-size: 42px;
+            font-weight: 900;
+            color: #0ff;
+        }
+
+        .hud-label {
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 2px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px 60px;
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            display: none;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        #gameOver h2 {
+            font-size: 64px;
+            color: #ff0055;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #0ff, #0088ff);
+            color: #000;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #0ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div id="ui">
+                <div><span id="speed" class="hud-value">0</span> <span class="hud-label">KM/H</span></div>
+                <div><span id="score" class="hud-value" style="color:#ff00ff">0</span> <span
+                        class="hud-label">SCORE</span></div>
+                <div><span id="pos" class="hud-value">51</span><span style="font-size:24px">/51</span> <span
+                        class="hud-label">POS</span></div>
+                <div><span id="dist" class="hud-value">0</span> <span class="hud-label">DIST</span></div>
+            </div>
+            <div id="nearMiss"
+                style="position: absolute; top: 30%; left: 50%; transform: translateX(-50%); color: #ff0; font-size: 48px; font-weight: 900; display: none; text-shadow: 0 0 20px #ff0;">
+                NEAR MISS! +500
+            </div>
+            <div id="startOverlay"
+                style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#fff; font-size:32px; font-weight:900; background:rgba(0,0,0,0.7); padding:20px; text-transform:uppercase; pointer-events:none; border: 2px solid #0ff;">
+                Click to Start Engines!
+            </div>
+            <div id="gameOver">
+                <h2>Finish!</h2>
+                <p id="finalStats" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></p>
+                <button onclick="resetGame()">Race Again</button>
+            </div>
+        </div>
+
+        <script>
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Config
+            const FPS = 60;
+            const STEP = 1 / FPS;
+            const width = 1024;
+            const height = 768;
+            const roadWidth = 2000;
+            const segmentLength = 200;
+            const rumbleLength = 3;
+            const lanes = 3;
+            const fieldOfView = 100;
+            const cameraHeight = 1000;
+            const cameraDepth = 1 / Math.tan((fieldOfView / 2) * Math.PI / 180);
+            const drawDistance = 300;
+            const fogDensity = 5;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // State
+            let speed = 0;
+            let position = 0;
+            let playerX = 0;
+            let playerZ = 0;
+            const maxSpeed = 600; // EXTREME SPEED
+            const accel = maxSpeed / 2.0; // Instant torque
+            const breaking = -maxSpeed;
+            const decel = -maxSpeed / 5;
+            const offRoadDecel = -maxSpeed / 3;
+            const offRoadLimit = maxSpeed / 4;
+
+            let segments = [];
+            let cars = [];
+            let keyLeft = false;
+            let keyRight = false;
+            let keyFaster = false;
+            let keySlower = false;
+            let lastTime = 0;
+            let gameActive = true;
+            let countdown = 3;
+            let countdownTimer = 0;
+            let playerXSmooth = 0; // For camera lag
+            let score = 0;
+            let nearMissCombo = 0;
+
+            // --- AUDIO ENGINE ---
+            const Audio = {
+                ctx: null,
+                engineOsc: null,
+                gainNode: null,
+                init: function () {
+                    if (this.ctx) return;
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+                    // Engine Sound
+                    this.engineOsc = this.ctx.createOscillator();
+                    this.gainNode = this.ctx.createGain();
+
+                    this.engineOsc.type = 'sawtooth';
+                    this.engineOsc.frequency.value = 100;
+
+                    // Low pass filter to muffle raw sawtooth
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 400;
+
+                    this.engineOsc.connect(filter);
+                    filter.connect(this.gainNode);
+                    this.gainNode.connect(this.ctx.destination);
+
+                    this.gainNode.gain.value = 0; // Muted start
+                    this.engineOsc.start();
+                },
+                update: function (speedRatio) {
+                    if (!this.ctx) return;
+                    // Pitch based on speed
+                    this.engineOsc.frequency.setValueAtTime(100 + (speedRatio * 600), this.ctx.currentTime);
+                    // Volume based on speed/idle
+                    const vol = 0.1 + (speedRatio * 0.2);
+                    this.gainNode.gain.setValueAtTime(vol, this.ctx.currentTime);
+                },
+                playCrash: function () {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth'; // Rough sound
+                    osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
+                    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.5);
+                },
+                playPoint: function () {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.1);
+                }
+            };
+
+            // Assets
+            // Procedural generation of sprites would be cool, but simple shapes for now
+
+            // --- UTILS ---
+            function limit(value, min, max) { return Math.max(min, Math.min(value, max)); }
+            function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+            function randomChoice(options) { return options[randomInt(0, options.length - 1)]; }
+            function easeIn(a, b, percent) { return a + (b - a) * Math.pow(percent, 2); }
+            function easeOut(a, b, percent) { return a + (b - a) * (1 - Math.pow(1 - percent, 2)); }
+            function easeInOut(a, b, percent) { return a + (b - a) * ((-Math.cos(percent * Math.PI) / 2) + 0.5); }
+
+            // --- GAME LOGIC ---
+            function resetGame() {
+                segments = [];
+                cars = [];
+                speed = 0;
+                position = 0;
+                playerX = 0;
+                playerZ = 0;
+                playerZ = 0;
+                score = 0;
+                gameActive = true;
+                countdown = 3;
+                countdownTimer = 3; // Seconds
+                document.getElementById('gameOver').style.display = 'none';
+                document.getElementById('startOverlay').style.display = 'none';
+
+                // Build Road
+                createRoad();
+
+                // Add Cars - HYPER GRID START
+                for (let i = 0; i < 50; i++) {
+                    const z = (i * 100) + 100; // Right in your face!
+                    const carSpeed = randomInt(400, 580); // Extreme competition
+                    const lane = randomChoice([-0.7, 0, 0.7]);
+                    cars.push({
+                        offset: lane,
+                        z: z,
+                        speed: carSpeed,
+                        sprite: randomChoice(['CAR01', 'CAR02', 'CAR03', 'CAR04']),
+                        color: randomChoice(['#ff0055', '#00ffaa', '#ffff00', '#5500ff'])
+                    });
+                }
+            }
+
+            function createRoad() {
+                const numSegments = 2000;
+                for (let i = 0; i < numSegments; i++) {
+                    const color = Math.floor(i / rumbleLength) % 2 ? 'DARK' : 'LIGHT';
+
+                    // Add Curves
+                    let curve = 0;
+                    let y = 0;
+                    if (i > 200 && i < 400) curve = 2;
+                    if (i > 500 && i < 700) curve = -2;
+                    if (i > 900 && i < 1500) curve = 4; // Long curve
+                    if (i > 1600) curve = -3;
+
+                    // Hills (simple y offset for now)
+                    if (i > 300 && i < 600) y = Math.sin(i / 30) * 1500;
+
+                    segments.push({
+                        index: i,
+                        p1: { world: { y: y, z: i * segmentLength }, camera: {}, screen: {} },
+                        p2: { world: { y: y, z: (i + 1) * segmentLength }, camera: {}, screen: {} },
+                        curve: curve,
+                        color: color
+                    });
+                }
+            }
+
+            function update(dt) {
+                if (!gameActive) return;
+
+                // Countdown Logic
+                if (countdown > -1) {
+                    countdownTimer -= dt;
+                    if (countdownTimer < 2 && countdown === 3) countdown = 2;
+                    if (countdownTimer < 1 && countdown === 2) countdown = 1;
+                    if (countdownTimer < 0 && countdown === 1) countdown = 0; // GO
+                    if (countdownTimer < -1 && countdown === 0) countdown = -1; // End
+                    if (countdown > 0) return; // Don't move yet
+                }
+
+                const speedMultiplier = 3.0; // HYPER SPEED VISUALS
+                position = (position + speed * dt * speedMultiplier) % (segments.length * segmentLength);
+                playerZ += speed * dt * speedMultiplier; // Total distance
+
+                const currentSegmentIndex = Math.floor(position / segmentLength);
+                const currentSegment = segments[currentSegmentIndex];
+
+                // Speed Control
+                const speedRatio = speed / maxSpeed;
+                const dx = dt * 3.5 * speedRatio; // Hyper agility
+
+                if (keyLeft) playerX = playerX - dx;
+                else if (keyRight) playerX = playerX + dx;
+
+                // Centrifugal force (Reduced drastically from 2 to 0.3)
+                playerX = playerX - (dx * speedRatio * currentSegment.curve * 0.3);
+
+                // Steering Assist (Helps stay on track)
+                // If curve is Right (positive), assist moves Player Right (positive)
+                playerX = playerX + (dx * speedRatio * currentSegment.curve * 0.15); // Assist
+
+                // Smooth Clamp logic to prevent sticky offroad
+                if (playerX < -2.5) playerX = -2.5;
+                if (playerX > 2.5) playerX = 2.5;
+
+                if (keyFaster) speed = limit(speed + accel * dt, 0, maxSpeed);
+                else if (keySlower) speed = limit(speed + breaking * dt, 0, maxSpeed);
+                else speed = limit(speed + decel * dt, 0, maxSpeed);
+
+                // Offroad physics
+                if ((playerX < -1 || playerX > 1) && speed > offRoadLimit)
+                    speed = limit(speed + offRoadDecel * dt, 0, maxSpeed);
+
+                playerX = limit(playerX, -2, 2);
+
+                // AI Cars update
+                for (let i = 0; i < cars.length; i++) {
+                    let car = cars[i];
+                    // Simple AI movement
+                    const segment = segments[Math.floor(car.z / segmentLength) % segments.length];
+
+                    // Curve handling
+                    if (segment.curve > 2) car.offset -= dt * 0.5;
+                    if (segment.curve < -2) car.offset += dt * 0.5;
+                    car.offset = limit(car.offset, -0.8, 0.8);
+
+                    // Move forward
+                    car.z = (car.z + car.speed * dt * speedMultiplier); // Apply multiplier to cars too!
+
+                    // Collision check (Very simple box)
+                    // Collision check (Very simple box)
+                    if (car.z > position - segmentLength && car.z < position + segmentLength) {
+                        // Check X overlap
+                        const widthOverlap = 0.6; // Car width
+                        if (Math.abs(car.offset - playerX) < widthOverlap) {
+                            // CRASH
+                            if (speed > 100) Audio.playCrash();
+                            speed = speed * 0.5; // Slow down massively
+                            // Push away
+                            if (playerX > car.offset) playerX += 0.5; else playerX -= 0.5;
+                            nearMissCombo = 0;
+                        } else if (Math.abs(car.offset - playerX) < widthOverlap + 0.5) {
+                            // NEAR MISS
+                            if (!car.nearMissed && speed > 300) {
+                                car.nearMissed = true;
+                                score += 500;
+                                nearMissCombo++;
+                                Audio.playPoint();
+
+                                // Show UI
+                                const nm = document.getElementById('nearMiss');
+                                nm.style.display = 'block';
+                                nm.innerText = `NEAR MISS! +500`;
+                                setTimeout(() => nm.style.display = 'none', 800);
+                            }
+                        }
+                    }
+                }
+
+                // Audio Update
+                Audio.update(speed / maxSpeed);
+
+                // Score based on distance + speed
+                if (speed > 0) score += Math.floor(speed * dt * 0.1);
+
+                // UI Update
+                document.getElementById('speed').innerText = Math.floor(speed);
+                document.getElementById('score').innerText = Math.floor(score);
+                document.getElementById('dist').innerText = Math.floor(playerZ / 1000);
+
+                // Calc Position
+                let racePos = 1;
+                for (let c of cars) {
+                    if (c.z > playerZ) racePos++;
+                }
+                document.getElementById('pos').innerText = racePos;
+
+                // Finish Line
+                if (playerZ > segments.length * segmentLength) {
+                    gameActive = false;
+                    document.getElementById('finalStats').innerHTML = `Position: <span style="color:#0ff; font-weight:bold">${racePos}</span> / 51`;
+                    document.getElementById('gameOver').style.display = 'block';
+                }
+            }
+
+            // --- RENDER ---
+            function project(p, cameraX, cameraY, cameraZ, cameraDepth, width, height, roadWidth) {
+                p.camera.x = (p.world.x || 0) - cameraX;
+                p.camera.y = (p.world.y || 0) - cameraY;
+                p.camera.z = (p.world.z || 0) - cameraZ;
+
+                // Loop adjustment
+                if (p.camera.z < 0) {
+                    // For infinite looping track logic (not fully implemented here)
+                    // p.camera.z += segments.length * segmentLength; 
+                }
+
+                p.screen.scale = cameraDepth / p.camera.z;
+                p.screen.x = Math.round((width / 2) + (p.screen.scale * p.camera.x * width / 2));
+                p.screen.y = Math.round((height / 2) - (p.screen.scale * p.camera.y * height / 2));
+                p.screen.w = Math.round((p.screen.scale * roadWidth * width / 2));
+            }
+
+            function renderPolygon(x1, y1, x2, y2, x3, y3, x4, y4, color) {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineTo(x3, y3);
+                ctx.lineTo(x4, y4);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            function renderSegment(segment) {
+                const x1 = segment.p1.screen.x;
+                const y1 = segment.p1.screen.y;
+                const w1 = segment.p1.screen.w;
+                const x2 = segment.p2.screen.x;
+                const y2 = segment.p2.screen.y;
+                const w2 = segment.p2.screen.w;
+
+                const r1 = w1 / 5; // ULTRA WIDE RUMBLE
+                const r2 = w2 / 5;
+                const l1 = w1 / 40;
+                const l2 = w2 / 40;
+
+                // Colors - NEON STYLE
+                const grassColor = Math.floor(segment.index / 20) % 2 ? '#0a1a0a' : '#0f2f0f'; // Darker grass for contrast
+                const rumbleColor = segment.color === 'DARK' ? '#ff00ff' : '#00ffff'; // Neon Magenta / Cyan
+                const roadColor = segment.color === 'DARK' ? '#222' : '#2a2a2a'; // Dark asphalt
+                const laneColor = segment.color === 'DARK' ? '#ffffff' : 'rgba(0,0,0,0)';
+
+                // Grass
+                ctx.fillStyle = grassColor;
+                ctx.fillRect(0, y2, width, y1 - y2);
+
+                // Rumble Strips
+                renderPolygon(x1 - w1 - r1, y1, x1 - w1, y1, x2 - w2, y2, x2 - w2 - r2, y2, rumbleColor);
+                renderPolygon(x1 + w1 + r1, y1, x1 + w1, y1, x2 + w2, y2, x2 + w2 + r2, y2, rumbleColor);
+
+                // Road
+                renderPolygon(x1 - w1, y1, x1 + w1, y1, x2 + w2, y2, x2 - w2, y2, roadColor);
+
+                // Lanes
+                if (laneColor) {
+                    const lanew1 = w1 * 2 / lanes;
+                    const lanew2 = w2 * 2 / lanes;
+                    let lanex1 = x1 - w1 + lanew1;
+                    let lanex2 = x2 - w2 + lanew2;
+
+                    for (let i = 1; i < lanes; i++) {
+                        renderPolygon(lanex1 - l1 / 2, y1, lanex1 + l1 / 2, y1, lanex2 + l2 / 2, y2, lanex2 - l2 / 2, y2, laneColor);
+                        lanex1 += lanew1;
+                        lanex2 += lanew2;
+                    }
+                }
+            }
+
+            function drawCar(car) {
+                // Find which segment the car is in
+                const segmentIndex = Math.floor(car.z / segmentLength) % segments.length;
+                const segment = segments[segmentIndex];
+
+                // Calculate screen position
+                const carPercent = (car.z % segmentLength) / segmentLength; // Interpolation?
+
+                // Use projected P1
+                const p1 = segment.p1;
+
+                // Relative Z
+                const relZ = car.z - ((position < car.z) ? position : (position - segments.length * segmentLength));
+                // Wait, simple projection:
+                // We need to project the car based on camera position
+                // Just reuse project logic but for point
+
+                // Reuse segment projected values for ease, interpolate between P1 and P2
+                const scale = p1.screen.scale; // Approx
+                const spriteX = p1.screen.x + (scale * car.offset * roadWidth * width / 2);
+                const spriteY = p1.screen.y;
+
+                // Draw Sprite
+                const spriteW = 150 * scale * 4; // Scale factor
+                const spriteH = 80 * scale * 4;
+
+                // Simple Car Body
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(spriteX - spriteW / 2 + 5, spriteY - spriteH, spriteW, spriteH / 3);
+
+                // Body
+                ctx.fillStyle = car.color;
+                ctx.fillRect(spriteX - spriteW / 2, spriteY - spriteH - 5, spriteW, spriteH / 2);
+
+                // Roof
+                ctx.fillStyle = '#111';
+                ctx.fillRect(spriteX - spriteW / 4, spriteY - spriteH * 1.4, spriteW / 2, spriteH / 2);
+
+                // Lights
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(spriteX - spriteW / 2.2, spriteY - spriteH - 5, spriteW / 6, spriteH / 6);
+                ctx.fillRect(spriteX + spriteW / 2.2 - spriteW / 6, spriteY - spriteH - 5, spriteW / 6, spriteH / 6);
+            }
+
+            function drawPlayer() {
+                const spriteW = 350;
+                const spriteH = 180;
+                const spriteX = width / 2;
+                const spriteY = height;
+
+                ctx.save();
+                ctx.translate(spriteX, spriteY);
+
+                // TILT ANIMATION
+                if (keyLeft) ctx.rotate(-0.1);
+                if (keyRight) ctx.rotate(0.1);
+
+                ctx.translate(-spriteX, -spriteY);
+
+                // Turbo Flame
+                if (keyFaster && Math.random() > 0.5) {
+                    ctx.fillStyle = '#0ff';
+                    ctx.beginPath();
+                    ctx.moveTo(spriteX - 80, spriteY - 80);
+                    ctx.lineTo(spriteX - 60, spriteY - 40);
+                    ctx.lineTo(spriteX - 100, spriteY - 40);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(spriteX + 80, spriteY - 80);
+                    ctx.lineTo(spriteX + 60, spriteY - 40);
+                    ctx.lineTo(spriteX + 100, spriteY - 40);
+                    ctx.fill();
+                }
+
+                // Body
+                ctx.fillStyle = '#fff'; // White super car
+                ctx.beginPath();
+                ctx.moveTo(spriteX - 150, spriteY - 30);
+                ctx.lineTo(spriteX - 140, spriteY - 90);
+                ctx.quadraticCurveTo(spriteX, spriteY - 110, spriteX + 140, spriteY - 90); // Curvier rear
+                ctx.lineTo(spriteX + 150, spriteY - 30);
+                ctx.fill();
+
+                // Spoiler
+                ctx.fillStyle = '#111'; // Carbon wings
+                ctx.fillRect(spriteX - 160, spriteY - 100, 320, 15);
+                // Wing tips
+                ctx.fillRect(spriteX - 160, spriteY - 110, 20, 30);
+                ctx.fillRect(spriteX + 140, spriteY - 110, 20, 30);
+
+                // Tail Lights (Glowing)
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#f00';
+                ctx.fillStyle = '#ff0000';
+                // Left Light
+                ctx.fillRect(spriteX - 130, spriteY - 80, 80, 20);
+                // Right Light
+                ctx.fillRect(spriteX + 50, spriteY - 80, 80, 20);
+                ctx.shadowBlur = 0;
+
+                // Exhausts (Flame Logic already exists above but let's draw pipes)
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(spriteX - 80, spriteY - 40, 15, 0, Math.PI * 2);
+                ctx.arc(spriteX + 80, spriteY - 40, 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // License Plate
+                ctx.fillStyle = '#ffcc00';
+                ctx.fillRect(spriteX - 40, spriteY - 70, 80, 25);
+                ctx.fillStyle = '#000';
+                ctx.font = '16px monospace';
+                ctx.fillText("TURBO", spriteX - 25, spriteY - 52);
+
+                // Windshield reflection
+                ctx.fillStyle = 'rgba(200,200,255,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(spriteX - 70, spriteY - 100);
+                ctx.lineTo(spriteX - 50, spriteY - 140);
+                ctx.lineTo(spriteX + 50, spriteY - 140);
+                ctx.lineTo(spriteX + 70, spriteY - 100);
+                ctx.fill();
+
+                // Tires
+                ctx.fillStyle = '#111';
+                ctx.fillRect(spriteX - 160, spriteY - 50, 45, 50);
+                ctx.fillRect(spriteX + 115, spriteY - 50, 45, 50);
+
+                ctx.restore();
+            }
+
+            function render() {
+                // Background (Parallax Sky)
+                const skyOffset = playerX * 100; // Fake parallax
+                ctx.fillStyle = '#051b3b'; // Dark Blue Night
+                ctx.fillRect(0, 0, width, height);
+
+                // Sunset/Moon
+                ctx.fillStyle = 'rgba(255, 0, 100, 0.2)';
+                ctx.beginPath();
+                ctx.arc(width / 2 - skyOffset / 5, height / 2, 300, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Stars
+                ctx.fillStyle = '#fff';
+                if (Math.random() > 0.9) ctx.fillRect(randomInt(0, width), randomInt(0, height / 2), 2, 2);
+
+                // Base segment
+                const baseSegment = segments[Math.floor(position / segmentLength) % segments.length];
+                const basePercent = (position % segmentLength) / segmentLength;
+
+                let maxY = height;
+                let x = 0;
+                let dx = -(baseSegment.curve * basePercent);
+
+                // Draw Road
+                for (let n = 0; n < drawDistance; n++) {
+                    const segmentIndex = (baseSegment.index + n) % segments.length;
+                    const segment = segments[segmentIndex];
+
+                    segment.looped = segment.index < baseSegment.index;
+                    const cameraZ = (position % (segments.length * segmentLength)); // Loop check?
+
+                    // World coordinate projection
+                    let projectZ = (segment.index * segmentLength) - position;
+                    if (projectZ < 0) projectZ += segments.length * segmentLength;
+
+                    // Camera Lag
+                    playerXSmooth = playerXSmooth + (playerX - playerXSmooth) * 0.1;
+
+                    project(segment.p1, (playerXSmooth * roadWidth) - x, cameraHeight, position - (segment.looped ? segments.length * segmentLength : 0), cameraDepth, width, height, roadWidth);
+                    project(segment.p2, (playerXSmooth * roadWidth) - x - dx, cameraHeight, position - (segment.looped ? segments.length * segmentLength : 0), cameraDepth, width, height, roadWidth);
+
+                    x += dx;
+                    dx += segment.curve;
+
+                    // Clip behind camera or too far
+                    if (segment.p1.camera.z <= cameraDepth || segment.p2.screen.y >= maxY || segment.p2.screen.y >= segment.p1.screen.y)
+                        continue;
+
+                    renderSegment(segment);
+                    maxY = segment.p1.screen.y;
+                }
+
+                // Draw Cars (Back to Front)
+                // Filter visible cars
+                const visibleCars = cars.filter(c => c.z > position && c.z < position + 100 * segmentLength); // Simple cull
+                visibleCars.sort((a, b) => b.z - a.z); // Far ones first
+
+                for (let car of visibleCars) {
+                    drawCar(car);
+                }
+
+                drawPlayer();
+
+                // Speed Lines (Visual Effect)
+                if (speed > 100) {
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.5, (speed / maxSpeed) * 0.5)})`;
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 10; i++) {
+                        const x = randomInt(0, width);
+                        const y = randomInt(0, height);
+                        // Draw streaks from center
+                        const cx = width / 2;
+                        const cy = height / 2;
+                        const angle = Math.atan2(y - cy, x - cx);
+                        const len = (speed / maxSpeed) * 50;
+
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+                        ctx.stroke();
+                    }
+                }
+
+                // Countdown UI
+                if (countdown > 0) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.fillStyle = '#ff0055';
+                    ctx.font = '900 120px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(countdown, width / 2, height / 2);
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#fff';
+                    ctx.strokeText(countdown, width / 2, height / 2);
+                } else if (countdown === 0) {
+                    ctx.fillStyle = '#0f0';
+                    ctx.font = '900 120px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("GO!", width / 2, height / 2);
+                }
+            }
+
+            // Loop
+            function frame(time) {
+                const dt = Math.min(1, (time - lastTime) / 1000); // Limit dt
+                lastTime = time;
+
+                update(dt);
+                render();
+                requestAnimationFrame(frame);
+            }
+
+            // Controls
+            document.addEventListener('keydown', e => {
+                switch (e.key) {
+                    case 'ArrowLeft': keyLeft = true; break;
+                    case 'ArrowRight': keyRight = true; break;
+                    case 'ArrowUp': keyFaster = true; break;
+                    case 'ArrowDown': keySlower = true; break;
+                }
+            });
+
+            document.addEventListener('keyup', e => {
+                switch (e.key) {
+                    case 'ArrowLeft': keyLeft = false; break;
+                    case 'ArrowRight': keyRight = false; break;
+                    case 'ArrowUp': keyFaster = false; break;
+                    case 'ArrowDown': keySlower = false; break;
+                }
+            });
+
+            // Focus handler
+            window.addEventListener('click', () => {
+                window.focus();
+                Audio.init(); // Start Audio Context on user gesture
+                if (countdownTimer > 2.8) resetGame(); // Only reset if start
+                document.getElementById('startOverlay').style.display = 'none';
+            });
+            window.onload = () => window.focus();
+
+            resetGame();
+            requestAnimationFrame(frame);
+
+        </script>
+</body>
+
+</html>

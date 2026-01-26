@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deja Vu - A Horror Experience</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #clock {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 48px;
+            color: #ff0000;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            font-family: 'Courier New', monospace;
+            letter-spacing: 8px;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+        }
+
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 9px;
+        }
+
+        #crosshair.interact {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+        }
+
+        #interactPrompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #interactPrompt.show {
+            opacity: 1;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #fff;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px 50px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.6;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        #message.show {
+            opacity: 1;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        #loopCounter {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            color: #888;
+            text-align: center;
+        }
+
+        #inventory {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        #inventory.show {
+            display: block;
+        }
+
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: all;
+        }
+
+        #startScreen h1 {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #ff0000;
+            text-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        }
+
+        #startScreen p {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 40px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        #startButton {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            pointer-events: all;
+            transition: all 0.3s;
+        }
+
+        #startButton:hover {
+            background: #cc0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .glitch {
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>DEJA VU</h1>
+        <p>
+            You wake up in your room at 3:00 AM, just another restless night—or so you think. 
+            But as you drift back to sleep, time refuses to move forward. Waking up again, you 
+            find something missing, and the unease grows. Reality bends, and you're no longer 
+            sure if you're dreaming or trapped in something far worse.
+        </p>
+        <button id="startButton">Wake Up</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="clock">3:00 AM</div>
+        <div id="loopCounter"></div>
+        <div id="crosshair"></div>
+        <div id="interactPrompt"></div>
+        <div id="message"></div>
+        <div id="inventory"></div>
+        <div id="controls">
+            WASD - Move | Mouse - Look | E - Interact/Pick Up | Space - Go Back to Sleep | Left Click - Throw
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let prevTime = performance.now();
+        let isLocked = false;
+        let loop = 0;
+        let gameStarted = false;
+        let canSleep = false;
+        let objects = [];
+        let interactables = [];
+        let pickableObjects = [];
+        let lights = [];
+        let heldObject = null;
+        let lookTarget = null;
+        
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        const PI_2 = Math.PI / 2;
+
+        const stories = [
+            "You wake up. Everything seems normal... or does it?",
+            "You wake up again. The lamp is gone. Where did it go?",
+            "You wake up. Your desk is empty. Nothing makes sense.",
+            "You wake up. The walls are getting darker. This isn't right.",
+            "You wake up. The room is smaller. Much smaller.",
+            "You wake up. Everything is red. Something is very wrong.",
+            "You wake up. There is no escape. There never was."
+        ];
+
+        // Start game
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            gameStarted = true;
+            init();
+            lockPointer();
+        });
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 1, 20);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 0);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            createRoom();
+            startLoop();
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('click', onClick);
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function createRoom() {
+            objects.forEach(obj => scene.remove(obj));
+            objects = [];
+            interactables = [];
+            pickableObjects = [];
+            lights.forEach(light => scene.remove(light));
+            lights = [];
+
+            const intensity = Math.max(0.3, 1 - loop * 0.15);
+            const roomColor = loop < 5 ? 0x2a2a2a : 0x1a0000;
+
+            // Floor
+            const floorGeometry = new THREE.PlaneGeometry(10, 10);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: roomColor,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            objects.push(floor);
+
+            // Ceiling
+            const ceiling = new THREE.Mesh(floorGeometry, floorMaterial);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.y = 3;
+            scene.add(ceiling);
+            objects.push(ceiling);
+
+            // Walls
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: roomColor });
+            
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial);
+            backWall.position.set(0, 1.5, -5);
+            backWall.receiveShadow = true;
+            scene.add(backWall);
+            objects.push(backWall);
+
+            const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial);
+            frontWall.position.set(0, 1.5, 5);
+            frontWall.rotation.y = Math.PI;
+            scene.add(frontWall);
+            objects.push(frontWall);
+
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial);
+            leftWall.position.set(-5, 1.5, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            scene.add(leftWall);
+            objects.push(leftWall);
+
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), wallMaterial);
+            rightWall.position.set(5, 1.5, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            scene.add(rightWall);
+            objects.push(rightWall);
+
+            // Bed
+            const bedFrame = new THREE.Mesh(
+                new THREE.BoxGeometry(2.2, 0.5, 3.2),
+                new THREE.MeshStandardMaterial({ color: loop > 4 ? 0x330000 : 0x3a2a1a })
+            );
+            bedFrame.position.set(3, 0.25, -3);
+            bedFrame.castShadow = true;
+            bedFrame.receiveShadow = true;
+            scene.add(bedFrame);
+            objects.push(bedFrame);
+
+            const mattress = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 0.3, 3),
+                new THREE.MeshStandardMaterial({ color: loop > 4 ? 0x550000 : 0x666666 })
+            );
+            mattress.position.set(3, 0.65, -3);
+            mattress.castShadow = true;
+            mattress.userData = { name: 'bed', interactable: true, type: 'bed' };
+            scene.add(mattress);
+            objects.push(mattress);
+            interactables.push(mattress);
+
+            // Pillow
+            const pillow = new THREE.Mesh(
+                new THREE.BoxGeometry(0.6, 0.2, 0.4),
+                new THREE.MeshStandardMaterial({ color: 0xeeeeee })
+            );
+            pillow.position.set(3, 0.9, -4);
+            pillow.castShadow = true;
+            scene.add(pillow);
+            objects.push(pillow);
+
+            // Desk (removed after loop 1)
+            if (loop < 2) {
+                const deskTop = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.8, 0.1, 0.9),
+                    new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
+                );
+                deskTop.position.set(-3, 0.75, -3);
+                deskTop.castShadow = true;
+                deskTop.receiveShadow = true;
+                scene.add(deskTop);
+                objects.push(deskTop);
+
+                // Desk legs
+                for (let i = 0; i < 4; i++) {
+                    const leg = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.1, 0.75, 0.1),
+                        new THREE.MeshStandardMaterial({ color: 0x3a2a1a })
+                    );
+                    const x = i % 2 === 0 ? -0.8 : 0.8;
+                    const z = i < 2 ? -0.4 : 0.4;
+                    leg.position.set(-3 + x, 0.375, -3 + z);
+                    leg.castShadow = true;
+                    scene.add(leg);
+                    objects.push(leg);
+                }
+
+                // Book on desk
+                const book = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.15, 0.2, 0.25),
+                    new THREE.MeshStandardMaterial({ color: 0x8B0000 })
+                );
+                book.position.set(-3.3, 0.9, -3);
+                book.castShadow = true;
+                book.userData = { 
+                    name: 'book', 
+                    interactable: true, 
+                    pickable: true,
+                    type: 'item'
+                };
+                scene.add(book);
+                objects.push(book);
+                interactables.push(book);
+                pickableObjects.push(book);
+            }
+
+            // Lamp (removed after loop 0)
+            if (loop < 1) {
+                const lampBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.15, 0.15, 0.3, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x2a2a2a })
+                );
+                lampBase.position.set(-2.5, 0.95, -3);
+                lampBase.castShadow = true;
+                lampBase.userData = {
+                    name: 'lamp_base',
+                    interactable: true,
+                    pickable: true,
+                    type: 'item'
+                };
+                scene.add(lampBase);
+                objects.push(lampBase);
+                interactables.push(lampBase);
+                pickableObjects.push(lampBase);
+
+                const lampShade = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.3, 0.4, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffddaa })
+                );
+                lampShade.position.set(-2.5, 1.4, -3);
+                lampShade.castShadow = true;
+                scene.add(lampShade);
+                objects.push(lampShade);
+
+                const lampLight = new THREE.PointLight(0xffddaa, 0.6, 6);
+                lampLight.position.set(-2.5, 1.4, -3);
+                lampLight.castShadow = true;
+                scene.add(lampLight);
+                lights.push(lampLight);
+            }
+
+            // Small objects
+            if (loop < 3) {
+                // Clock
+                const clock = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x222222 })
+                );
+                clock.rotation.x = Math.PI / 2;
+                clock.position.set(-3.5, 0.85, -2.5);
+                clock.castShadow = true;
+                clock.userData = {
+                    name: 'clock',
+                    interactable: true,
+                    pickable: true,
+                    type: 'item'
+                };
+                scene.add(clock);
+                objects.push(clock);
+                interactables.push(clock);
+                pickableObjects.push(clock);
+
+                // Cup
+                const cup = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.06, 0.15, 16),
+                    new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+                );
+                cup.position.set(-2.7, 0.875, -2.5);
+                cup.castShadow = true;
+                cup.userData = {
+                    name: 'cup',
+                    interactable: true,
+                    pickable: true,
+                    type: 'item'
+                };
+                scene.add(cup);
+                objects.push(cup);
+                interactables.push(cup);
+                pickableObjects.push(cup);
+            }
+
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(loop > 4 ? 0xff0000 : 0xffffff, intensity);
+            scene.add(ambientLight);
+            lights.push(ambientLight);
+
+            // Directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, intensity * 0.8);
+            directionalLight.position.set(2, 4, 2);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            lights.push(directionalLight);
+
+            if (loop > 3) {
+                const redLight = new THREE.PointLight(0xff0000, 1, 15);
+                redLight.position.set(0, 2.5, 0);
+                scene.add(redLight);
+                lights.push(redLight);
+            }
+        }
+
+        function startLoop() {
+            showMessage(stories[Math.min(loop, stories.length - 1)], 3000);
+            document.getElementById('loopCounter').textContent = `Loop ${loop + 1}`;
+            
+            if (loop > 0) {
+                document.getElementById('clock').classList.add('glitch');
+                setTimeout(() => {
+                    document.getElementById('clock').classList.remove('glitch');
+                }, 2000);
+            }
+
+            canSleep = true;
+            heldObject = null;
+            updateInventory();
+        }
+
+        function sleep() {
+            if (!canSleep) return;
+            
+            canSleep = false;
+            showMessage("Going back to sleep...", 2000);
+            
+            setTimeout(() => {
+                loop++;
+                camera.position.set(0, 1.6, 0);
+                euler.set(0, 0, 0);
+                createRoom();
+                startLoop();
+            }, 2000);
+        }
+
+        function showMessage(text, duration) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.classList.add('show');
+            
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, duration);
+        }
+
+        function lockPointer() {
+            const canvas = document.getElementById('gameCanvas');
+            canvas.requestPointerLock();
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = document.pointerLockElement === document.getElementById('gameCanvas');
+        });
+
+        function checkLookTarget() {
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+            
+            const intersects = raycaster.intersectObjects(interactables);
+            
+            const crosshair = document.getElementById('crosshair');
+            const prompt = document.getElementById('interactPrompt');
+            
+            if (intersects.length > 0 && intersects[0].distance < 3) {
+                lookTarget = intersects[0].object;
+                crosshair.classList.add('interact');
+                
+                if (lookTarget.userData.type === 'bed') {
+                    prompt.textContent = 'Press E to examine bed | Press SPACE to sleep';
+                } else if (lookTarget.userData.pickable) {
+                    prompt.textContent = `Press E to pick up ${lookTarget.userData.name}`;
+                } else {
+                    prompt.textContent = 'Press E to interact';
+                }
+                prompt.classList.add('show');
+            } else {
+                lookTarget = null;
+                crosshair.classList.remove('interact');
+                prompt.classList.remove('show');
+            }
+        }
+
+        function interact() {
+            if (!lookTarget) return;
+            
+            if (lookTarget.userData.type === 'bed') {
+                showMessage("The bed feels cold and unwelcoming...", 2000);
+            } else if (lookTarget.userData.pickable && !heldObject) {
+                pickUpObject(lookTarget);
+            }
+        }
+
+        function pickUpObject(object) {
+            heldObject = object;
+            scene.remove(object);
+            interactables = interactables.filter(obj => obj !== object);
+            pickableObjects = pickableObjects.filter(obj => obj !== object);
+            updateInventory();
+            showMessage(`Picked up ${object.userData.name}`, 1500);
+        }
+
+        function throwObject() {
+            if (!heldObject) return;
+            
+            const throwPos = camera.position.clone();
+            throwPos.add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1));
+            
+            heldObject.position.copy(throwPos);
+            scene.add(heldObject);
+            interactables.push(heldObject);
+            pickableObjects.push(heldObject);
+            
+            const throwVel = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(0.3);
+            
+            animateThrow(heldObject, throwVel);
+            
+            showMessage(`Threw ${heldObject.userData.name}`, 1000);
+            heldObject = null;
+            updateInventory();
+        }
+
+        function animateThrow(object, velocity) {
+            let iterations = 0;
+            const maxIterations = 60;
+            
+            const throwInterval = setInterval(() => {
+                object.position.add(velocity);
+                velocity.y -= 0.02; // Gravity
+                
+                if (object.position.y < 0.2) {
+                    object.position.y = 0.2;
+                    clearInterval(throwInterval);
+                }
+                
+                iterations++;
+                if (iterations >= maxIterations) {
+                    clearInterval(throwInterval);
+                }
+            }, 16);
+        }
+
+        function updateInventory() {
+            const inv = document.getElementById('inventory');
+            if (heldObject) {
+                inv.textContent = `Holding: ${heldObject.userData.name}`;
+                inv.classList.add('show');
+            } else {
+                inv.classList.remove('show');
+            }
+        }
+
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Space': 
+                    event.preventDefault();
+                    sleep(); 
+                    break;
+                case 'KeyE':
+                    event.preventDefault();
+                    interact();
+                    break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        }
+
+        function onMouseMove(event) {
+            if (!isLocked) return;
+
+            const movementX = event.movementX || 0;
+            const movementY = event.movementY || 0;
+
+            euler.setFromQuaternion(camera.quaternion);
+            euler.y -= movementX * 0.002;
+            euler.x -= movementY * 0.002;
+            euler.x = Math.max(-PI_2, Math.min(PI_2, euler.x));
+            camera.quaternion.setFromEuler(euler);
+        }
+
+        function onClick() {
+            if (!isLocked) {
+                lockPointer();
+            } else if (heldObject) {
+                throwObject();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            if (isLocked) {
+                const speed = 3.0;
+
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                const direction = new THREE.Vector3();
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+                const forward = new THREE.Vector3(0, 0, -1);
+                forward.applyQuaternion(camera.quaternion);
+                forward.y = 0;
+                forward.normalize();
+
+                const right = new THREE.Vector3(1, 0, 0);
+                right.applyQuaternion(camera.quaternion);
+                right.y = 0;
+                right.normalize();
+
+                camera.position.add(forward.multiplyScalar(-velocity.z));
+                camera.position.add(right.multiplyScalar(-velocity.x));
+
+                const boundary = 4.5;
+                camera.position.x = Math.max(-boundary, Math.min(boundary, camera.position.x));
+                camera.position.z = Math.max(-boundary, Math.min(boundary, camera.position.z));
+                camera.position.y = 1.6;
+
+                checkLookTarget();
+            }
+
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

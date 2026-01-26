@@ -11,9 +11,10 @@ const SuperMarioGame = ({ onExit }) => {
     const [gameState, setGameState] = useState('playing'); // playing, gameover, victory
 
     // Game Constants
-    const GRAVITY = 0.6;
-    const JUMP_POWER = -12;
-    const MOVE_SPEED = 4;
+    const GRAVITY = 0.5;
+    const JUMP_POWER = -11.5;
+    const MOVE_SPEED = 1.5;
+    const ACCELERATION = 0.2;
     const TILE_SIZE = 32;
 
     // Refs for mutable game state
@@ -37,7 +38,7 @@ const SuperMarioGame = ({ onExit }) => {
         // --- Game Classes ---
         class Player {
             constructor(x, y) {
-                this.x = x; this.y = y; this.width = 28; this.height = 28;
+                this.x = x; this.y = y; this.width = 36; this.height = 36;
                 this.velocityX = 0; this.velocityY = 0;
                 this.onGround = false; this.facing = 1; this.invincible = false; this.invincibleTimer = 0;
             }
@@ -45,9 +46,17 @@ const SuperMarioGame = ({ onExit }) => {
             update(level, enemies, canvasWidth, canvasHeight) {
                 const keys = gameRef.current.keys;
                 // Movement
-                if (keys['ArrowLeft'] || keys['a']) { this.velocityX = -MOVE_SPEED; this.facing = -1; }
-                else if (keys['ArrowRight'] || keys['d']) { this.velocityX = MOVE_SPEED; this.facing = 1; }
-                else { this.velocityX *= 0.8; }
+                if (keys['ArrowLeft'] || keys['a']) {
+                    this.velocityX -= ACCELERATION;
+                    if (this.velocityX < -MOVE_SPEED) this.velocityX = -MOVE_SPEED;
+                    this.facing = -1;
+                }
+                else if (keys['ArrowRight'] || keys['d']) {
+                    this.velocityX += ACCELERATION;
+                    if (this.velocityX > MOVE_SPEED) this.velocityX = MOVE_SPEED;
+                    this.facing = 1;
+                }
+                else { this.velocityX *= 0.85; }
 
                 // Jump
                 if ((keys[' '] || keys['w'] || keys['ArrowUp']) && this.onGround) { this.velocityY = JUMP_POWER; this.onGround = false; }
@@ -135,16 +144,18 @@ const SuperMarioGame = ({ onExit }) => {
             }
 
             draw(ctx, cameraX) {
-                ctx.save(); ctx.translate(-cameraX, 0);
+                ctx.save();
+                ctx.translate(this.x - cameraX, this.y);
+                ctx.scale(1.3, 1.3); // Scale up by 30%
                 if (!this.invincible || Math.floor(this.invincibleTimer / 5) % 2 === 0) {
-                    // Mario Colors
-                    ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x + 6, this.y + 8, 16, 16);
-                    ctx.fillStyle = '#ffdbac'; ctx.fillRect(this.x + 8, this.y + 2, 12, 10);
-                    ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x + 6, this.y, 16, 4);
-                    ctx.fillStyle = '#000'; ctx.fillRect(this.x + 10, this.y + 5, 2, 2); ctx.fillRect(this.x + 16, this.y + 5, 2, 2);
-                    ctx.fillStyle = '#5c3a21'; ctx.fillRect(this.x + 8, this.y + 8, 12, 2);
-                    ctx.fillStyle = '#0000ff'; ctx.fillRect(this.x + 8, this.y + 24, 5, 4); ctx.fillRect(this.x + 15, this.y + 24, 5, 4);
-                    ctx.fillStyle = '#5c3a21'; ctx.fillRect(this.x + 6, this.y + 24, 7, 4); ctx.fillRect(this.x + 15, this.y + 24, 7, 4);
+                    // Mario Colors (adjusted for local coordinates)
+                    ctx.fillStyle = '#ff0000'; ctx.fillRect(6, 8, 16, 16);
+                    ctx.fillStyle = '#ffdbac'; ctx.fillRect(8, 2, 12, 10);
+                    ctx.fillStyle = '#ff0000'; ctx.fillRect(6, 0, 16, 4);
+                    ctx.fillStyle = '#000'; ctx.fillRect(10, 5, 2, 2); ctx.fillRect(16, 5, 2, 2);
+                    ctx.fillStyle = '#5c3a21'; ctx.fillRect(8, 8, 12, 2);
+                    ctx.fillStyle = '#0000ff'; ctx.fillRect(8, 24, 5, 4); ctx.fillRect(15, 24, 5, 4);
+                    ctx.fillStyle = '#5c3a21'; ctx.fillRect(6, 24, 7, 4); ctx.fillRect(15, 24, 7, 4);
                 }
                 ctx.restore();
             }

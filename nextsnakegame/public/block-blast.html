@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Blast - Puzzle Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --accent-primary: #ff6b6b;
+            --accent-secondary: #4ecdc4;
+            --accent-tertiary: #ffe66d;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0c0;
+            --grid-bg: #0f1419;
+            --block-shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1419 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from {
+                filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.3));
+            }
+            to {
+                filter: drop-shadow(0 0 20px rgba(78, 205, 196, 0.5));
+            }
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .score-item {
+            background: var(--bg-secondary);
+            padding: 15px 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(78, 205, 196, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .score-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .game-container {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            margin-bottom: 25px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            background: var(--grid-bg);
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .cell.filled {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            box-shadow: 0 2px 8px var(--block-shadow),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: blockPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes blockPop {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .cell.clearing {
+            animation: clearPulse 0.5s ease-in-out;
+        }
+
+        @keyframes clearPulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+                filter: brightness(1.5);
+            }
+        }
+
+        .cell.preview {
+            background: rgba(78, 205, 196, 0.3);
+            border: 2px solid var(--accent-secondary);
+        }
+
+        .blocks-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            min-height: 120px;
+            flex-wrap: wrap;
+        }
+
+        .block-wrapper {
+            background: var(--grid-bg);
+            padding: 15px;
+            border-radius: 12px;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid rgba(78, 205, 196, 0.2);
+        }
+
+        .block-wrapper:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .block-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .block-wrapper.used {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .block {
+            display: grid;
+            gap: 3px;
+        }
+
+        .block-cell {
+            width: 25px;
+            height: 25px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 4px;
+            box-shadow: 0 2px 5px var(--block-shadow),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Fredoka', sans-serif;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .game-over-overlay.show {
+            display: flex;
+        }
+
+        .game-over-content {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(78, 205, 196, 0.3);
+            animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .game-over-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .game-over-content p {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            color: var(--text-secondary);
+        }
+
+        .combo-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, var(--accent-tertiary), var(--accent-primary));
+            color: var(--bg-primary);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 2rem;
+            font-weight: 700;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 999;
+            box-shadow: 0 10px 30px rgba(255, 230, 109, 0.5);
+        }
+
+        .combo-notification.show {
+            animation: comboPopup 1s ease-out;
+        }
+
+        @keyframes comboPopup {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            80% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .score-board {
+                gap: 15px;
+            }
+
+            .score-item {
+                padding: 10px 15px;
+            }
+
+            .score-value {
+                font-size: 1.5rem;
+            }
+
+            .game-container {
+                padding: 15px;
+            }
+
+            .block-cell {
+                width: 20px;
+                height: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BLOCK BLAST</h1>
+        </header>
+
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">SCORE</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">BEST</div>
+                <div class="score-value" id="bestScore">0</div>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <div class="grid" id="grid"></div>
+            <div class="blocks-container" id="blocksContainer"></div>
+        </div>
+
+        <div class="controls">
+            <button id="restartBtn">New Game</button>
+        </div>
+    </div>
+
+    <div class="game-over-overlay" id="gameOverOverlay">
+        <div class="game-over-content">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button id="playAgainBtn">Play Again</button>
+        </div>
+    </div>
+
+    <div class="combo-notification" id="comboNotification"></div>
+
+    <script>
+        const GRID_SIZE = 8;
+        const SHAPES = [
+            [[1]],
+            [[1, 1]],
+            [[1], [1]],
+            [[1, 1], [1, 1]],
+            [[1, 1, 1]],
+            [[1], [1], [1]],
+            [[1, 1, 1], [1, 1, 1]],
+            [[1, 1], [1, 1], [1, 1]],
+            [[1, 0], [1, 1]],
+            [[0, 1], [1, 1]],
+            [[1, 1], [1, 0]],
+            [[1, 1], [0, 1]],
+            [[1, 1, 1], [0, 1, 0]],
+            [[0, 1, 0], [1, 1, 1]],
+            [[1, 0], [1, 0], [1, 1]],
+            [[0, 1], [0, 1], [1, 1]],
+            [[1, 1], [0, 1], [0, 1]],
+            [[1, 1], [1, 0], [1, 0]],
+        ];
+
+        class BlockBlastGame {
+            constructor() {
+                this.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+                this.score = 0;
+                this.bestScore = localStorage.getItem('blockBlastBest') || 0;
+                this.currentBlocks = [];
+                this.draggedBlock = null;
+                this.initializeGrid();
+                this.generateBlocks();
+                this.updateScore();
+                this.attachEventListeners();
+            }
+
+            initializeGrid() {
+                const gridElement = document.getElementById('grid');
+                gridElement.innerHTML = '';
+                for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.index = i;
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            generateBlocks() {
+                this.currentBlocks = [];
+                for (let i = 0; i < 3; i++) {
+                    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                    this.currentBlocks.push({ shape, used: false });
+                }
+                this.renderBlocks();
+            }
+
+            renderBlocks() {
+                const container = document.getElementById('blocksContainer');
+                container.innerHTML = '';
+
+                this.currentBlocks.forEach((blockData, index) => {
+                    if (blockData.used) return;
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'block-wrapper';
+                    wrapper.dataset.blockIndex = index;
+
+                    const block = document.createElement('div');
+                    block.className = 'block';
+                    const shape = blockData.shape;
+                    block.style.gridTemplateColumns = `repeat(${shape[0].length}, 25px)`;
+
+                    shape.forEach(row => {
+                        row.forEach(cell => {
+                            const cellDiv = document.createElement('div');
+                            if (cell === 1) {
+                                cellDiv.className = 'block-cell';
+                            } else {
+                                cellDiv.style.width = '25px';
+                                cellDiv.style.height = '25px';
+                            }
+                            block.appendChild(cellDiv);
+                        });
+                    });
+
+                    wrapper.appendChild(block);
+                    container.appendChild(wrapper);
+
+                    this.attachBlockDragEvents(wrapper, index);
+                });
+            }
+
+            attachBlockDragEvents(wrapper, blockIndex) {
+                let isDragging = false;
+                let clonedBlock = null;
+
+                const startDrag = (e) => {
+                    isDragging = true;
+                    this.draggedBlock = this.currentBlocks[blockIndex];
+                    this.draggedBlockIndex = blockIndex;
+                    wrapper.style.opacity = '0.5';
+
+                    clonedBlock = wrapper.cloneNode(true);
+                    clonedBlock.style.position = 'fixed';
+                    clonedBlock.style.pointerEvents = 'none';
+                    clonedBlock.style.zIndex = '1000';
+                    clonedBlock.style.transform = 'translate(-50%, -50%)';
+                    document.body.appendChild(clonedBlock);
+                };
+
+                const moveDrag = (e) => {
+                    if (!isDragging) return;
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    if (clonedBlock) {
+                        clonedBlock.style.left = clientX + 'px';
+                        clonedBlock.style.top = clientY + 'px';
+                    }
+
+                    this.highlightValidPlacements(clientX, clientY);
+                };
+
+                const endDrag = (e) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    wrapper.style.opacity = '1';
+
+                    if (clonedBlock) {
+                        clonedBlock.remove();
+                        clonedBlock = null;
+                    }
+
+                    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+                    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+                    this.clearPreview();
+                    const placed = this.tryPlaceBlock(clientX, clientY);
+
+                    if (placed) {
+                        this.currentBlocks[this.draggedBlockIndex].used = true;
+                        this.renderBlocks();
+                        this.clearCompleteLines();
+                        
+                        const allUsed = this.currentBlocks.every(b => b.used);
+                        if (allUsed) {
+                            setTimeout(() => this.generateBlocks(), 300);
+                        } else if (this.checkGameOver()) {
+                            this.gameOver();
+                        }
+                    }
+
+                    this.draggedBlock = null;
+                    this.draggedBlockIndex = null;
+                };
+
+                wrapper.addEventListener('mousedown', startDrag);
+                wrapper.addEventListener('touchstart', startDrag, { passive: true });
+                document.addEventListener('mousemove', moveDrag);
+                document.addEventListener('touchmove', moveDrag, { passive: true });
+                document.addEventListener('mouseup', endDrag);
+                document.addEventListener('touchend', endDrag);
+            }
+
+            highlightValidPlacements(clientX, clientY) {
+                this.clearPreview();
+                const gridElement = document.getElementById('grid');
+                const gridRect = gridElement.getBoundingClientRect();
+
+                if (clientX < gridRect.left || clientX > gridRect.right ||
+                    clientY < gridRect.top || clientY > gridRect.bottom) {
+                    return;
+                }
+
+                const cellWidth = gridRect.width / GRID_SIZE;
+                const cellHeight = gridRect.height / GRID_SIZE;
+                const col = Math.floor((clientX - gridRect.left) / cellWidth);
+                const row = Math.floor((clientY - gridRect.top) / cellHeight);
+
+                if (this.canPlaceBlock(row, col, this.draggedBlock.shape)) {
+                    this.showPreview(row, col, this.draggedBlock.shape);
+                }
+            }
+
+            showPreview(startRow, startCol, shape) {
+                shape.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                        if (cell === 1) {
+                            const gridRow = startRow + r;
+                            const gridCol = startCol + c;
+                            if (gridRow >= 0 && gridRow < GRID_SIZE && gridCol >= 0 && gridCol < GRID_SIZE) {
+                                const index = gridRow * GRID_SIZE + gridCol;
+                                const cellElement = document.querySelector(`[data-index="${index}"]`);
+                                cellElement.classList.add('preview');
+                            }
+                        }
+                    });
+                });
+            }
+
+            clearPreview() {
+                document.querySelectorAll('.cell.preview').forEach(cell => {
+                    cell.classList.remove('preview');
+                });
+            }
+
+            canPlaceBlock(startRow, startCol, shape) {
+                for (let r = 0; r < shape.length; r++) {
+                    for (let c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c] === 1) {
+                            const gridRow = startRow + r;
+                            const gridCol = startCol + c;
+                            if (gridRow < 0 || gridRow >= GRID_SIZE || 
+                                gridCol < 0 || gridCol >= GRID_SIZE ||
+                                this.grid[gridRow][gridCol] === 1) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
+            tryPlaceBlock(clientX, clientY) {
+                const gridElement = document.getElementById('grid');
+                const gridRect = gridElement.getBoundingClientRect();
+
+                if (clientX < gridRect.left || clientX > gridRect.right ||
+                    clientY < gridRect.top || clientY > gridRect.bottom) {
+                    return false;
+                }
+
+                const cellWidth = gridRect.width / GRID_SIZE;
+                const cellHeight = gridRect.height / GRID_SIZE;
+                const col = Math.floor((clientX - gridRect.left) / cellWidth);
+                const row = Math.floor((clientY - gridRect.top) / cellHeight);
+
+                if (this.canPlaceBlock(row, col, this.draggedBlock.shape)) {
+                    this.placeBlock(row, col, this.draggedBlock.shape);
+                    return true;
+                }
+                return false;
+            }
+
+            placeBlock(startRow, startCol, shape) {
+                let blockCount = 0;
+                shape.forEach((row, r) => {
+                    row.forEach((cell, c) => {
+                        if (cell === 1) {
+                            const gridRow = startRow + r;
+                            const gridCol = startCol + c;
+                            this.grid[gridRow][gridCol] = 1;
+                            blockCount++;
+                            const index = gridRow * GRID_SIZE + gridCol;
+                            const cellElement = document.querySelector(`[data-index="${index}"]`);
+                            cellElement.classList.add('filled');
+                        }
+                    });
+                });
+                this.score += blockCount;
+                this.updateScore();
+            }
+
+            clearCompleteLines() {
+                const rowsToClear = [];
+                const colsToClear = [];
+
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    if (this.grid[r].every(cell => cell === 1)) {
+                        rowsToClear.push(r);
+                    }
+                }
+
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (this.grid.every(row => row[c] === 1)) {
+                        colsToClear.push(c);
+                    }
+                }
+
+                const totalLines = rowsToClear.length + colsToClear.length;
+                if (totalLines > 0) {
+                    this.animateClear(rowsToClear, colsToClear);
+                    
+                    setTimeout(() => {
+                        let clearedCells = 0;
+                        rowsToClear.forEach(r => {
+                            for (let c = 0; c < GRID_SIZE; c++) {
+                                if (this.grid[r][c] === 1) {
+                                    this.grid[r][c] = 0;
+                                    clearedCells++;
+                                    const index = r * GRID_SIZE + c;
+                                    const cellElement = document.querySelector(`[data-index="${index}"]`);
+                                    cellElement.classList.remove('filled', 'clearing');
+                                }
+                            }
+                        });
+
+                        colsToClear.forEach(c => {
+                            for (let r = 0; r < GRID_SIZE; r++) {
+                                if (this.grid[r][c] === 1) {
+                                    this.grid[r][c] = 0;
+                                    clearedCells++;
+                                    const index = r * GRID_SIZE + c;
+                                    const cellElement = document.querySelector(`[data-index="${index}"]`);
+                                    cellElement.classList.remove('filled', 'clearing');
+                                }
+                            }
+                        });
+
+                        const bonus = totalLines * 10;
+                        this.score += bonus;
+                        this.updateScore();
+
+                        if (totalLines > 1) {
+                            this.showCombo(totalLines);
+                        }
+                    }, 500);
+                }
+            }
+
+            animateClear(rows, cols) {
+                rows.forEach(r => {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        const index = r * GRID_SIZE + c;
+                        const cellElement = document.querySelector(`[data-index="${index}"]`);
+                        cellElement.classList.add('clearing');
+                    }
+                });
+
+                cols.forEach(c => {
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        const index = r * GRID_SIZE + c;
+                        const cellElement = document.querySelector(`[data-index="${index}"]`);
+                        cellElement.classList.add('clearing');
+                    }
+                });
+            }
+
+            showCombo(count) {
+                const notification = document.getElementById('comboNotification');
+                notification.textContent = `COMBO x${count}!`;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 1000);
+            }
+
+            checkGameOver() {
+                for (let blockData of this.currentBlocks) {
+                    if (blockData.used) continue;
+                    
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        for (let c = 0; c < GRID_SIZE; c++) {
+                            if (this.canPlaceBlock(r, c, blockData.shape)) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
+            gameOver() {
+                const overlay = document.getElementById('gameOverOverlay');
+                const finalScore = document.getElementById('finalScore');
+                finalScore.textContent = this.score;
+                overlay.classList.add('show');
+            }
+
+            updateScore() {
+                document.getElementById('score').textContent = this.score;
+                if (this.score > this.bestScore) {
+                    this.bestScore = this.score;
+                    localStorage.setItem('blockBlastBest', this.bestScore);
+                }
+                document.getElementById('bestScore').textContent = this.bestScore;
+            }
+
+            restart() {
+                this.grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
+                this.score = 0;
+                this.initializeGrid();
+                this.generateBlocks();
+                this.updateScore();
+                document.getElementById('gameOverOverlay').classList.remove('show');
+            }
+
+            attachEventListeners() {
+                document.getElementById('restartBtn').addEventListener('click', () => this.restart());
+                document.getElementById('playAgainBtn').addEventListener('click', () => this.restart());
+            }
+        }
+
+        const game = new BlockBlastGame();
+    </script>
+</body>
+</html>

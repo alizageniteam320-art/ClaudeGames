@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settlement Overseer - Pixel Kingdom</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #87ceeb;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 4px solid #2a2a4e;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        }
+
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(26, 26, 46, 0.85) 100%);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #4a4a8e;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .resource-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(74, 74, 142, 0.3);
+            padding: 5px 12px;
+            border-radius: 5px;
+            border: 2px solid #4a4a8e;
+            transition: all 0.3s;
+        }
+
+        .resource:hover {
+            background: rgba(74, 74, 142, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .resource-icon {
+            font-size: 18px;
+        }
+
+        .resource-value {
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        #buildMenu {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(42, 42, 78, 0.95) 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border: 3px solid #4a4a8e;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+        }
+
+        .build-btn {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #4a4a8e 0%, #5a5aa8 100%);
+            border: 2px solid #6a6ac8;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .build-btn:hover:not(.disabled) {
+            background: linear-gradient(135deg, #5a5aa8 0%, #6a6ac8 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(106, 106, 200, 0.4);
+        }
+
+        .build-btn:active:not(.disabled) {
+            transform: translateY(-1px);
+        }
+
+        .build-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #333;
+        }
+
+        .build-btn.selected {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+            border-color: #ffa0a0;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
+        }
+
+        .build-cost {
+            font-size: 10px;
+            color: #ffd700;
+            margin-top: 3px;
+        }
+
+        #notifications {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        .notification {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(42, 42, 78, 0.95) 100%);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #4a4a8e;
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .notification.success {
+            border-color: #4ade80;
+        }
+
+        .notification.warning {
+            border-color: #fbbf24;
+        }
+
+        .notification.danger {
+            border-color: #ef4444;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        #tooltip {
+            position: fixed;
+            background: rgba(26, 26, 46, 0.98);
+            padding: 12px 16px;
+            border-radius: 5px;
+            border: 2px solid #4a4a8e;
+            pointer-events: none;
+            z-index: 3000;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        #tooltip h4 {
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        #tooltip p {
+            font-size: 12px;
+            line-height: 1.4;
+            color: #ccc;
+        }
+
+        #assignMenu {
+            position: fixed;
+            background: rgba(26, 26, 46, 0.98);
+            padding: 20px;
+            border-radius: 10px;
+            border: 3px solid #4a4a8e;
+            display: none;
+            z-index: 2000;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+            min-width: 250px;
+        }
+
+        #assignMenu h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #assignMenu button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #4a4a8e 0%, #5a5aa8 100%);
+            border: 2px solid #6a6ac8;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        #assignMenu button:hover {
+            background: linear-gradient(135deg, #5a5aa8 0%, #6a6ac8 100%);
+            transform: translateX(5px);
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 5000;
+        }
+
+        .loading h2 {
+            font-size: 32px;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #statsPanel {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(42, 42, 78, 0.95) 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border: 3px solid #4a4a8e;
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            max-width: 280px;
+        }
+
+        #statsPanel h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .stat-label {
+            color: #aaa;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .stat-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #4a4a8e;
+        }
+
+        .help-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #4a4a8e;
+        }
+
+        .help-section h4 {
+            color: #ffd700;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .help-section p {
+            font-size: 11px;
+            color: #ccc;
+            margin: 4px 0;
+            line-height: 1.4;
+        }
+
+        .help-shortcut {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .recruit-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            border: 2px solid #16a34a;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .recruit-btn:hover:not(.disabled) {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .recruit-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #555;
+        }
+
+        .recruit-cost {
+            font-size: 10px;
+            margin-top: 3px;
+            color: #ffd700;
+        }
+
+
+        #craftPanel {
+            position: fixed;
+            top: 300px;
+            left: 20px;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(42, 42, 78, 0.95) 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border: 3px solid #4a4a8e;
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: none;
+        }
+
+        #craftPanel.show {
+            display: block;
+        }
+
+        #craftPanel h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .craft-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #4a4a8e 0%, #5a5aa8 100%);
+            border: 2px solid #6a6ac8;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .craft-btn:hover:not(.disabled) {
+            background: linear-gradient(135deg, #5a5aa8 0%, #6a6ac8 100%);
+            transform: translateX(3px);
+        }
+
+        .craft-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Added styles for details/summary */
+        details>summary {
+            list-style: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        details>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details[open]>summary {
+            margin-bottom: 10px;
+        }
+
+        #statsPanel h3 {
+            display: inline-block;
+            /* Ensure it flows with summary */
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <div class="resource-group">
+            <div class="resource">
+                <span class="resource-icon">🪵</span>
+                <span class="resource-value" id="wood">0</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">🪨</span>
+                <span class="resource-value" id="stone">0</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">⚙️</span>
+                <span class="resource-value" id="ore">0</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">🥩</span>
+                <span class="resource-value" id="meat">0</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">🌿</span>
+                <span class="resource-value" id="herbs">0</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">🍖</span>
+                <span class="resource-value" id="food">0</span>
+            </div>
+        </div>
+        <div class="resource-group">
+            <div class="resource">
+                <span class="resource-icon">👤</span>
+                <span class="resource-value" id="population">3</span>
+            </div>
+            <div class="resource">
+                <span class="resource-icon">🛡️</span>
+                <span class="resource-value" id="security">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="statsPanel">
+        <details open>
+            <summary>
+                <h3>📊 Town Stats</h3>
+            </summary>
+            <div class="stat-item">
+                <span class="stat-label">Rooms:</span>
+                <span class="stat-value" id="roomCount">1</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Idle Sims:</span>
+                <span class="stat-value" id="idleSims">3</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Next Raid:</span>
+                <span class="stat-value" id="raidTimer">120s</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Day:</span>
+                <span class="stat-value" id="dayCounter">1</span>
+            </div>
+
+            <div class="stat-section">
+                <div class="stat-item">
+                    <span class="stat-label">Population:</span>
+                    <span class="stat-value" id="populationDetail">3</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Housing Cap:</span>
+                    <span class="stat-value" id="housingCap">6</span>
+                </div>
+                <button class="recruit-btn" id="recruitBtn">
+                    👤 Recruit New Sim
+                    <div class="recruit-cost">Cost: 20 Food + 15 Wood</div>
+                </button>
+            </div>
+        </details>
+
+        <div class="help-section">
+            <details>
+                <summary>
+                    <h4>🎮 Controls</h4>
+                </summary>
+                <p><span class="help-shortcut">Click Sims</span> to assign tasks</p>
+                <p><span class="help-shortcut">1-6 Keys</span> quick-build</p>
+                <p><span class="help-shortcut">ESC</span> cancel build</p>
+            </details>
+        </div>
+
+        <div class="help-section">
+            <details>
+                <summary>
+                    <h4>💡 Tips</h4>
+                </summary>
+                <p>🏠 Build houses to increase population capacity</p>
+                <p>🛡️ Assign guards before raids!</p>
+                <p>🍖 Cook meat in kitchens</p>
+                <p>🧪 Preservation rooms unlock crafting</p>
+            </details>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="1200" height="700"></canvas>
+
+    <div id="buildMenu">
+        <button class="build-btn" data-room="house">
+            🏠 House
+            <div class="build-cost">Wood: 10</div>
+        </button>
+        <button class="build-btn" data-room="storage">
+            📦 Storage
+            <div class="build-cost">Wood: 15, Stone: 5</div>
+        </button>
+        <button class="build-btn" data-room="kitchen">
+            🍳 Kitchen
+            <div class="build-cost">Wood: 20, Stone: 10</div>
+        </button>
+        <button class="build-btn" data-room="workshop">
+            🔨 Workshop
+            <div class="build-cost">Wood: 25, Stone: 15</div>
+        </button>
+        <button class="build-btn" data-room="guard">
+            🗡️ Guard Post
+            <div class="build-cost">Wood: 20, Ore: 10</div>
+        </button>
+        <button class="build-btn" data-room="preserve">
+            🧂 Preservation
+            <div class="build-cost">Wood: 30, Stone: 20</div>
+        </button>
+    </div>
+
+    <div id="notifications"></div>
+    <div id="tooltip"></div>
+    <div id="assignMenu">
+        <h3>Assign Sim Task</h3>
+        <button data-task="wood">🪵 Gather Wood</button>
+        <button data-task="stone">🪨 Mine Stone</button>
+        <button data-task="ore">⚙️ Mine Ore</button>
+        <button data-task="hunt">🦌 Hunt Animals</button>
+        <button data-task="forage">🌿 Forage Herbs</button>
+        <button data-task="fight">⚔️ Fight Monsters</button>
+        <button data-task="guard">🛡️ Guard Gate</button>
+        <button data-task="cook">🍳 Cook Food</button>
+        <button data-task="guard">🛡️ Guard Gate</button>
+        <button data-task="cook">🍳 Cook Food</button>
+        <button data-task="romance"
+            style="background:linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%); border-color:#ffa0a0;">❤️ Try for
+            Baby</button>
+        <button data-task="idle">💤 Idle</button>
+    </div>
+
+    <div id="craftPanel">
+        <h3>🧪 Crafting & Preservation</h3>
+        <button class="craft-btn" data-craft="salt">
+            🧂 Make Salt<br>
+            <small>2 Herbs → 3 Salt</small>
+        </button>
+        <button class="craft-btn" data-craft="sugar">
+            🍬 Make Sugar<br>
+            <small>3 Herbs → 2 Sugar</small>
+        </button>
+        <button class="craft-btn" data-craft="preserve-meat">
+            🥓 Preserve Meat<br>
+            <small>2 Meat + 1 Salt → 4 Food</small>
+        </button>
+        <button class="craft-btn" data-craft="sweet-dish">
+            🍰 Sweet Dish<br>
+            <small>2 Meat + 2 Sugar → 5 Food +Energy</small>
+        </button>
+        <button class="craft-btn" data-craft="herb-mix">
+            🌿 Herb Mix<br>
+            <small>1 Meat + 3 Herbs → 4 Food +Health</small>
+        </button>
+    </div>
+
+    <div id="simInspector"
+        style="display:none; position:fixed; top:80px; left:20px; background:rgba(26,26,46,0.95); padding:15px; border-radius:10px; border:3px solid #4a4a8e; backdrop-filter:blur(15px); z-index:1000; width:280px;">
+        <h3 style="color:#ffd700; margin-bottom:10px; border-bottom:1px solid #4a4a8e; padding-bottom:5px;">Sim Details
+        </h3>
+        <div id="inspectorContent"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        const game = {
+            resources: {
+                wood: 80,
+                stone: 50,
+                ore: 20,
+                meat: 10,
+                herbs: 5,
+                food: 5,
+                salt: 3,
+                sugar: 2,
+                spices: 0
+            },
+            rooms: [],
+            sims: [],
+            monsters: [],
+            selectedRoom: null,
+            buildMode: null,
+            camera: { x: 0, y: 0 },
+            security: 0,
+            raidTimer: 90,
+            dayCounter: 1,
+            gameTime: 0,
+            paused: false,
+            resourceNodes: [],
+            gameSpeed: 1
+        };
+
+        const NAMES = ["Alex", "Sam", "Jordan", "Casey", "Riley", "Taylor", "Morgan", "Jamie", "Quinn", "Avery"];
+        function getRandomName() { return NAMES[Math.floor(Math.random() * NAMES.length)]; }
+        const GENDERS = ['Male', 'Female'];
+
+        // Room Templates
+        const roomTemplates = {
+            house: {
+                name: 'House',
+                width: 80,
+                height: 80,
+                color: '#8b4513',
+                cost: { wood: 10 },
+                icon: '🏠',
+                capacity: 2
+            },
+            storage: {
+                name: 'Storage',
+                width: 100,
+                height: 80,
+                color: '#654321',
+                cost: { wood: 15, stone: 5 },
+                icon: '📦',
+                capacity: 0
+            },
+            kitchen: {
+                name: 'Kitchen',
+                width: 100,
+                height: 80,
+                color: '#ff6b35',
+                cost: { wood: 20, stone: 10 },
+                icon: '🍳',
+                capacity: 0
+            },
+            workshop: {
+                name: 'Workshop',
+                width: 120,
+                height: 80,
+                color: '#4a4a4a',
+                cost: { wood: 25, stone: 15 },
+                icon: '🔨',
+                capacity: 0
+            },
+            guard: {
+                name: 'Guard Post',
+                width: 80,
+                height: 80,
+                color: '#2c3e50',
+                cost: { wood: 20, ore: 10 },
+                icon: '🗡️',
+                capacity: 0,
+                security: 20
+            },
+            preserve: {
+                name: 'Preservation Room',
+                width: 120,
+                height: 80,
+                color: '#7d4e7d',
+                cost: { wood: 30, stone: 20 },
+                icon: '🧂',
+                capacity: 0
+            }
+        };
+
+        // Spice Recipes
+        const spiceRecipes = {
+            basic: { salt: 1, effect: 'hunger+5' },
+            sweet: { sugar: 1, effect: 'energy+10' },
+            savory: { salt: 1, herbs: 2, effect: 'health+15' },
+            exotic: { sugar: 1, herbs: 3, effect: 'speed+20' }
+        };
+
+        // Initialize starting room and sims
+        function initGame() {
+            const startRoom = {
+                ...roomTemplates.house,
+                x: 300,
+                y: 500,
+                id: Date.now(),
+                workers: []
+            };
+            game.rooms.push(startRoom);
+
+            // Create starting sims
+            for (let i = 0; i < 3; i++) {
+                game.sims.push({
+                    x: startRoom.x + 20 + i * 20,
+                    y: startRoom.y + 40,
+                    vx: 0,
+                    vy: 0,
+                    task: 'idle',
+                    target: null,
+                    targetRoom: null,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                    taskTimer: 0,
+                    id: Date.now() + i,
+                    gathering: false,
+                    carrying: null,
+                    // New Stats
+                    hunger: 100,
+                    energy: 100,
+                    happiness: 100,
+                    happiness: 100,
+                    age: 18,
+                    gender: GENDERS[Math.floor(Math.random() * 2)],
+                    name: getRandomName(),
+                    skills: { wood: 0, stone: 0, ore: 0, hunt: 0, forage: 0, fight: 0, cook: 0, social: 0 },
+                    currentAction: 'Thinking...'
+                });
+            }
+
+            // Create resource nodes
+            createResourceNodes();
+
+            updateUI();
+            gameLoop();
+        }
+
+        function createResourceNodes() {
+            // Trees for wood
+            for (let i = 0; i < 8; i++) {
+                game.resourceNodes.push({
+                    type: 'wood',
+                    x: 600 + Math.random() * 400,
+                    y: 520 + Math.random() * 40,
+                    amount: 50,
+                    icon: '🌲'
+                });
+            }
+
+            // Rocks for stone
+            for (let i = 0; i < 6; i++) {
+                game.resourceNodes.push({
+                    type: 'stone',
+                    x: 200 + Math.random() * 300,
+                    y: 530 + Math.random() * 30,
+                    amount: 40,
+                    icon: '🪨'
+                });
+            }
+
+            // Ore veins
+            for (let i = 0; i < 4; i++) {
+                game.resourceNodes.push({
+                    type: 'ore',
+                    x: 900 + Math.random() * 200,
+                    y: 535 + Math.random() * 25,
+                    amount: 30,
+                    icon: '⛏️'
+                });
+            }
+
+            // Hunting grounds (animals - Goats)
+            for (let i = 0; i < 5; i++) {
+                game.resourceNodes.push({
+                    type: 'hunt',
+                    x: 400 + Math.random() * 600,
+                    y: 480 + Math.random() * 50,
+                    amount: 20,
+                    icon: '🐐', // Changed to Goat
+                    moving: true,
+                    direction: Math.random() > 0.5 ? 1 : -1
+                });
+            }
+
+            // Herb patches
+            for (let i = 0; i < 6; i++) {
+                game.resourceNodes.push({
+                    type: 'forage',
+                    x: 300 + Math.random() * 700,
+                    y: 520 + Math.random() * 40,
+                    amount: 25,
+                    icon: '🌿'
+                });
+            }
+        }
+
+        // Draw functions
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87ceeb');
+            gradient.addColorStop(0.6, '#e0f6ff');
+            gradient.addColorStop(1, '#8b7355');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Ground
+            ctx.fillStyle = '#5d4e37';
+            ctx.fillRect(0, 580, canvas.width, canvas.height - 580);
+
+            // Grass layer
+            ctx.fillStyle = '#4a7c34';
+            ctx.fillRect(0, 570, canvas.width, 10);
+
+            // Simple clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            const cloudOffset = (game.gameTime * 10) % (canvas.width + 200);
+            drawCloud(cloudOffset - 100, 80);
+            drawCloud(cloudOffset + 200, 120);
+            drawCloud(cloudOffset + 500, 60);
+        }
+
+        function drawCloud(x, y) {
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, Math.PI * 2);
+            ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
+            ctx.arc(x + 55, y, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawRoom(room) {
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(room.x + 5, room.y + 5, room.width, room.height);
+
+            // Room body
+            ctx.fillStyle = room.color;
+            ctx.fillRect(room.x, room.y, room.width, room.height);
+
+            // Border
+            ctx.strokeStyle = '#2c2c2c';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(room.x, room.y, room.width, room.height);
+
+            // Window details
+            ctx.fillStyle = '#87ceeb';
+            if (room.width > 80) {
+                ctx.fillRect(room.x + 15, room.y + 15, 20, 20);
+                ctx.fillRect(room.x + room.width - 35, room.y + 15, 20, 20);
+            } else {
+                ctx.fillRect(room.x + 20, room.y + 15, 20, 20);
+            }
+
+            // Door
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(room.x + room.width / 2 - 10, room.y + room.height - 30, 20, 30);
+
+            // Icon
+            ctx.font = '32px Arial';
+            ctx.fillText(room.icon, room.x + room.width / 2 - 16, room.y + room.height / 2 + 10);
+
+            // Highlight if selected
+            if (game.selectedRoom === room) {
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(room.x - 2, room.y - 2, room.width + 4, room.height + 4);
+            }
+        }
+
+        function drawSim(sim) {
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(sim.x, sim.y + 18, 8, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Body
+            ctx.fillStyle = sim.color;
+
+            // Child scaling
+            if (sim.age < 18) {
+                const scale = 0.5 + (sim.age / 18) * 0.5; // 0.5 to 1.0
+                ctx.save();
+                ctx.translate(sim.x, sim.y + 8);
+                ctx.scale(scale, scale);
+                ctx.translate(-sim.x, -(sim.y + 8));
+            }
+
+            ctx.fillRect(sim.x - 6, sim.y, 12, 16);
+
+            // Head
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath();
+            ctx.arc(sim.x, sim.y - 2, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(sim.x - 3, sim.y - 4, 2, 2);
+            ctx.fillRect(sim.x + 1, sim.y - 4, 2, 2);
+
+            // Accessorize based on gender
+            if (sim.gender === 'Female') {
+                ctx.fillStyle = sim.color;
+                ctx.fillRect(sim.x - 7, sim.y - 2, 14, 4); // Hair/Band
+            }
+
+            if (sim.age < 18) {
+                ctx.restore();
+            }
+
+            // Show if carrying something
+            if (sim.carrying) {
+                let carryIcon = '📦';
+                if (sim.carrying.type === 'wood') carryIcon = '🪵';
+                if (sim.carrying.type === 'stone') carryIcon = '🪨';
+                if (sim.carrying.type === 'ore') carryIcon = '⚙️';
+                if (sim.carrying.type === 'hunt') carryIcon = '🥩';
+                if (sim.carrying.type === 'forage') carryIcon = '🌿';
+
+                ctx.font = '16px Arial';
+                ctx.fillText(carryIcon, sim.x + 8, sim.y + 5);
+            }
+
+            // Show Axe if chopping wood - Made Prominent
+            if ((sim.task === 'wood' && sim.gathering) || (sim.task === 'wood' && !sim.carrying && sim.target)) {
+                ctx.font = '24px Arial'; // Larger Axe
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 5;
+                // A simple swinging animation offset
+                const swing = sim.gathering ? Math.sin(game.gameTime * 15) * 8 : 0;
+                const swingRotation = sim.gathering ? Math.sin(game.gameTime * 15) : 0;
+
+                ctx.save();
+                ctx.translate(sim.x + 12, sim.y + 5);
+                ctx.rotate(swingRotation);
+                ctx.fillText('🪓', 0, 0 + swing);
+                ctx.restore();
+                ctx.shadowBlur = 0; // Reset shadow
+            }
+
+            // Task indicator above head
+            let emoji = '💤';
+            if (sim.task === 'wood') emoji = '🪓';
+            else if (sim.task === 'stone') emoji = '⛏️';
+            else if (sim.task === 'ore') emoji = '⚒️';
+            else if (sim.task === 'hunt') emoji = '🏹';
+            else if (sim.task === 'forage') emoji = '🌾';
+            else if (sim.task === 'fight') emoji = '⚔️';
+            else if (sim.task === 'guard') emoji = '🛡️';
+            else if (sim.task === 'guard') emoji = '🛡️';
+            else if (sim.task === 'cook') emoji = '👨‍🍳';
+            else if (sim.task === 'eat') emoji = '🍗';
+            else if (sim.task === 'sleep') emoji = '💤';
+
+            // Status Bubble (Hunger/Low Energy)
+            if (sim.hunger < 30) {
+                ctx.font = '12px Arial';
+                ctx.fillText('🗯️🍗', sim.x + 10, sim.y - 25);
+            } else if (sim.energy < 20) {
+                ctx.font = '12px Arial';
+                ctx.fillText('🗯️💤', sim.x + 10, sim.y - 25);
+            }
+
+            ctx.font = '14px Arial';
+            ctx.fillText(emoji, sim.x - 7, sim.y - 18);
+
+            // Gathering animation
+            if (sim.gathering) {
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 2;
+                const pulseSize = 12 + Math.sin(game.gameTime * 5) * 3;
+                ctx.beginPath();
+                ctx.arc(sim.x, sim.y + 5, pulseSize, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawMonster(monster) {
+            const yPos = monster.y + (monster.yOffset || 0);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(monster.x, monster.y + 22, 12, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Slime body
+            ctx.fillStyle = monster.color;
+            ctx.beginPath();
+            ctx.ellipse(monster.x, yPos, 15, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shine effect
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.ellipse(monster.x - 5, yPos - 5, 5, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(monster.x - 5, yPos, 3, 0, Math.PI * 2);
+            ctx.arc(monster.x + 5, yPos, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Health bar
+            const healthWidth = 30;
+            const healthPercent = monster.hp / monster.maxHp;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(monster.x - 15, yPos - 28, healthWidth, 4);
+            ctx.fillStyle = healthPercent > 0.5 ? '#4ade80' : healthPercent > 0.25 ? '#fbbf24' : '#ef4444';
+            ctx.fillRect(monster.x - 15, yPos - 28, healthWidth * healthPercent, 4);
+        }
+
+        function drawGate() {
+            const gateX = 50;
+            const gateY = 500;
+
+            // Gate structure
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(gateX, gateY, 40, 80);
+
+            // Metal bands
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillRect(gateX, gateY + 20, 40, 5);
+            ctx.fillRect(gateX, gateY + 40, 40, 5);
+            ctx.fillRect(gateX, gateY + 60, 40, 5);
+
+            ctx.font = '24px Arial';
+            ctx.fillText('🚪', gateX + 8, gateY + 50);
+        }
+
+        function drawResourceNode(node) {
+            if (node.amount <= 0) return;
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(node.x, node.y + 15, 12, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Node icon
+            ctx.save();
+            if (node.type === 'hunt' || node.type === 'forage') {
+                ctx.font = '48px Arial'; // Much larger for Goats and Plants
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.strokeText(node.icon, node.x - 24, node.y + 15); // Outline
+                ctx.fillText(node.icon, node.x - 24, node.y + 15); // Fill
+            } else {
+                ctx.font = '32px Arial';
+                ctx.fillText(node.icon, node.x - 16, node.y + 10);
+            }
+            ctx.restore();
+
+            // Resource amount indicator
+            if (node.amount < 20) {
+                ctx.fillStyle = 'rgba(255, 100, 100, 0.7)';
+                ctx.fillRect(node.x - 10, node.y - 20, 20, 3);
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(node.x - 10, node.y - 20, 20 * (node.amount / 20), 3);
+            }
+        }
+
+        // Update functions
+        function updateNeeds(sim, deltaTime) {
+            // Decay needs
+            sim.hunger = Math.max(0, sim.hunger - deltaTime * 0.5); // 200s to starve
+            sim.energy = Math.max(0, sim.energy - deltaTime * 0.2); // 500s to exhaust
+            sim.happiness = Math.max(0, sim.happiness - deltaTime * 0.1);
+
+            // Check health
+            if (sim.hunger <= 0) {
+                if (Math.random() < 0.01) showNotification(`${sim.name} is starving!`, 'danger');
+            }
+
+            // Aging
+            if (sim.age < 18) {
+                // Grow to 18 in 300 seconds (5 mins)
+                // 18 age / 300s = 0.06 per sec
+                sim.age += deltaTime * 0.06;
+                if (sim.age >= 18) {
+                    showNotification(`${sim.name} grew up! 🎉`, 'success');
+                }
+            } else {
+                // Adult aging (slower)
+                sim.age += deltaTime * 0.005;
+            }
+        }
+
+        function updateInspector() {
+            const sim = game.selectedSim;
+            if (!sim) {
+                document.getElementById('simInspector').style.display = 'none';
+                return;
+            }
+
+            const isChild = sim.age < 18;
+            document.getElementById('simInspector').style.display = 'block';
+            const html = `
+                <div style="font-size:16px; font-weight:bold; color:white; margin-bottom:5px;">${sim.gender === 'Male' ? '👨' : '👩'} ${sim.name || 'Sim'}</div>
+                <div style="font-size:12px; color:#aaa; margin-bottom:10px;">
+                    ${isChild ? '👶 Child' : '🧑 Adult'} | Age: ${Math.floor(sim.age)}
+                    <br>Status: <span style="color:#fff">${sim.currentAction || sim.task}</span>
+                </div>
+                
+                <div style="margin-bottom:5px; font-size:12px;">Hunger: ${Math.floor(sim.hunger)}%</div>
+                <div style="width:100%; height:6px; background:#333; border-radius:3px; margin-bottom:10px;">
+                    <div style="width:${sim.hunger}%; height:100%; background:${sim.hunger < 30 ? '#ff4444' : '#4ade80'}; border-radius:3px;"></div>
+                </div>
+
+                <div style="margin-bottom:5px; font-size:12px;">Energy: ${Math.floor(sim.energy)}%</div>
+                 <div style="width:100%; height:6px; background:#333; border-radius:3px; margin-bottom:10px;">
+                    <div style="width:${sim.energy}%; height:100%; background:${sim.energy < 30 ? '#ff4444' : '#ffd700'}; border-radius:3px;"></div>
+                </div>
+                
+                <h4 style="color:#ffd700; margin:15px 0 5px 0; border-bottom:1px solid #4a4a8e;">Skills</h4>
+                ${Object.entries(sim.skills || {}).map(([skill, val]) =>
+                `<div style="display:flex; justify-content:space-between; font-size:11px; color:#ccc; margin-bottom:2px;">
+                        <span>${skill.charAt(0).toUpperCase() + skill.slice(1)}</span>
+                        <span>Lvl ${Math.floor(val)}</span>
+                    </div>`
+            ).join('')}
+            `;
+            document.getElementById('inspectorContent').innerHTML = html;
+        }
+
+        function checkAutonomy(sim) {
+            // Child Autonomy (Only Play/Needs)
+            if (sim.age < 18) {
+                if (sim.task !== 'idle' && sim.task !== 'eat' && sim.task !== 'sleep') {
+                    sim.task = 'idle'; // Force idle if assigned work
+                }
+            }
+
+            // Critical Needs Overrides
+            if (sim.hunger < 30 && sim.task !== 'eat' && game.resources.food >= 1) {
+                sim.task = 'eat';
+                sim.currentAction = 'Hungry! Seeking food...';
+                sim.target = null;
+                return;
+            }
+
+            if (sim.energy < 20 && sim.task !== 'sleep') {
+                sim.task = 'sleep';
+                sim.currentAction = 'Tired! Seeking bed...';
+                sim.target = null;
+                return;
+            }
+
+            // Idle Autonomy
+            if (sim.task === 'idle') {
+                // Determine best action based on needs or random
+                if (Math.random() < 0.005) { // Low chance to switch
+                    const tasks = ['wood', 'stone', 'forage', 'hunt'];
+                    // Children can only play, not work
+                    if (sim.age < 18) {
+                        // For now, children just stay idle or fulfill needs
+                        // Later, could add 'play' task
+                        return;
+                    }
+                    const newTask = tasks[Math.floor(Math.random() * tasks.length)];
+                    sim.task = newTask;
+                    sim.currentAction = `Decided to ${newTask}`;
+                    // showNotification(`${sim.name} decided to ${newTask}`, 'success');
+                }
+            }
+        }
+
+        function updateSim(sim, deltaTime) {
+            updateNeeds(sim, deltaTime);
+            checkAutonomy(sim);
+
+            // Eat Task
+            if (sim.task === 'eat') {
+                const storage = game.rooms.find(r => r.name === 'Kitchen' || r.name === 'Storage' || r.name === 'House');
+                if (!storage) {
+                    sim.task = 'idle'; // No place to eat
+                    return;
+                }
+
+                const dx = storage.x + storage.width / 2 - sim.x;
+                const dy = storage.y + storage.height / 2 - sim.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 30) {
+                    sim.vx = (dx / dist) * 2;
+                    sim.vy = (dy / dist) * 2;
+                } else {
+                    sim.vx = 0;
+                    sim.vy = 0;
+                    sim.taskTimer += deltaTime;
+                    if (sim.taskTimer > 2) {
+                        if (game.resources.food >= 1) {
+                            game.resources.food -= 1;
+                            sim.hunger = Math.min(100, sim.hunger + 40);
+                            sim.happiness += 5;
+                            showNotification(`${sim.name} ate food`, 'success');
+                            sim.task = 'idle'; // Done
+                        } else {
+                            sim.task = 'idle'; // No food
+                        }
+                        sim.taskTimer = 0;
+                    }
+                }
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                sim.y = Math.max(400, Math.min(565, sim.y));
+                return;
+            }
+
+            // Sleep Task
+            if (sim.task === 'sleep') {
+                const house = game.rooms.find(r => r.name === 'House');
+                if (!house) {
+                    // Sleep on ground?
+                    sim.energy += deltaTime * 2; // Slow recovery
+                    if (sim.energy >= 90) sim.task = 'idle';
+                    return;
+                }
+
+                const dx = house.x + house.width / 2 - sim.x;
+                const dy = house.y + house.height / 2 - sim.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 30) {
+                    sim.vx = (dx / dist) * 2;
+                    sim.vy = (dy / dist) * 2;
+                } else {
+                    sim.vx = 0;
+                    sim.vy = 0;
+                    sim.energy += deltaTime * 10; // Fast recovery in bed
+                    if (sim.energy >= 100) {
+                        sim.energy = 100;
+                        sim.task = 'idle';
+                        showNotification(`${sim.name} is rested`, 'success');
+                    }
+                }
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                sim.y = Math.max(400, Math.min(565, sim.y));
+                return;
+            }
+
+            // Romance Task
+            if (sim.task === 'romance') {
+                // 1. Find Partner
+                if (!sim.partner) {
+                    sim.currentAction = 'Looking for love...';
+                    const potentialPartner = game.sims.find(s =>
+                        s !== sim &&
+                        s.age >= 18 &&
+                        s.gender !== sim.gender &&
+                        (s.task === 'idle' || s.task === 'romance')
+                    );
+
+                    if (potentialPartner) {
+                        sim.partner = potentialPartner;
+                        potentialPartner.partner = sim;
+                        potentialPartner.task = 'romance'; // Pull partner into romance
+                        showNotification('Romance started! ❤️', 'success');
+                    } else {
+                        // Wander while looking
+                        if (Math.random() < 0.02) {
+                            sim.vx = (Math.random() - 0.5) * 1.5;
+                            sim.vy = (Math.random() - 0.5) * 0.5;
+                        }
+                        sim.x += sim.vx * deltaTime * 60;
+                        sim.y += sim.vy * deltaTime * 60;
+                        sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                        sim.y = Math.max(400, Math.min(565, sim.y));
+                        return;
+                    }
+                }
+
+                // 2. Go to House
+                if (sim.partner) {
+                    sim.currentAction = 'Going to house...';
+                    const house = game.rooms.find(r => r.name === 'House'); // Any house
+                    if (!house) {
+                        sim.task = 'idle';
+                        sim.partner.task = 'idle';
+                        sim.partner.partner = null;
+                        sim.partner = null;
+                        showNotification('Need a house for romance!', 'warning');
+                        return;
+                    }
+
+                    const dx = house.x + house.width / 2 - sim.x;
+                    const dy = house.y + house.height / 2 - sim.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 20) {
+                        sim.vx = (dx / dist) * 2;
+                        sim.vy = (dy / dist) * 2;
+                    } else {
+                        // 3. Kiss/Woohoo
+                        sim.vx = 0;
+                        sim.vy = 0;
+                        sim.taskTimer += deltaTime;
+                        sim.currentAction = 'WooHoo! ❤️';
+
+                        if (sim.taskTimer > 5) {
+                            // Finished
+                            const housingCapacity = game.rooms.filter(r => r.name === 'House').length * 2 + 2;
+                            if (game.sims.length < housingCapacity) {
+                                // Baby!
+                                game.sims.push({
+                                    x: sim.x,
+                                    y: sim.y,
+                                    vx: 0,
+                                    vy: 0,
+                                    task: 'idle',
+                                    target: null,
+                                    targetRoom: null,
+                                    color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                                    taskTimer: 0,
+                                    id: Date.now(),
+                                    gathering: false,
+                                    carrying: null,
+                                    hunger: 80,
+                                    energy: 80,
+                                    happiness: 100,
+                                    age: 0, // Baby
+                                    gender: GENDERS[Math.floor(Math.random() * 2)],
+                                    name: getRandomName(),
+                                    skills: { wood: 0, stone: 0, ore: 0, hunt: 0, forage: 0, fight: 0, cook: 0, social: 0 },
+                                    currentAction: 'Crying'
+                                });
+                                showNotification(' A BABY IS BORN! 👶', 'success');
+                            } else {
+                                showNotification('No room for baby!', 'warning');
+                            }
+
+                            // Reset
+                            sim.task = 'idle';
+                            sim.partner.task = 'idle';
+                            sim.partner.partner = null;
+                            sim.partner = null;
+                            sim.taskTimer = 0;
+                        }
+                    }
+                    sim.x += sim.vx * deltaTime * 60;
+                    sim.y += sim.vy * deltaTime * 60;
+                    sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                    sim.y = Math.max(400, Math.min(565, sim.y));
+                    return;
+                }
+            }
+
+            // Find closest kitchen if cooking
+            if (sim.task === 'cook') {
+                const kitchen = game.rooms.find(r => r.name === 'Kitchen');
+                if (!kitchen) {
+                    sim.task = 'idle';
+                    showNotification('Need a Kitchen to cook!', 'warning');
+                    return;
+                }
+
+                // Move to kitchen
+                const dx = kitchen.x + kitchen.width / 2 - sim.x;
+                const dy = kitchen.y + kitchen.height / 2 - sim.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 30) {
+                    sim.vx = (dx / dist) * 2;
+                    sim.vy = (dy / dist) * 2;
+                } else {
+                    sim.vx = 0;
+                    sim.vy = 0;
+                    sim.taskTimer += deltaTime;
+
+                    if (sim.taskTimer > 3 && game.resources.meat >= 2) {
+                        game.resources.meat -= 2;
+                        game.resources.food += 4;
+                        sim.taskTimer = 0;
+                        showNotification('Food cooked! +4 🍖', 'success');
+                    } else if (sim.taskTimer > 3) {
+                        showNotification('Not enough meat to cook!', 'warning');
+                        sim.taskTimer = 0;
+                    }
+                }
+
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                return;
+            }
+
+            // Guard task - stay at gate
+            if (sim.task === 'guard') {
+                const targetX = 150;
+                const targetY = 530;
+                const dx = targetX - sim.x;
+                const dy = targetY - sim.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 20) {
+                    sim.vx = (dx / dist) * 2;
+                    sim.vy = (dy / dist) * 2;
+                } else {
+                    sim.vx = 0;
+                    sim.vy = 0;
+
+                    // Attack nearby monsters
+                    const nearbyMonster = game.monsters.find(m => {
+                        const mdx = m.x - sim.x;
+                        const mdy = m.y - sim.y;
+                        return Math.sqrt(mdx * mdx + mdy * mdy) < 80;
+                    });
+
+                    if (nearbyMonster) {
+                        sim.taskTimer += deltaTime;
+                        if (sim.taskTimer > 0.5) {
+                            nearbyMonster.hp -= 8;
+                            sim.taskTimer = 0;
+                            if (nearbyMonster.hp <= 0) {
+                                game.monsters = game.monsters.filter(m => m !== nearbyMonster);
+                                game.resources.meat += 2;
+                                showNotification('Guard defeated monster! +2 meat', 'success');
+                            }
+                        }
+                    }
+                }
+
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                return;
+            }
+
+            // Fighting monsters
+            if (sim.task === 'fight') {
+                if (!sim.target || sim.target.hp <= 0) {
+                    // Find nearest monster
+                    let nearest = null;
+                    let nearestDist = Infinity;
+
+                    for (let monster of game.monsters) {
+                        const dx = monster.x - sim.x;
+                        const dy = monster.y - sim.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearest = monster;
+                        }
+                    }
+
+                    sim.target = nearest;
+                }
+
+                if (sim.target && sim.target.hp > 0) {
+                    const dx = sim.target.x - sim.x;
+                    const dy = sim.target.y - sim.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 40) {
+                        sim.vx = (dx / dist) * 2.5;
+                        sim.vy = (dy / dist) * 2.5;
+                    } else {
+                        sim.vx = 0;
+                        sim.vy = 0;
+                        sim.taskTimer += deltaTime;
+
+                        if (sim.taskTimer > 0.8) {
+                            sim.target.hp -= 12;
+                            sim.taskTimer = 0;
+                            if (sim.target.hp <= 0) {
+                                game.monsters = game.monsters.filter(m => m !== sim.target);
+                                game.resources.meat += 2;
+                                game.resources.herbs += Math.random() > 0.6 ? 1 : 0;
+                                showNotification('Monster defeated! +2 meat', 'success');
+                                sim.target = null;
+                            }
+                        }
+                    }
+                } else {
+                    // No monsters, wander
+                    if (Math.random() < 0.02) {
+                        sim.vx = (Math.random() - 0.5) * 2;
+                        sim.vy = (Math.random() - 0.5) * 0.5;
+                    }
+                }
+
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                sim.y = Math.max(400, Math.min(565, sim.y));
+                return;
+            }
+
+            // Resource gathering tasks
+            if (['wood', 'stone', 'ore', 'hunt', 'forage'].includes(sim.task)) {
+                // If not carrying and no target, find resource node
+                if (!sim.carrying && !sim.target) {
+                    const nodes = game.resourceNodes.filter(n => n.type === sim.task && n.amount > 0);
+                    if (nodes.length > 0) {
+                        // Find closest node
+                        let closest = nodes[0];
+                        let closestDist = Infinity;
+
+                        for (let node of nodes) {
+                            const dx = node.x - sim.x;
+                            const dy = node.y - sim.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                closest = node;
+                            }
+                        }
+
+                        sim.target = closest;
+                        sim.gathering = false;
+                    } else {
+                        // No resources available
+                        if (Math.random() < 0.01) {
+                            showNotification(`No ${sim.task} resources available!`, 'warning');
+                        }
+                        sim.task = 'idle';
+                        return;
+                    }
+                }
+
+                // Moving to resource node
+                if (sim.target && !sim.gathering && !sim.carrying) {
+                    const dx = sim.target.x - sim.x;
+                    const dy = sim.target.y - sim.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 30) {
+                        sim.vx = (dx / dist) * 2;
+                        sim.vy = (dy / dist) * 2;
+                    } else {
+                        sim.vx = 0;
+                        sim.vy = 0;
+                        sim.gathering = true;
+                        sim.taskTimer = 0;
+                    }
+                }
+
+                // Gathering from node
+                if (sim.gathering && sim.target && !sim.carrying) {
+                    sim.taskTimer += deltaTime;
+
+                    let gatherTime = 2;
+                    if (sim.task === 'ore') gatherTime = 3;
+                    if (sim.task === 'hunt') gatherTime = 4;
+
+                    // Skill Bonus (Faster gathering)
+                    if (sim.skills && sim.skills[sim.task]) {
+                        gatherTime = Math.max(0.5, gatherTime - sim.skills[sim.task] * 0.1);
+                    }
+
+                    if (sim.taskTimer > gatherTime) {
+                        // Gather resource
+                        const amount = Math.floor(Math.random() * 3) + 2;
+                        sim.target.amount -= 1;
+                        sim.carrying = { type: sim.task, amount: amount };
+                        sim.gathering = false;
+                        sim.target = null;
+
+                        // Skill XP
+                        if (sim.skills && sim.skills[sim.task] !== undefined) {
+                            sim.skills[sim.task] += 0.5;
+                        }
+
+                        // Find storage or home
+                        const storage = game.rooms.find(r => r.name === 'Storage' || r.name === 'House');
+                        sim.targetRoom = storage || game.rooms[0];
+                    }
+                }
+
+                // Carrying resource back to storage
+                if (sim.carrying && sim.targetRoom) {
+                    const dx = sim.targetRoom.x + sim.targetRoom.width / 2 - sim.x;
+                    const dy = sim.targetRoom.y + sim.targetRoom.height / 2 - sim.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 40) {
+                        sim.vx = (dx / dist) * 2.5;
+                        sim.vy = (dy / dist) * 2.5;
+                    } else {
+                        sim.vx = 0;
+                        sim.vy = 0;
+
+                        // Deposit resource
+                        game.resources[sim.carrying.type] += sim.carrying.amount;
+                        showNotification(`+${sim.carrying.amount} ${sim.carrying.type}!`, 'success');
+                        sim.carrying = null;
+                        sim.targetRoom = null;
+                    }
+                }
+
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                sim.y = Math.max(400, Math.min(565, sim.y));
+                return;
+            }
+
+            // Idle - random wandering
+            if (sim.task === 'idle') {
+                if (Math.random() < 0.02) {
+                    sim.vx = (Math.random() - 0.5) * 1.5;
+                    sim.vy = (Math.random() - 0.5) * 0.5;
+                }
+
+                sim.x += sim.vx * deltaTime * 60;
+                sim.y += sim.vy * deltaTime * 60;
+                sim.x = Math.max(100, Math.min(canvas.width - 100, sim.x));
+                sim.y = Math.max(400, Math.min(565, sim.y));
+
+                // Friction
+                sim.vx *= 0.95;
+                sim.vy *= 0.95;
+            }
+        }
+
+        function updateMonster(monster, deltaTime) {
+            // Move towards gate
+            const gateX = 80;
+            const gateDist = Math.abs(monster.x - gateX);
+
+            if (gateDist > 30) {
+                monster.vx = -1.5;
+                monster.x += monster.vx;
+            } else {
+                monster.vx = 0;
+                // Attack gate (reduce security)
+                monster.attackTimer += deltaTime;
+                if (monster.attackTimer >= 2) {
+                    if (game.security > 0) {
+                        game.security = Math.max(0, game.security - 3);
+                        showNotification('Gate damaged! Security -3', 'danger');
+                    } else {
+                        showNotification('Gate breached! Monsters entering town!', 'danger');
+                        // Monster can now move into town
+                        monster.x -= 2;
+                    }
+                    monster.attackTimer = 0;
+                }
+            }
+
+            // Check if being attacked by guards or fighters
+            const attackers = game.sims.filter(sim => {
+                if (sim.task !== 'guard' && sim.task !== 'fight') return false;
+                const dx = sim.x - monster.x;
+                const dy = sim.y - monster.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                return dist < 100;
+            });
+
+            if (attackers.length > 0) {
+                monster.guardDamageTimer += deltaTime;
+            }
+
+            // Monster hops (animation)
+            monster.animTimer = (monster.animTimer || 0) + deltaTime;
+            monster.yOffset = Math.sin(monster.animTimer * 3) * 2;
+        }
+
+        function spawnRaid() {
+            const raidSize = Math.min(2 + Math.floor(game.dayCounter / 2), 8);
+            const monsterTypes = [
+                { color: '#90EE90', hp: 30, name: 'Green Slime' },
+                { color: '#FF6B9D', hp: 40, name: 'Pink Slime' },
+                { color: '#4169E1', hp: 50, name: 'Blue Slime' },
+                { color: '#FFD700', hp: 60, name: 'Gold Slime' }
+            ];
+
+            const baseHp = 25 + game.dayCounter * 5;
+
+            for (let i = 0; i < raidSize; i++) {
+                const type = monsterTypes[Math.min(Math.floor(game.dayCounter / 3), monsterTypes.length - 1)];
+                game.monsters.push({
+                    x: canvas.width - 80,
+                    y: 520 + i * 25,
+                    vx: -1,
+                    hp: baseHp + type.hp,
+                    maxHp: baseHp + type.hp,
+                    color: type.color,
+                    name: type.name,
+                    attackTimer: 0,
+                    guardDamageTimer: 0,
+                    animTimer: Math.random() * 3,
+                    yOffset: 0
+                });
+            }
+
+            showNotification(`🚨 RAID! ${raidSize} ${monsterTypes[Math.min(Math.floor(game.dayCounter / 3), monsterTypes.length - 1)].name}s approaching!`, 'danger');
+        }
+
+        // UI Functions
+        function updateUI() {
+            document.getElementById('wood').textContent = Math.floor(game.resources.wood);
+            document.getElementById('stone').textContent = Math.floor(game.resources.stone);
+            document.getElementById('ore').textContent = Math.floor(game.resources.ore);
+            document.getElementById('meat').textContent = Math.floor(game.resources.meat);
+            document.getElementById('herbs').textContent = Math.floor(game.resources.herbs);
+            document.getElementById('food').textContent = Math.floor(game.resources.food);
+            document.getElementById('population').textContent = game.sims.length;
+            document.getElementById('security').textContent = Math.floor(game.security);
+            document.getElementById('roomCount').textContent = game.rooms.length;
+            document.getElementById('idleSims').textContent = game.sims.filter(s => s.task === 'idle').length;
+            document.getElementById('raidTimer').textContent = Math.floor(game.raidTimer) + 's';
+            document.getElementById('dayCounter').textContent = game.dayCounter;
+
+            // Calculate housing capacity
+            const housingCapacity = game.rooms.filter(r => r.name === 'House').length * 2 + 2; // Each house adds 2, starting capacity is 2
+            document.getElementById('populationDetail').textContent = game.sims.length;
+            document.getElementById('housingCap').textContent = housingCapacity;
+
+            // Update recruit button
+            const canRecruit = game.resources.food >= 20 && game.resources.wood >= 15 && game.sims.length < housingCapacity;
+            document.getElementById('recruitBtn').classList.toggle('disabled', !canRecruit);
+
+            // Show craft panel if preservation room exists
+            const hasPreservation = game.rooms.some(r => r.name === 'Preservation Room');
+            document.getElementById('craftPanel').classList.toggle('show', hasPreservation);
+
+            // Update craft button states
+            document.querySelectorAll('.craft-btn').forEach(btn => {
+                const craft = btn.dataset.craft;
+                let canCraft = false;
+
+                if (craft === 'salt') canCraft = game.resources.herbs >= 2;
+                else if (craft === 'sugar') canCraft = game.resources.herbs >= 3;
+                else if (craft === 'preserve-meat') canCraft = game.resources.meat >= 2 && game.resources.salt >= 1;
+                else if (craft === 'sweet-dish') canCraft = game.resources.meat >= 2 && game.resources.sugar >= 2;
+                else if (craft === 'herb-mix') canCraft = game.resources.meat >= 1 && game.resources.herbs >= 3;
+
+                btn.classList.toggle('disabled', !canCraft);
+            });
+
+            // Update build buttons
+            document.querySelectorAll('.build-btn').forEach(btn => {
+                const roomType = btn.dataset.room;
+                const template = roomTemplates[roomType];
+                let canBuild = true;
+
+                for (let [resource, amount] of Object.entries(template.cost)) {
+                    if (game.resources[resource] < amount) {
+                        canBuild = false;
+                        break;
+                    }
+                }
+
+                btn.classList.toggle('disabled', !canBuild);
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.getElementById('notifications').appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Event Handlers
+        canvas.addEventListener('mousemove', (e) => {
+            if (game.buildMode) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                game.ghostBuilding = {
+                    x: x,
+                    y: y
+                };
+            } else {
+                game.ghostBuilding = null;
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (game.buildMode) {
+                const template = roomTemplates[game.buildMode];
+
+                // Check if can afford
+                let canBuild = true;
+                for (let [resource, amount] of Object.entries(template.cost)) {
+                    if (game.resources[resource] < amount) {
+                        canBuild = false;
+                        showNotification(`Not enough ${resource}!`, 'warning');
+                        break;
+                    }
+                }
+
+                // Check if clicking in valid area (ground level)
+                if (!canBuild) return;
+
+                if (y < 450 || y > 580) {
+                    showNotification('Must build on the ground!', 'warning');
+                    return;
+                }
+
+                const newX = Math.floor(x - template.width / 2);
+                const newY = 500;
+
+                // Check for overlapping rooms
+                const overlaps = game.rooms.some(room => {
+                    return !(newX + template.width < room.x ||
+                        newX > room.x + room.width ||
+                        newY + template.height < room.y ||
+                        newY > room.y + room.height);
+                });
+
+                if (overlaps) {
+                    showNotification('Cannot overlap with existing rooms!', 'warning');
+                    return;
+                }
+
+                // Deduct resources
+                for (let [resource, amount] of Object.entries(template.cost)) {
+                    game.resources[resource] -= amount;
+                }
+
+                // Create room
+                const newRoom = {
+                    ...template,
+                    x: newX,
+                    y: newY,
+                    id: Date.now(),
+                    workers: []
+                };
+
+                game.rooms.push(newRoom);
+                if (newRoom.security) {
+                    game.security += newRoom.security;
+                }
+
+                showNotification(`${template.name} built! 🏗️`, 'success');
+                game.buildMode = null;
+                document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('selected'));
+                updateUI();
+            } else {
+                // Check if clicked on sim
+                const clickedSim = game.sims.find(sim => {
+                    const dx = sim.x - x;
+                    const dy = sim.y - y;
+                    return Math.sqrt(dx * dx + dy * dy) < 20;
+                });
+
+                if (clickedSim) {
+                    game.selectedSim = clickedSim;
+                    const menu = document.getElementById('assignMenu');
+                    menu.style.display = 'block';
+                    menu.style.left = Math.min(e.clientX, window.innerWidth - 270) + 'px';
+                    menu.style.top = Math.min(e.clientY, window.innerHeight - 400) + 'px';
+                }
+            }
+        });
+
+        document.querySelectorAll('.build-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!btn.classList.contains('disabled')) {
+                    const roomType = btn.dataset.room;
+                    game.buildMode = roomType;
+                    document.querySelectorAll('.build-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    showNotification(`Click on the ground to place ${roomTemplates[roomType].name}`, 'success');
+                }
+            });
+        });
+
+        document.getElementById('assignMenu').addEventListener('click', (e) => {
+            if (e.target.dataset.task && game.selectedSim) {
+                game.selectedSim.task = e.target.dataset.task;
+                game.selectedSim.taskTimer = 0;
+                showNotification(`Sim assigned to ${e.target.dataset.task}`, 'success');
+                document.getElementById('assignMenu').style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#assignMenu') && !e.target.closest('canvas')) {
+                document.getElementById('assignMenu').style.display = 'none';
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                game.buildMode = null;
+                document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('selected'));
+                document.getElementById('assignMenu').style.display = 'none';
+            }
+
+            // Quick build shortcuts
+            if (e.key === '1') document.querySelector('[data-room="house"]')?.click();
+            if (e.key === '2') document.querySelector('[data-room="storage"]')?.click();
+            if (e.key === '3') document.querySelector('[data-room="kitchen"]')?.click();
+            if (e.key === '4') document.querySelector('[data-room="workshop"]')?.click();
+            if (e.key === '5') document.querySelector('[data-room="guard"]')?.click();
+            if (e.key === '6') document.querySelector('[data-room="preserve"]')?.click();
+        });
+
+        // Crafting system
+        document.querySelectorAll('.craft-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const craft = btn.dataset.craft;
+                let success = false;
+
+                if (craft === 'salt' && game.resources.herbs >= 2) {
+                    game.resources.herbs -= 2;
+                    game.resources.salt += 3;
+                    success = true;
+                    showNotification('Created 3 Salt! 🧂', 'success');
+                } else if (craft === 'sugar' && game.resources.herbs >= 3) {
+                    game.resources.herbs -= 3;
+                    game.resources.sugar += 2;
+                    success = true;
+                    showNotification('Created 2 Sugar! 🍬', 'success');
+                } else if (craft === 'preserve-meat' && game.resources.meat >= 2 && game.resources.salt >= 1) {
+                    game.resources.meat -= 2;
+                    game.resources.salt -= 1;
+                    game.resources.food += 4;
+                    success = true;
+                    showNotification('Preserved meat into 4 Food! 🥓', 'success');
+                } else if (craft === 'sweet-dish' && game.resources.meat >= 2 && game.resources.sugar >= 2) {
+                    game.resources.meat -= 2;
+                    game.resources.sugar -= 2;
+                    game.resources.food += 5;
+                    success = true;
+                    showNotification('Created Sweet Dish! +5 Food +Energy 🍰', 'success');
+                } else if (craft === 'herb-mix' && game.resources.meat >= 1 && game.resources.herbs >= 3) {
+                    game.resources.meat -= 1;
+                    game.resources.herbs -= 3;
+                    game.resources.food += 4;
+                    success = true;
+                    showNotification('Created Herb Mix! +4 Food +Health 🌿', 'success');
+                }
+
+                if (!success) {
+                    showNotification('Not enough resources!', 'warning');
+                }
+
+                updateUI();
+            });
+        });
+
+        // Recruit new sim button
+        document.getElementById('recruitBtn').addEventListener('click', () => {
+            const housingCapacity = game.rooms.filter(r => r.name === 'House').length * 2 + 2; // Starting house capacity
+
+            if (game.sims.length >= housingCapacity) {
+                showNotification('Build more houses to increase population capacity!', 'warning');
+            } else if (game.resources.food >= 20 && game.resources.wood >= 15) {
+                game.resources.food -= 20;
+                game.resources.wood -= 15;
+
+                // Spawn new sim at a random house
+                const houses = game.rooms.filter(r => r.name === 'House');
+                const spawnHouse = houses[Math.floor(Math.random() * houses.length)] || game.rooms[0];
+
+                game.sims.push({
+                    x: spawnHouse.x + spawnHouse.width / 2,
+                    y: spawnHouse.y + 40,
+                    vx: 0,
+                    vy: 0,
+                    task: 'idle',
+                    target: null,
+                    targetRoom: null,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                    taskTimer: 0,
+                    id: Date.now(),
+                    gathering: false,
+                    carrying: null
+                });
+
+                showNotification('New sim recruited! 👤', 'success');
+                updateUI();
+            } else {
+                showNotification('Need 20 Food and 15 Wood to recruit!', 'warning');
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                game.buildMode = null;
+                document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('selected'));
+                document.getElementById('assignMenu').style.display = 'none';
+            }
+
+            // Quick build shortcuts
+            if (e.key === '1') document.querySelector('[data-room="house"]').click();
+            if (e.key === '2') document.querySelector('[data-room="storage"]').click();
+            if (e.key === '3') document.querySelector('[data-room="kitchen"]').click();
+            if (e.key === '4') document.querySelector('[data-room="workshop"]').click();
+            if (e.key === '5') document.querySelector('[data-room="guard"]').click();
+            if (e.key === '6') document.querySelector('[data-room="preserve"]').click();
+        });
+
+        // Game Loop
+        let lastTime = 0;
+        function gameLoop(timestamp = 0) {
+            const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            game.gameTime += deltaTime;
+
+            // Update raid timer
+            game.raidTimer -= deltaTime;
+            if (game.raidTimer <= 0) {
+                spawnRaid();
+                game.raidTimer = 90 - Math.min(game.dayCounter * 1.5, 40); // Raids get more frequent
+                game.dayCounter++;
+            }
+
+            // Update resource nodes (animals move)
+            game.resourceNodes.forEach(node => {
+                if (node.moving && node.type === 'hunt') {
+                    node.x += node.direction * 0.5;
+                    if (node.x < 400 || node.x > 1000) {
+                        node.direction *= -1;
+                    }
+                }
+
+                // Slowly regenerate resources
+                if (Math.random() < 0.001 && node.amount < 50) {
+                    node.amount += 1;
+                }
+            });
+
+            // Update game objects
+            game.sims.forEach(sim => updateSim(sim, deltaTime));
+            game.monsters.forEach(monster => updateMonster(monster, deltaTime));
+
+            // Draw everything
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawGate();
+
+            // Draw resource nodes
+            game.resourceNodes.forEach(node => drawResourceNode(node));
+
+            game.rooms.forEach(room => drawRoom(room));
+            game.sims.forEach(sim => drawSim(sim));
+            game.monsters.forEach(monster => drawMonster(monster));
+
+            // Draw ghost building
+            if (game.ghostBuilding && game.buildMode) {
+                const template = roomTemplates[game.buildMode];
+                const gx = Math.floor(game.ghostBuilding.x - template.width / 2);
+                const gy = 500;
+
+                // Check if valid placement
+                const overlaps = game.rooms.some(room => {
+                    return !(gx + template.width < room.x ||
+                        gx > room.x + room.width ||
+                        gy + template.height < room.y ||
+                        gy > room.y + room.height);
+                });
+
+                const validY = game.ghostBuilding.y >= 450 && game.ghostBuilding.y <= 580;
+
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = overlaps || !validY ? '#ff4444' : '#44ff44';
+                ctx.fillRect(gx, gy, template.width, template.height);
+                ctx.strokeStyle = overlaps || !validY ? '#ff0000' : '#00ff00';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(gx, gy, template.width, template.height);
+
+                ctx.font = '32px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(template.icon, gx + template.width / 2 - 16, gy + template.height / 2 + 10);
+                ctx.globalAlpha = 1.0;
+            }
+
+            updateUI();
+            if (game.selectedSim) updateInspector();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        initGame();
+    </script>
+</body>
+
+</html>

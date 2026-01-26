@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Racing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        canvas {
+            display: block;
+            background: #2d2d2d;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: bold;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            display: none;
+        }
+        
+        #gameOver h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff4444;
+        }
+        
+        #gameOver button {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        #gameOver button:hover {
+            background: #45a049;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div>Speed: <span id="speed">0</span> km/h</div>
+            <div>Distance: <span id="distance">0</span> m</div>
+            <div>Position: <span id="position">1</span>/5</div>
+        </div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p id="finalStats"></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+        <div id="instructions">
+            Use Arrow Keys: ← → to steer | ↑ to accelerate | ↓ to brake
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 800;
+        canvas.height = 600;
+        
+        // Game variables
+        let gameRunning = true;
+        let speed = 0;
+        let distance = 0;
+        const maxSpeed = 200;
+        const acceleration = 1.2;
+        const deceleration = 0.8;
+        
+        // Player position (lateral movement only in first person)
+        const player = {
+            x: 0, // Center position (-1 to 1, where 0 is center)
+            targetX: 0,
+            speed: 0
+        };
+        
+        // Road properties
+        const roadWidth = 2000; // Virtual road width
+        const segmentLength = 200; // Length of each road segment
+        const rumbleLength = 3; // Number of segments per color change
+        const cameraHeight = 1000;
+        const cameraDepth = 1 / 300;
+        const fogDensity = 5;
+        const maxCars = 5;
+        
+        // Road segments for 3D effect
+        let segments = [];
+        const segmentCount = 300;
+        
+        // Initialize road segments
+        for (let i = 0; i < segmentCount; i++) {
+            segments.push({
+                index: i,
+                z: i * segmentLength,
+                curve: 0,
+                // Alternate colors for road stripes
+                color: Math.floor(i / rumbleLength) % 2 ? '#555' : '#666'
+            });
+        }
+        
+        // AI Cars in 3D space
+        const aiCars = [];
+        function createAICar() {
+            return {
+                z: Math.random() * segmentCount * segmentLength + 1000,
+                x: (Math.random() - 0.5) * 1.5, // -0.75 to 0.75
+                speed: 100 + Math.random() * 80,
+                color: ['#0066ff', '#00ff00', '#ffff00', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 5)],
+                sprite: Math.random() > 0.5 ? 'car1' : 'car2'
+            };
+        }
+        
+        // Initialize AI cars
+        for (let i = 0; i < maxCars; i++) {
+            aiCars.push(createAICar());
+        }
+        
+        // Keyboard input
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Project 3D to 2D
+        function project3D(x, y, z) {
+            const scale = cameraDepth / z;
+            const projX = canvas.width / 2 + scale * x * canvas.width / 2;
+            const projY = canvas.height / 2 - scale * y * canvas.height / 2;
+            const projW = scale * roadWidth * canvas.width / 2;
+            return { x: projX, y: projY, w: projW, scale: scale };
+        }
+        
+        // Draw road segment
+        function drawSegment(segment, playerZ) {
+            const z = segment.z - playerZ;
+            if (z <= 0 || z > segmentCount * segmentLength / 2) return;
+            
+            const p1 = project3D(segment.curve - player.x, 0, z);
+            const p2 = project3D(segment.curve - player.x, 0, z + segmentLength);
+            
+            if (p1.y > canvas.height || p2.y < 0) return;
+            
+            // Draw grass
+            ctx.fillStyle = '#2d5016';
+            ctx.fillRect(0, p2.y, canvas.width, p1.y - p2.y);
+            
+            // Draw road
+            const roadColor = segment.color;
+            ctx.fillStyle = roadColor;
+            
+            // Road trapezoid
+            ctx.beginPath();
+            ctx.moveTo(p1.x - p1.w, p1.y);
+            ctx.lineTo(p1.x + p1.w, p1.y);
+            ctx.lineTo(p2.x + p2.w, p2.y);
+            ctx.lineTo(p2.x - p2.w, p2.y);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw road edges
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = p1.scale * 30;
+            ctx.beginPath();
+            ctx.moveTo(p1.x - p1.w, p1.y);
+            ctx.lineTo(p2.x - p2.w, p2.y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(p1.x + p1.w, p1.y);
+            ctx.lineTo(p2.x + p2.w, p2.y);
+            ctx.stroke();
+            
+            // Draw center line dashes
+            if (Math.floor(segment.index / rumbleLength) % 2) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = p1.scale * 15;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw 3D car sprite
+        function drawCar3D(car, playerZ) {
+            const z = car.z - playerZ;
+            if (z <= 0 || z > segmentCount * segmentLength / 2) return;
+            
+            const segment = segments[Math.floor(car.z / segmentLength) % segments.length];
+            const p = project3D((car.x - player.x) * roadWidth / 2, -50, z);
+            
+            if (p.y < 0 || p.y > canvas.height) return;
+            
+            const carWidth = p.scale * 200;
+            const carHeight = p.scale * 150;
+            
+            // Draw car shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(p.x - carWidth / 2, p.y + carHeight * 0.8, carWidth, carHeight * 0.2);
+            
+            // Draw car body
+            ctx.fillStyle = car.color;
+            ctx.fillRect(p.x - carWidth / 2, p.y - carHeight / 2, carWidth, carHeight);
+            
+            // Draw car windows
+            ctx.fillStyle = 'rgba(50, 50, 80, 0.8)';
+            ctx.fillRect(p.x - carWidth / 3, p.y - carHeight / 3, carWidth * 0.66, carHeight * 0.3);
+            
+            // Draw car lights
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(p.x - carWidth / 2.5, p.y + carHeight / 3, carWidth * 0.15, carHeight * 0.1);
+            ctx.fillRect(p.x + carWidth / 3.5, p.y + carHeight / 3, carWidth * 0.15, carHeight * 0.1);
+        }
+        
+        // Draw player car (bottom of screen)
+        function drawPlayerCar() {
+            const x = canvas.width / 2;
+            const y = canvas.height - 120;
+            const width = 150;
+            const height = 100;
+            
+            // Car body
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(x - width / 2, y - height / 2, width, height);
+            
+            // Windows
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(x - width / 3, y - height / 2 + 10, width * 0.66, height * 0.35);
+            
+            // Hood
+            ctx.fillStyle = '#cc0000';
+            ctx.beginPath();
+            ctx.moveTo(x - width / 2, y - height / 2);
+            ctx.lineTo(x + width / 2, y - height / 2);
+            ctx.lineTo(x + width / 3, y - height);
+            ctx.lineTo(x - width / 3, y - height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Side mirrors
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x - width / 2 - 10, y - height / 4, 10, 20);
+            ctx.fillRect(x + width / 2, y - height / 4, 10, 20);
+        }
+        
+        // Update player
+        function updatePlayer() {
+            // Acceleration
+            if (keys['ArrowUp']) {
+                speed = Math.min(speed + acceleration, maxSpeed);
+            } else if (keys['ArrowDown']) {
+                speed = Math.max(speed - acceleration * 2.5, 0);
+            } else {
+                speed = Math.max(speed - deceleration, 0);
+            }
+            
+            // Steering - lateral movement
+            if (keys['ArrowLeft']) {
+                player.targetX = Math.max(player.targetX - 0.02, -0.9);
+            } else if (keys['ArrowRight']) {
+                player.targetX = Math.min(player.targetX + 0.02, 0.9);
+            }
+            
+            // Smooth camera movement
+            player.x += (player.targetX - player.x) * 0.1;
+            
+            // Update distance
+            distance += speed / 60;
+        }
+        
+        // Update AI cars
+        function updateAICars(playerZ) {
+            for (let car of aiCars) {
+                // Move car relative to player
+                const relativeSpeed = (speed - car.speed) / 60;
+                car.z -= relativeSpeed;
+                
+                // Simple lane behavior
+                if (Math.random() < 0.01) {
+                    car.x += (Math.random() - 0.5) * 0.1;
+                    car.x = Math.max(-0.8, Math.min(0.8, car.x));
+                }
+                
+                // Reset car when it goes off screen
+                if (car.z < playerZ - 500) {
+                    car.z = playerZ + Math.random() * 2000 + 2000;
+                    car.x = (Math.random() - 0.5) * 1.5;
+                    car.speed = 100 + Math.random() * 80;
+                }
+                
+                if (car.z > playerZ + 3000) {
+                    car.z = playerZ + Math.random() * 1000 + 500;
+                    car.x = (Math.random() - 0.5) * 1.5;
+                }
+            }
+        }
+        
+        // Collision detection
+        function checkCollisions(playerZ) {
+            for (let car of aiCars) {
+                const zDist = Math.abs(car.z - playerZ);
+                const xDist = Math.abs(car.x - player.x);
+                
+                if (zDist < 200 && xDist < 0.15) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // Check if off road
+            if (Math.abs(player.x) > 0.95) {
+                speed = Math.max(speed - 3, 0);
+            }
+        }
+        
+        // Calculate position
+        function calculatePosition(playerZ) {
+            let position = 1;
+            for (let car of aiCars) {
+                if (car.z > playerZ) {
+                    position++;
+                }
+            }
+            return position;
+        }
+        
+        // Update UI
+        function updateUI(playerZ) {
+            document.getElementById('speed').textContent = Math.round(speed);
+            document.getElementById('distance').textContent = Math.round(distance);
+            document.getElementById('position').textContent = calculatePosition(playerZ);
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            const finalDistance = Math.round(distance);
+            const finalPosition = calculatePosition(distance);
+            document.getElementById('finalStats').innerHTML = 
+                `Distance: ${finalDistance}m<br>Final Position: ${finalPosition}/${maxCars + 1}`;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Restart game
+        function restartGame() {
+            gameRunning = true;
+            speed = 0;
+            distance = 0;
+            player.x = 0;
+            player.targetX = 0;
+            
+            // Reset AI cars
+            aiCars.length = 0;
+            for (let i = 0; i < maxCars; i++) {
+                aiCars.push(createAICar());
+            }
+            
+            document.getElementById('gameOver').style.display = 'none';
+            gameLoop();
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            const playerZ = distance * 10;
+            
+            // Clear canvas with sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update
+            updatePlayer();
+            updateAICars(playerZ);
+            checkCollisions(playerZ);
+            updateUI(playerZ);
+            
+            // Draw road segments from back to front
+            const startSegment = Math.floor(playerZ / segmentLength);
+            for (let i = startSegment + 150; i > startSegment; i--) {
+                const segment = segments[i % segments.length];
+                const newSegment = { ...segment, z: i * segmentLength };
+                drawSegment(newSegment, playerZ);
+            }
+            
+            // Sort and draw cars by distance
+            const sortedCars = [...aiCars].sort((a, b) => b.z - a.z);
+            for (let car of sortedCars) {
+                drawCar3D(car, playerZ);
+            }
+            
+            // Draw player car (always on top)
+            drawPlayerCar();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game
+        gameLoop();
+    </script>
+</body>
+</html>
