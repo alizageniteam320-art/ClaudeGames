@@ -1,0 +1,51 @@
+﻿2D SLUG: Infinite Front
+Step into the trenches with 2D SLUG, a high-octane, side-scrolling survival shooter built directly for your browser. This isn't just a simple script; it’s a finely-tuned war simulator that combines the relentless spirit of retro arcade classics with modern, procedural world-building.
+Whether you’re dodging a hail of lead or timing the perfect arc of a high-explosive grenade, 2D SLUG delivers responsive gameplay and an ever-evolving battlefield that scales in difficulty the further you push into enemy territory.
+________________
+
+
+The Gameplay Experience
+2D SLUG puts you in control of a specialized commando navigating an endless, procedurally generated combat zone. The game utilizes a sophisticated custom engine featuring tiered enemy AI, realistic projectile physics, and dynamic camera tracking.
+* Procedural Warfare: No two runs are identical. The world generates platforms, enemy squads, and vital supply drops in real-time, requiring instant tactical adaptation.
+* Tactical Ordnance: Beyond your primary rifle, you possess a physics-based grenade system. Master the gravity-affected trajectory and ground-bounce friction to clear out bunkers and armored threats.
+* Elite Engagements: Face off against a variety of foes, from standard infantry to Elite Soldiers—distinguishable by their aggressive red-tinted gear—and heavy-duty Tanks that require maximum firepower to neutralized.
+* Vital Resource Scavenging: Survival depends on more than just aim. You must hunt for health packs, ammo crates, and grenade refills to sustain your push into the heart of the conflict.
+________________
+
+
+Key Features
+* Infinite Scrolling World: Advanced procedural logic spawns challenges ahead of the player while optimizing performance by cleaning up the battlefield behind them.
+* Dynamic Visual FX: Features a robust particle system for blood-spatter, muzzle flashes, and multi-layered explosions, paired with "Tactical Outlines" to ensure visibility in the heat of battle.
+* Cinematic HUD: A comprehensive interface monitors your distance, score, and critical vitals, including a specialized grenade fuse indicator.
+* Scaleable Difficulty: As your distance increases, the enemy presence intensifies, forcing you to evolve from a scout into a one-man army.
+________________
+
+
+Mastery of Controls
+Action
+	Control (Keyboard)
+	Purpose
+	Move Left / Right
+	A / D
+	Navigate the battlefield
+	Jump
+	W / Space
+	Scale platforms and dodge fire
+	Crouch
+	S
+	Take cover or hit low targets
+	Shoot
+	J / Left Click
+	Fire your primary weapon
+	Grenade
+	K / Right Click
+	Launch high-explosive ordnance
+	Pause
+	P / ESC
+	Assess the tactical situation
+	________________
+
+
+Technical Excellence
+The code behind 2D SLUG is optimized for a seamless 60 frames per second (FPS), ensuring every jump and shot feels snappy. By leveraging the HTML5 Canvas API and a modular JavaScript class structure, the game manages complex interactions—like aspect-ratio sprite preservation, global composite tinting, and area-of-effect (AoE) damage—with professional precision.
+"A masterclass in browser-based run-and-gun action. 2D SLUG takes the chaotic soul of the 90s arcades and reimagines it for the modern web."

@@ -1,0 +1,47 @@
+﻿DEADZONE: Zombie Apocalypse
+"The night is long, the fog is thick, and you are the only thing standing between humanity and the end."
+Abstract: The Technical Masterpiece
+DEADZONE is an atmospheric, high-fidelity survival shooter built on the cutting edge of browser-based 3D technology. Using a custom-tuned Three.js engine, the game delivers a haunting, fog-drenched landscape where every shadow hides a threat.
+The game features a Dynamic Procedural Appearance System, ensuring that no two undead encounters are the same. From decaying medical staff to infected hazmat units, the visual variety is matched only by the precision of the mechanics. This isn't just a "zombie game"—it is a meticulously balanced combat simulation designed for the "Killable" era of web gaming.
+________________
+
+
+Core Gameplay Features
+* Tactical Weaponry Suite: Master a four-tier arsenal, each with unique recoil patterns, bullet velocities, and damage profiles:
+   * M4A1 Assault Rifle: The versatile workhorse for mid-range crowd control.
+   * Combat Shotgun: High-recoil, high-impact stopping power for close-quarters panic.
+   * AWP Sniper Rifle: Surgical precision with massive headshot multipliers.
+   * Desert Eagle: The heavy-caliber sidearm with infinite reliability.
+* Intelligent Wave Scaling: Our Adaptive Difficulty Algorithm ensures the challenge grows with you. As waves progress, the undead become faster, hardier, and more aggressive, forcing you to manage resources and movement.
+* Visceral Feedback System: Experience combat through a reactive HUD. Dynamic crosshairs expand with recoil, hit markers confirm your lethality, and a "Blood Vignette" pulses as your health reaches critical levels.
+* The "Human-Grade" Undead: Unlike generic models, our zombies feature a multi-layered mesh system—complete with facial structures, sunken eye sockets, and distinct clothing types (Police, Soldier, Worker, etc.) to heighten the immersion.
+________________
+
+
+Combat Statistics & Customization
+The game is built for the "Killable" community, allowing for deep customization of the game's DNA within the source:
+Feature
+	Specification
+	Impact
+	Engine
+	Three.js r128
+	Ultra-smooth 60FPS performance
+	AI Pathing
+	Vector-Targeting
+	Relentless, player-focused pursuit
+	Physics
+	Ray-Cast Precision
+	Pixel-perfect headshot detection
+	Atmosphere
+	FogExp2 Rendering
+	Deep, claustrophobic visual depth
+	________________
+
+
+Operational Controls
+* [WASD] – Navigate the Deadzone.
+* [MOUSE] – Survey the horizon.
+* [LEFT CLICK] – Terminate with extreme prejudice.
+* [R] – Tactical reload.
+* [1-4] – Cycle your arsenal.
+* [SHIFT] – Sprint for your life.

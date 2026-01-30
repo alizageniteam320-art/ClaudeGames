@@ -1,0 +1,44 @@
+﻿2D FIGHTER: Arena of Shadows
+Step into the ring with 2D FIGHTER, a high-octane, local multiplayer combat experience built directly for your browser. This isn't just a simple script; it’s a finely-tuned battle simulator that combines retro arcade aesthetics with modern, fluid physics.
+Whether you’re looking to settle a score with a friend or master the art of the pixelated punch, 2D FIGHTER delivers responsive gameplay and intense 99-second rounds that will keep your heart racing.
+________________
+
+
+The Gameplay Experience
+2D FIGHTER puts you in control of one of two elite combatants. The game utilizes a sophisticated custom physics engine featuring gravity, friction, and precise collision detection.
+* Dynamic Combat: Every punch and kick has a dedicated "Hitbox." Timing is everything—strike too early and you’re open to a counter-attack; strike too late and your opponent will have already moved.
+* Tactical Defense: Use the Crouch mechanic to shrink your profile and evade high-reaching strikes, or take to the skies with high-velocity Jumping to reposition and launch aerial assaults.
+* Dual Health Systems: Monitor your status via the cinematic top HUD or the tactical mini-bars floating directly above your fighter’s head.
+________________
+
+
+Key Features
+* Seamless Local Multiplayer: Perfectly mapped controls for two players on a single keyboard.
+* Fluid Animations: Character states change dynamically from standing to crouching, jumping, and attacking, providing instant visual feedback.
+* Environmental Polish: Fight against a beautiful sky-and-earth backdrop with a modern, glass-morphic UI and smooth gradient effects.
+* Multiple Win Conditions: Victory can be claimed via a definitive Knockout or by leading in health when the 99-second timer hits zero.
+________________
+
+
+Mastery of Controls
+Action
+	Player 1 (Red)
+	Player 2 (Blue)
+	Movement
+	A / D
+	← / →
+	Jump / Crouch
+	W / S
+	↑ / ↓
+	Punch
+	F
+	Numpad 1
+	Kick
+	G
+	Numpad 2
+	________________
+
+
+Technical Excellence
+The code behind 2D FIGHTER is optimized for 60 frames per second (FPS), ensuring that every movement feels snappy and professional. By leveraging the HTML5 Canvas API and a robust JavaScript class structure, the game manages complex state transitions—like cooldown timers and gravity constants—without a hint of lag.
+"A masterclass in browser-based arcade action. 2D FIGHTER takes the simplicity of the past and pairs it with the precision of the present."

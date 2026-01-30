@@ -1,0 +1,18 @@
+﻿BLOCK BLAST: The Ultimate Neon Grid Challenge
+Block Blast is a masterfully crafted, high-octane puzzle experience that reimagines classic spatial logic for the modern era. Set against a deep, synthwave-inspired backdrop, this game isn't just about moving shapes—it’s about rhythm, foresight, and the satisfying "crunch" of a perfectly executed combo. Whether you're looking for a Zen-like flow state or a high-stakes strategic battle against a shrinking grid, Block Blast delivers an addictive, premium experience right in your browser.
+________________
+
+
+Master the Mechanics
+The gameplay is deceptively simple but offers infinite depth. Your goal is to navigate an $8 \times 8$ digital arena using a revolving set of geometric shapes.
+* Tactical Drag-and-Drop: You are dealt three unique pieces at a time. Each move requires careful calculation; one wrong placement could block your path to a new high score.
+* The "Blast" Effect: Fill a horizontal row or vertical column to trigger a "Blast." Unlike traditional falling-block games, you have the freedom to clear lines in any direction, allowing for complex "cross-clears."
+* High-Stakes Survival: There is no timer—only your own spatial limits. The game ends the moment you can no longer fit your remaining pieces on the board.
+________________
+
+
+A Sensory Puzzle Experience
+Your code brings more than just logic; it brings personality. The visual identity of Block Blast is built on a "Cyber-Refined" aesthetic:
+* Reactive UI: Experience tactile satisfaction with "Block-Pop" animations and "Clearing-Pulse" effects that make every victory feel earned.
+* Ghost-Guided Precision: Never guess a placement again. The intelligent preview system shows you exactly how a piece fits before you let go.
+* Seamless Fluidity: Optimized for 60fps, the game feels buttery smooth whether you’re playing with a high-end mouse or a mobile touchscreen.

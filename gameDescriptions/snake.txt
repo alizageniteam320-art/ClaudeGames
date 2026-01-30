@@ -1,0 +1,38 @@
+﻿Neon Serpent: The Ultimate Glitch-Grid Challenge
+Neon Serpent is a sleek, modernized reimagining of the classic arcade Snake, blending high-fidelity visuals with a pulse-pounding progression system. Set against a deep-space violet backdrop, this version transforms a simple mechanic into a tactical battle of reflexes, spatial awareness, and scaling difficulty.
+________________
+
+
+Game Abstract
+In the digital vacuum of the Grid-Sector, you control a bio-luminescent serpent that thrives on energy nodes. But growth is a double-edged sword: as you consume, you expand, turning the very arena into a claustrophobic labyrinth of your own making. With every five nodes consumed, the simulation accelerates, pushing your reaction times to the absolute limit.
+Elite Gameplay Features
+* Hyper-Responsive Control Matrix: Supports both WASD and Arrow Key inputs with a zero-latency buffer, allowing for frame-perfect turns.
+* Dynamic Velocity Scaling: Unlike traditional versions, the game's clock speed increases every 5 points. By the time you reach a score of 50, you aren't just playing; you’re surviving a high-speed digital chase.
+* The "Shadow Glow" Engine: The snake features a gradient aesthetic—a vibrant emerald head followed by deeper forest-green body segments—all emitting a soft neon bloom that interacts with the grid lines.
+* Persistence Protocol: Features an integrated High Score memory system using localStorage, ensuring your greatest runs are immortalized even after the browser is closed.
+________________
+
+
+Technical Specifications
+Feature
+	Specification
+	Impact
+	Arena Resolution
+	$400 \times 400$ px
+	Perfect balance for desktop and mobile-responsive play.
+	Grid Density
+	$20 \times 20$ Tiles
+	Provides $400$ possible positions for strategic maneuvering.
+	Food Logic
+	Anti-Overlapping Randomization
+	Prevents energy nodes from spawning inside the snake's body.
+	Physics
+	Linear Collision Detection
+	Frame-by-frame checks for wall impacts and self-cannibalization.
+	________________
+ How to Play
+1. Awaken: Use any movement key to set the serpent in motion.
+2. Consume: Steer toward the glowing crimson energy nodes to grow and score.
+3. Adapt: Anticipate the speed increase every 5 points.
+4. Pause: Hit Spacebar to freeze the simulation and plan your next path through the maze of your own tail.
+Pro Tip: As your score climbs above 30, try to "coil" your body along the edges of the grid. This clears the central play area, giving you more reaction time to reach the next energy node.

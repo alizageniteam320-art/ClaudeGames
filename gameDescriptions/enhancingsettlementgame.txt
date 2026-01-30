@@ -1,0 +1,38 @@
+﻿Settlement Overseer: Pixel Kingdom A Living, Breathing Survival Strategy Engine
+________________
+
+
+Overview
+Settlement Overseer: Pixel Kingdom is an immersive, real-time settlement management simulator that blends the charm of retro pixel art with the complexity of modern survival strategy. As the Overseer, you are tasked with transforming a lone shack into a thriving, fortified citadel. Your success hinges on your ability to balance resource loops, protect your citizens from nightly raids, and manage the intricate personal lives of your "Sims."
+________________
+
+
+Core Gameplay Mechanics
+1. Dynamic Resource Ecosystem
+Every material in the Kingdom serves a vital purpose. Unlike static strategy games, resources in Pixel Kingdom must be physically gathered and transported:
+* Harvesting: Assign Sims to chop timber 🪵, mine granite 🪨, or extract iron ore ⚙️.
+* The Food Chain: Hunt wild goats 🥩 or forage for herbs 🌿. These raw ingredients must be processed in a Kitchen to create nourishing food 🍖 that prevents starvation.
+* Preservation & Crafting: Unlock the Preservation Room to access advanced chemistry. Convert herbs into Salt or Sugar to create high-tier dishes that provide health and energy buffs.
+2. Sim Management & "The Human Element"
+Your settlers aren't just numbers—they are individuals with unique traits and needs:
+* Vitals: Track Hunger, Energy, and Happiness. A hungry Sim is a slow Sim; an exhausted Sim will eventually collapse.
+* Life Cycles: Manage demographics through recruitment or the "Try for Baby" mechanic. Watch children grow from small, low-capacity helpers into full-sized workers.
+* Skill Progression: As Sims perform tasks, they grow more efficient in specific trades (Woodcutting, Mining, Cooking, Combat).
+3. Strategic Architecture
+Build your town using a modular room system. Each structure unlocks new capabilities: | Building | Primary Function | Cost | | :--- | :--- | :--- | | House 🏠 | Increases population capacity (Housing Cap). | 10 Wood | | Kitchen 🍳 | Converts raw meat/herbs into Food. | 20 Wood, 10 Stone | | Guard Post 🛡️ | Boosts town security and provides a defense rally point. | 20 Wood, 10 Ore | | Workshop 🔨 | Required for advanced tool and material production. | 25 Wood, 15 Stone |
+________________
+
+
+Threats & Defense
+The wilderness is not empty. As your settlement grows, it attracts the attention of Monsters.
+* The Raid Timer: A persistent countdown keeps you on edge. You must balance your workforce between gathering resources and preparing for the next assault.
+* Combat: Assign your strongest Sims to Guard or Fight tasks. Use your Town Security rating to mitigate losses during the chaos of a raid.
+________________
+
+
+Abstract Visuals & Atmosphere
+Experience a "Lush Pixel" aesthetic featuring:
+* Dynamic Environments: Watch clouds drift over your settlement while Sims perform animated tasks like swinging axes and carrying crates.
+* Status Bubbles: Instantly read your settlement's health through visual cues—Sims will "think" of food or sleep when their needs are critical.
+* Responsive UI: A high-tech glass-morphism interface that provides deep-dive stats while staying out of the way of the action.
+Overseer's Pro-Tip: Don't expand too fast! Each new Sim is another mouth to feed. Ensure your Kitchen and Preservation rooms are running efficiently before recruiting more help.

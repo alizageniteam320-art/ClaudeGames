@@ -1,0 +1,17 @@
+﻿Duck Hunt: Retro Revival
+Experience a pixel-perfect homage to the golden era of arcade gaming. Duck Hunt: Retro Revival brings the high-stakes precision of 8-bit sharpshooting directly to your browser. Built with a modern HTML5 canvas engine, this game captures the nostalgic aesthetic of the 1980s while delivering smooth, responsive gameplay that challenges even the sharpest reflexes.
+________________
+
+
+The Gameplay Experience
+Step into the tall grass as an elite marksman. Your mission is simple but demanding: clear the skies. As the rounds progress, the ducks become faster, more erratic, and harder to pin down. You are equipped with a high-precision crosshair and a limited supply of ammunition—making every click a decisive moment between victory and a mocking laugh from your faithful (yet cheeky) hunting dog.
+Core Game Mechanics
+* Precision Shooting: A custom-rendered crosshair tracks your movement with zero latency, ensuring that every shot landed is a testament to your skill.
+* Dynamic Difficulty: The game features a progressive leveling system. With every round, the "fly-away" speed of the ducks increases, requiring tighter lead times and better prediction.
+* Resource Management: You start with 3 bullets per duck. Waste them, and you'll watch your target fly off into the sunset while your dog snickers from the brush.
+* The Hunting Dog: An interactive companion that sniffs out prey, celebrates your successful hits by retrieving ducks, and—in true retro fashion—mocks your misses.
+________________
+
+
+Visuals & Atmosphere
+The game utilizes a NES-inspired 8-bit color palette and "crisp-edge" pixel rendering to maintain that authentic vintage feel. From the swaying marsh grass and rolling clouds to the iconic duck-flap animations, every frame is designed to transport you back to the arcade.

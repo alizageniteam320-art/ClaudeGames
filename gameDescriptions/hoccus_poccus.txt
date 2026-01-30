@@ -1,0 +1,36 @@
+﻿Game Title: Hoccus Poccus
+"The clock strikes 3:00 AM. It always strikes 3:00 AM."
+________________
+
+
+Abstract
+hoccus poccus is a psychological horror experience built on the haunting concept of a "recursive reality." Unlike traditional horror games that rely on sprawling maps, hoccus poccus traps the player within the suffocating confines of a single bedroom. The horror is found not in what jumps out at you, but in what is missing.
+As you navigate through a series of "Loops," the environment subtly decays and transforms. What begins as a familiar, safe space gradually twists into a surreal nightmare where the laws of physics and logic no longer apply. It is a game of observation, unease, and the terrifying realization that some dreams are impossible to wake up from.
+________________
+
+
+Core Gameplay Mechanics
+* The Loop System: The game progresses through iterative cycles. Every time the player "goes back to sleep," they wake up in the same room, but reality has shifted. Objects vanish, colors drain, and the atmosphere becomes increasingly hostile.
+* Tactile Interaction: Players can physically pick up, examine, and throw objects (books, lamps, clocks). This isn't just for show interacting with your environment is the only way to ground yourself as the room begins to glitch.
+* Dynamic Atmosphere: Utilizing the Three.js engine, the game features real-time lighting and fog effects. As the loops progress, the lighting shifts from warm lamp light to a cold, monochromatic void, eventually descending into a blood red "Hell" state.
+* Psychological Narrative: Narrative beats are delivered through "inner thoughts" that appear on the screen, guiding the player’s descent from confusion to total existential dread.
+________________
+
+
+Technical Features
+Feature
+	Description
+	Engine
+	Custom 3D engine built with Three.js.
+	Physics
+	Real-time gravity and projectile physics for object throwing.
+	Visuals
+	PCF Soft Shadows, exponential fog, and CSS-driven "Glitch" UI animations.
+	Controls
+	First-person WASD movement with smooth mouse-look and interaction prompts.
+	________________
+
+
+The Experience
+hoccus poccus plays with the player's memory. In Loop 1, you might notice the lamp is missing. By Loop 4, the walls themselves seem to be closing in. The game uses a "Sanity Based Rendering" approach the further you progress, the more the game world literally breaks down, culminating in a final loop where "There is no escape."
+"You wake up. Everything is red. Something is very wrong."

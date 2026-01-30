@@ -1,0 +1,51 @@
+﻿VOXELCRAFT: Infinite Horizons
+Step into a world limited only by your imagination with VoxelCraft, a high-performance, first-person sandbox exploration and building experience. Built directly for the modern web using the Three.js engine, this game delivers a seamless transition from a simple browser tab into a sprawling, 3D voxel universe.
+Whether you’re scaling pixelated peaks, planting dense forests, or engineering architectural marvels, VoxelCraft provides the tools and the canvas for a truly creative survival experience.
+________________
+
+
+The Gameplay Experience
+VoxelCraft puts you in the center of a procedurally generated environment where every block is interactable. The game features a robust custom physics engine that handles real-time gravity, momentum-based movement, and complex raycasting for precision building.
+* Procedural Terrain Generation: Explore a world shaped by mathematical noise, creating natural-looking hills, valleys, and underground stone layers.
+* Tactical Construction: Use the advanced "Face-Detection" placement system. The game identifies exactly which side of a block you are looking at, allowing for intuitive and rapid construction of complex structures.
+* Dynamic Lighting & Fog: Experience an atmospheric world with a real-time directional sun, soft shadow mapping, and a cinematic distance fog that adds depth and mystery to your horizon.
+* Precision Physics: Navigate the world with a fluid movement system that includes sprinting mechanics, realistic jump arcs, and multi-point collision detection to ensure you never clip through the earth.
+________________
+
+
+Key Features
+* Diverse Biome Palette: Switch instantly between high-fidelity materials including Grass, Dirt, Stone, Wood, and Sand, each rendered with flat-shading for that iconic retro-modern look.
+* Intuitive Inventory HUD: A sleek, glass-morphic hotbar allows for rapid block switching, paired with a real-time coordinate tracker for professional-grade navigation.
+* Optimized Voxel Rendering: Leverages the HTML5 WebGL API to maintain a smooth 60 FPS, even while calculating real-time shadows and fog density across thousands of active blocks.
+* True Sandbox Freedom: No forced objectives—just the pure, meditative joy of shaping a world from the ground up.
+________________
+
+
+Mastery of Controls
+Action
+	Control (Keyboard/Mouse)
+	Purpose
+	Movement
+	W / A / S / D
+	Traverse the voxel landscape
+	Look Around
+	Mouse Movement
+	Full 360-degree vision
+	Jump / Sprint
+	Space / Shift
+	Scale verticality and move faster
+	Break Block
+	Left Click
+	Harvest the world around you
+	Place Block
+	Right Click
+	Build and expand your creations
+	Select Material
+	Keys 1 - 5
+	Hot-swap your building materials
+	________________
+
+
+Technical Excellence
+The architecture of VoxelCraft is a masterclass in efficient JavaScript game design. By utilizing a Map() based block storage system, the game can perform lightning-fast lookups for collision and raycasting without the overhead of traditional 3D arrays. The integration of a Pointer Lock API creates a "True-FPS" experience, giving the player total 1:1 control over their perspective, while the Lambertian material system ensures the world looks vibrant and stylized under any lighting condition.
+"VoxelCraft isn't just a game; it's a technical showcase of what's possible in a browser. It captures the blocky charm of the past and pairs it with the technical precision of modern web standards."

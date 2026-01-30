@@ -1,0 +1,20 @@
+﻿BUBBLE SHOOTER: A Celestial Match-3 Odyssey
+Bubble Shooter is a high-polish, arcade-style puzzle experience that blends precision physics with vibrant, celestial aesthetics. Set against a deep-space backdrop, this game challenges players to clear a descending ceiling of colorful orbs using a high-precision launcher. Built with a focus on tactile feedback and rewarding progression, it offers a seamless blend of strategic planning and satisfying, explosive action.
+________________
+
+
+The Gameplay Loop
+The objective is simple yet deeply engaging: Clear the grid before the bubbles reach the danger zone.
+* Precision Launcher: Use your mouse to aim the trajectory-guided shooter. The built-in predictive pathing shows you exactly how your shot will bounce off the walls, allowing for expert "bank shots."
+* Match-3 Mechanics: Fire colored bubbles into the grid. When three or more bubbles of the same color connect, they trigger a chain reaction "pop."
+* Gravity & Cascades: Popping a group of bubbles doesn't just clear those orbs—any "floating" bubbles that lose their connection to the ceiling will plummet, granting massive bonus points and clearing large sections of the board at once.
+* Level Evolution: As you progress, the number of colors increases and the starting configurations become more complex, requiring tighter shots and smarter strategy.
+________________
+
+
+Visuals & Dynamic Effects
+Bubble Shooter is designed to be a sensory treat, featuring:
+* Cyber-Glow Aesthetic: A rich, purple-to-blue gradient background paired with high-contrast, glowing neon bubbles.
+* Kinetic Particle System: Every pop triggers a burst of color-coordinated particles that respond to gravity, creating a sense of physical weight and impact.
+* Dynamic HUD: A frosted-glass (glassmorphism) interface that tracks your score, current level, and remaining ammunition in real-time.
+* Next-Bubble Preview: A dedicated sub-canvas allows you to see your next shot, enabling long-term tactical planning.
