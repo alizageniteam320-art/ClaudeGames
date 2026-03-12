@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Duck Hunt</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 50%, #32CD32 100%);
+            font-family: 'Courier New', monospace;
+            cursor: none;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 3px solid #8B4513;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        
+        .crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 24px;
+            display: none;
+            z-index: 20;
+        }
+        
+        .restart-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .restart-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>ROUND: <span id="round">1</span></div>
+        <div>MISSES: <span id="misses">0</span></div>
+    </div>
+    
+    <canvas id="gameCanvas" width="1200" height="800"></canvas>
+    
+    <div class="crosshair" id="crosshair">
+        <svg width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18" fill="none" stroke="red" stroke-width="2"/>
+            <line x1="20" y1="2" x2="20" y2="10" stroke="red" stroke-width="2"/>
+            <line x1="20" y1="30" x2="20" y2="38" stroke="red" stroke-width="2"/>
+            <line x1="2" y1="20" x2="10" y2="20" stroke="red" stroke-width="2"/>
+            <line x1="30" y1="20" x2="38" y2="20" stroke="red" stroke-width="2"/>
+            <circle cx="20" cy="20" r="2" fill="red"/>
+        </svg>
+    </div>
+    
+    <div class="game-over" id="gameOver">
+        <h2>GAME OVER!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Rounds Completed: <span id="finalRound">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZIfAHQFswERavH8S85SErtqcYpA2/sessions/2fIAYMhxKjUzhLJCHgTG/games/ZW2RemfDlrz9EYr59h5F.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=alqUU9eZUaUDwID3qNw5vCfIODb%2F6ldi0ntkK3QuuWIYSMAOgk6xcKvbM%2FA%2BuwBlekVblJ0OZkyRezs4PSqJvcB5g6vmf6iDrGb%2BVIWJekPMefhLUVKFnInbPnndU%2FPHBbqA4lb4xgya0MTsWaMGTuhwHnFUxOlhMSBTODEGKpy8DriE7g4he%2FGC0%2BPFIC1bqkJM3DKDyeYdBtn%2FLSrroEUYzFIrEikv%2BrpibX4XMHEBJao7HW0aQwm%2FXm%2F%2FtOV8Bl424kLZhkaZGeJ0%2FZ%2B63HXtIO3JwCeBdmmh1DaeelRaONau%2FSbV5CZkc1AqDsnYkVN%2B%2FGsKLN6fg9qdbLhxVQ%3D%3D"></script>
+</body>
+</html>
