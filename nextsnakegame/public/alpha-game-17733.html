@@ -5,8 +5,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Block Blast - Puzzle Game</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Snake Game</title>
     <style>
         * {
             margin: 0;
@@ -14,519 +13,178 @@
             box-sizing: border-box;
         }
 
-        :root {
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --accent-primary: #ff6b6b;
-            --accent-secondary: #4ecdc4;
-            --accent-tertiary: #ffe66d;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0c0;
-            --grid-bg: #0f1419;
-            --block-shadow: rgba(0, 0, 0, 0.3);
-        }
-
         body {
-            font-family: 'Fredoka', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f1419 100%);
-            color: var(--text-primary);
-            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            overflow-x: hidden;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            color: white;
         }
 
-        .container {
-            max-width: 600px;
-            width: 100%;
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        header {
+        .game-container {
             text-align: center;
-            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-            text-shadow: 0 4px 20px rgba(255, 107, 107, 0.3);
-            animation: titleGlow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes titleGlow {
-            from { filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.3)); }
-            to { filter: drop-shadow(0 0 20px rgba(78, 205, 196, 0.5)); }
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .score-board {
             display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin-bottom: 25px;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
         }
 
         .score-item {
-            background: var(--bg-secondary);
-            padding: 15px 25px;
-            border-radius: 15px;
-            text-align: center;
-            border: 2px solid rgba(78, 205, 196, 0.2);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
         }
 
-        .score-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
-        }
-
-        .score-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .score-value {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-family: 'Space Mono', monospace;
-        }
-
-        .game-container {
-            background: var(--bg-secondary);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            margin-bottom: 25px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 4px;
-            background: var(--grid-bg);
-            padding: 10px;
-            border-radius: 15px;
-            margin-bottom: 25px;
-            box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5);
-        }
-
-        .cell {
-            aspect-ratio: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            transition: all 0.2s;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .cell.filled {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            box-shadow: 0 2px 8px var(--block-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            animation: blockPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        @keyframes blockPop {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        .cell.clearing {
-            animation: clearPulse 0.5s ease-in-out;
-        }
-
-        @keyframes clearPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); filter: brightness(1.5); }
-        }
-
-        .cell.preview {
-            background: rgba(78, 205, 196, 0.3);
-            border: 2px solid var(--accent-secondary);
-        }
-
-        .blocks-container {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            min-height: 120px;
-            flex-wrap: wrap;
-        }
-
-        .block-wrapper {
-            background: var(--grid-bg);
-            padding: 15px;
-            border-radius: 12px;
-            cursor: grab;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 2px solid rgba(78, 205, 196, 0.2);
-        }
-
-        .block-wrapper:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.3);
-        }
-
-        .block-wrapper:active { cursor: grabbing; }
-
-        .block-wrapper.used {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        .block {
-            display: grid;
-            gap: 3px;
-        }
-
-        .block-cell {
-            width: 25px;
-            height: 25px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 4px;
-            box-shadow: 0 2px 5px var(--block-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        canvas {
+            border: 4px solid white;
+            border-radius: 10px;
+            background-color: #1a1a2e;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
         }
 
         .controls {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .game-over p {
+            font-size: 1.3em;
+            margin-bottom: 30px;
         }
 
         button {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 25px;
             cursor: pointer;
-            transition: all 0.3s;
-            font-family: 'Fredoka', sans-serif;
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
-        button:active { transform: translateY(0); }
-
-        /* Leaderboard */
-        .leaderboard-section {
-            background: var(--bg-secondary);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            margin-bottom: 25px;
-            border: 2px solid rgba(78, 205, 196, 0.15);
+        button:active {
+            transform: translateY(0);
         }
 
-        .leaderboard-header {
+        .powerup-legend {
+            margin-top: 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            font-size: 0.85em;
         }
 
-        .leaderboard-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent-tertiary), var(--accent-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .clear-lb-btn {
-            background: transparent;
-            border: 1px solid rgba(255, 107, 107, 0.4);
-            color: var(--accent-primary);
-            padding: 6px 14px;
+        .powerup-legend-item {
+            background: rgba(255,255,255,0.15);
             border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: none;
-            transition: all 0.2s;
-        }
-
-        .clear-lb-btn:hover {
-            background: rgba(255, 107, 107, 0.15);
-            transform: translateY(-1px);
-            box-shadow: none;
-        }
-
-        .leaderboard-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .leaderboard-empty {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 1rem;
-            padding: 15px 0;
-        }
-
-        .lb-entry {
+            padding: 5px 12px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            background: var(--grid-bg);
-            border-radius: 10px;
-            padding: 10px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.15s;
-            animation: fadeIn 0.3s ease-out;
+            gap: 5px;
         }
 
-        .lb-entry:hover { transform: translateX(3px); }
-
-        .lb-entry.top-1 { border-color: rgba(255, 230, 109, 0.5); background: rgba(255, 230, 109, 0.07); }
-        .lb-entry.top-2 { border-color: rgba(192, 192, 192, 0.4); background: rgba(192, 192, 192, 0.05); }
-        .lb-entry.top-3 { border-color: rgba(205, 127, 50, 0.4); background: rgba(205, 127, 50, 0.05); }
-
-        .lb-rank {
-            font-size: 1.1rem;
-            font-weight: 700;
-            min-width: 28px;
-            text-align: center;
-            font-family: 'Space Mono', monospace;
-        }
-
-        .lb-entry.top-1 .lb-rank { color: var(--accent-tertiary); }
-        .lb-entry.top-2 .lb-rank { color: #c0c0c0; }
-        .lb-entry.top-3 .lb-rank { color: #cd7f32; }
-        .lb-entry:not(.top-1):not(.top-2):not(.top-3) .lb-rank { color: var(--text-secondary); }
-
-        .lb-name {
-            flex: 1;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .lb-score {
-            font-size: 1.1rem;
-            font-weight: 700;
-            font-family: 'Space Mono', monospace;
-            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .lb-date {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            min-width: 70px;
-            text-align: right;
-        }
-
-        /* Game Over Overlay */
-        .game-over-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
+        .active-powerup-bar {
+            margin-top: 12px;
+            min-height: 32px;
+            display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s;
-        }
-
-        .game-over-overlay.show { display: flex; }
-
-        .game-over-content {
-            background: var(--bg-secondary);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(78, 205, 196, 0.3);
-            animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            min-width: 320px;
-        }
-
-        @keyframes scaleIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .game-over-content h2 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .game-over-content p {
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            color: var(--text-secondary);
-        }
-
-        .name-input-section {
-            margin-bottom: 25px;
-        }
-
-        .name-input-section label {
-            display: block;
-            font-size: 1rem;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-
-        .name-input-section input {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 2px solid rgba(78, 205, 196, 0.3);
-            background: var(--grid-bg);
-            color: var(--text-primary);
-            font-family: 'Fredoka', sans-serif;
-            font-size: 1.1rem;
-            outline: none;
-            transition: border-color 0.2s;
-            text-align: center;
-        }
-
-        .name-input-section input:focus {
-            border-color: var(--accent-secondary);
-        }
-
-        .game-over-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
-        .combo-notification {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, var(--accent-tertiary), var(--accent-primary));
-            color: var(--bg-primary);
-            padding: 20px 40px;
-            border-radius: 15px;
-            font-size: 2rem;
-            font-weight: 700;
-            pointer-events: none;
-            opacity: 0;
-            z-index: 999;
-            box-shadow: 0 10px 30px rgba(255, 230, 109, 0.5);
+        .active-powerup-badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 0.95em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 2px solid rgba(255,255,255,0.4);
+            animation: pulse-badge 1s infinite alternate;
         }
 
-        .combo-notification.show {
-            animation: comboPopup 1s ease-out;
-        }
-
-        @keyframes comboPopup {
-            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-        }
-
-        @media (max-width: 600px) {
-            h1 { font-size: 2.5rem; }
-            .score-board { gap: 15px; }
-            .score-item { padding: 10px 15px; }
-            .score-value { font-size: 1.5rem; }
-            .game-container { padding: 15px; }
-            .block-cell { width: 20px; height: 20px; }
-            .lb-date { display: none; }
+        @keyframes pulse-badge {
+            from { box-shadow: 0 0 4px rgba(255,255,255,0.2); }
+            to { box-shadow: 0 0 12px rgba(255,255,255,0.7); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>BLOCK BLAST</h1>
-        </header>
-
+    <div class="game-container">
+        <h1>🐍 Snake Game</h1>
         <div class="score-board">
-            <div class="score-item">
-                <div class="score-label">SCORE</div>
-                <div class="score-value" id="score">0</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">BEST</div>
-                <div class="score-value" id="bestScore">0</div>
-            </div>
+            <div class="score-item">Score: <span id="score">0</span></div>
+            <div class="score-item">High Score: <span id="highScore">0</span></div>
         </div>
-
-        <div class="game-container">
-            <div class="grid" id="grid"></div>
-            <div class="blocks-container" id="blocksContainer"></div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="active-powerup-bar" id="activePowerupBar"></div>
+        <div class="powerup-legend">
+            <div class="powerup-legend-item">⚡ Speed Boost</div>
+            <div class="powerup-legend-item">🛡️ Ghost Mode</div>
+            <div class="powerup-legend-item">✂️ Shrink</div>
+            <div class="powerup-legend-item">💎 Double Points</div>
+            <div class="powerup-legend-item">❄️ Freeze</div>
         </div>
-
         <div class="controls">
-            <button id="restartBtn">New Game</button>
-            <button id="leaderboardBtn" style="background: linear-gradient(135deg, #4ecdc4, #ffe66d);">🏆 Leaderboard</button>
+            Arrow Keys / WASD to move &nbsp;|&nbsp; Space to Pause
         </div>
     </div>
 
-    <!-- Leaderboard Panel -->
-    <div class="leaderboard-section" id="leaderboardSection" style="display:none; max-width:600px; width:100%; margin: 20px auto 0;">
-        <div class="leaderboard-header">
-            <span class="leaderboard-title">🏆 Leaderboard</span>
-            <button class="clear-lb-btn" id="clearLbBtn">Clear All</button>
-        </div>
-        <ul class="leaderboard-list" id="leaderboardList"></ul>
+    <div class="game-over" id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">Play Again</button>
     </div>
-
-    <!-- Game Over Overlay -->
-    <div class="game-over-overlay" id="gameOverOverlay">
-        <div class="game-over-content">
-            <h2>Game Over!</h2>
-            <p>Final Score: <span id="finalScore">0</span></p>
-            <div class="name-input-section">
-                <label for="playerNameInput">Enter your name for the leaderboard:</label>
-                <input type="text" id="playerNameInput" maxlength="20" placeholder="Your Name" />
-            </div>
-            <div class="game-over-buttons">
-                <button id="saveScoreBtn">💾 Save Score</button>
-                <button id="playAgainBtn">Play Again</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="combo-notification" id="comboNotification"></div>
 
     
-  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZrZ8uNZ3UdTMNbD36R3iWzZS7IT2/sessions/comm-1773377931189/games/eZ6JMUt59wSFbW2aabt2.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=H5J3TX4247zmmorL6CnP%2F%2F5dg1oia7PfMihPPiXUyq4eh9H0vWv4kkmn7a5KBffd4xNdJQHwiRBT%2Bt%2BAqZQIY5%2BlBa3M2sniObyluZ7htjAal0G6YWE2FGg50APRcKidgsr58DwDO95mIoB%2FEqw9VUZiP7Kxtk5zeoXObZRnCt0GiKEho0uzO9LRgeoSKrZxWUjUgf3qEeJzeYQg05EZ0Utj4TntblO88LdjBgYOdwWn0zBv7FZVOf7dXheyjqZLI%2FSxUp9MOe28n8xtKskd8KqU%2B5nPFqq0iL%2BSZ5zD1ZE14iU983Zx%2BkD2YYAy%2BogeDhvWjzy2VCrX2xXLvsiaWA%3D%3D"></script>
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZrZ8uNZ3UdTMNbD36R3iWzZS7IT2/sessions/comm-1773379260294/games/yNKDcJbITTSRYl78kk0V.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=M4CAlj9cJXyrtb8w%2BjhCCa86TRBEfsdGGaEjk%2BE0RaRn6F7Qjses7MT23%2FaTCBb9Hb2OMMyEAmsqDyB5uk9wQIKGB2zT9J2ipBM0KF2yJ3taeVgba%2F9r3g71qPHZD1LwARWN7NYA2%2BTCZxHJqpRo4%2ByjvhqpkDCjBZ1uPXd6txfPS%2FA73QfIX2KU8K6RbzYRVKGeIG3YWW4mppoqfEVvrSpxo8PNOmI15ukkuLIU4zV8Se7nMCVvoIF28YfHj2znrTKV8mZLDeZ%2FeLg9pz2nw69JumDIHpruwnLVaKL84TdGdFeSwrZQvQhfrrnVj5m3ZO6X4XTtTc7E%2FbxUYopmoA%3D%3D"></script>
 </body>
 </html>
