@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Hunt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #ff0000;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            cursor: none;
+        }
+        
+        #gameContainer {
+            position: relative;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        canvas {
+            display: block;
+            border: 4px solid #333;
+            image-rendering: pixelated;
+        }
+        
+        #crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #hud {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 80px;
+            background: #000;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .bullets {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .bullet {
+            width: 30px;
+            height: 30px;
+            background: #ff0000;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+        
+        .bullet.used {
+            background: #333;
+        }
+        
+        #roundInfo {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px 40px;
+            font-size: 24px;
+            border-radius: 10px;
+            display: none;
+            z-index: 50;
+            text-align: center;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            padding: 40px 60px;
+            font-size: 24px;
+            border-radius: 15px;
+            display: none;
+            z-index: 50;
+            text-align: center;
+            border: 4px solid #ff0000;
+            min-width: 420px;
+        }
+        
+        #gameOver h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff0000;
+        }
+
+        #nameInputSection {
+            margin: 15px 0;
+            display: none;
+        }
+
+        #nameInputSection label {
+            font-size: 16px;
+            color: #aaa;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        #playerNameInput {
+            padding: 8px 14px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            background: #111;
+            color: #fff;
+            border: 2px solid #ff0000;
+            border-radius: 5px;
+            width: 200px;
+            text-align: center;
+            outline: none;
+        }
+
+        #playerNameInput:focus {
+            border-color: #ff6666;
+        }
+
+        #saveScoreBtn {
+            margin-top: 10px;
+            padding: 10px 28px;
+            font-size: 16px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #saveScoreBtn:hover {
+            background: #cc0000;
+        }
+        
+        #gameOver button.playAgainBtn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #gameOver button.playAgainBtn:hover {
+            background: #cc0000;
+        }
+
+        /* Leaderboard overlay */
+        #leaderboardOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.97);
+            color: #fff;
+            padding: 30px 50px;
+            font-size: 18px;
+            border-radius: 15px;
+            display: none;
+            z-index: 60;
+            text-align: center;
+            border: 4px solid #ffcc00;
+            min-width: 420px;
+        }
+
+        #leaderboardOverlay h2 {
+            font-size: 36px;
+            color: #ffcc00;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+
+        #leaderboardTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        #leaderboardTable th {
+            color: #ffcc00;
+            border-bottom: 2px solid #ffcc00;
+            padding: 6px 10px;
+            font-size: 16px;
+        }
+
+        #leaderboardTable td {
+            padding: 7px 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #333;
+        }
+
+        #leaderboardTable tr:nth-child(even) td {
+            background: rgba(255,255,255,0.04);
+        }
+
+        #leaderboardTable tr.highlight td {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        .rank-gold { color: #ffd700; }
+        .rank-silver { color: #c0c0c0; }
+        .rank-bronze { color: #cd7f32; }
+
+        #leaderboardCloseBtn {
+            padding: 12px 36px;
+            font-size: 18px;
+            background: #ffcc00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        #leaderboardCloseBtn:hover {
+            background: #e6b800;
+        }
+
+        /* Leaderboard button in HUD */
+        #lbBtn {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            padding: 5px 14px;
+            font-size: 13px;
+            background: #ffcc00;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            z-index: 20;
+        }
+
+        #lbBtn:hover {
+            background: #e6b800;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="crosshair"></div>
+        <div id="hud">
+            <div>
+                <div>SCORE: <span id="score">0</span></div>
+                <div>ROUND: <span id="round">1</span></div>
+            </div>
+            <div class="bullets" id="bulletsDisplay"></div>
+            <div>
+                <div>HIT: <span id="hit">0</span></div>
+                <div>MISS: <span id="miss">0</span></div>
+            </div>
+            <button id="lbBtn" onclick="openLeaderboard()">🏆 SCORES</button>
+        </div>
+        <div id="roundInfo"></div>
+        <div id="gameOver">
+            <h2>GAME OVER</h2>
+            <p id="finalScore"></p>
+            <div id="nameInputSection">
+                <label>Enter your name for the leaderboard:</label>
+                <input type="text" id="playerNameInput" maxlength="12" placeholder="YOUR NAME" />
+                <button id="saveScoreBtn" onclick="saveScore()">SAVE SCORE</button>
+            </div>
+            <button class="playAgainBtn" onclick="restartGame()">PLAY AGAIN</button>
+            <button class="playAgainBtn" style="background:#ffcc00;color:#000;margin-left:10px;" onclick="openLeaderboardFromGameOver()">🏆 LEADERBOARD</button>
+        </div>
+
+        <!-- Leaderboard Overlay -->
+        <div id="leaderboardOverlay">
+            <h2>🏆 LEADERBOARD</h2>
+            <table id="leaderboardTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>NAME</th>
+                        <th>SCORE</th>
+                        <th>ROUNDS</th>
+                        <th>HITS</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                </tbody>
+            </table>
+            <button id="leaderboardCloseBtn" onclick="closeLeaderboard()">CLOSE</button>
+        </div>
+    </div>
+
+    <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773380704145/games/Wq4xguPBEqVHWfXb6JK3.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=VIXH6nojlaaIYoJp3wccJdAlTM0Dr%2B5%2BBSI%2F8qfyOd2Yk8VTOD4Ec%2FmlrOwHFrefZrU%2BfeIOpkpiqRBoJq8%2F9GBJdOL5n2Fs0hRjaVykZ2JrTBb%2BdstjhHngoc6TfDOHAj3JwBCN7FLM7NTQCI6ZfMqJSlGbj%2B4NoC409bSB9uhjIGa%2FZhHSdN%2Bx5T4bKZZmrdzfT1H3V5rJgB2HyPdopk%2BP9YyBInHxP%2BEZiXT60MImFHXhiT%2BdwMkYiuh8WXpbuWmbsWxeaXI%2Ffaoj%2B5hIYvWAvtcVrQohPoXclFkPY1SAA7Uj3XNvDIn44Qd7Uaf7Wo0MZdC6ZBpXeFqkrwxn7w%3D%3D"></script>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773380704145/games/GN51YcbmjGLZlB5NCYLM.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=hnSAOL3l6DGWvnFbR%2BPsefZE%2FKx3Jh2y9RA3FepL3enOvKPrmyQD7gOpnguFDr9UZ9dxlrodXX3ImgYdtQpKWmhEqudJVuK0mfGfJF1tK%2BK4sxYAaZ2cOxdTKZydyajlroX6BfKJzbhvRSN8cxz3XYicATPJE23iDXYs%2BPZrhM0ELDFaoPZSfvAW97eNQwEp%2FvvKW2m9swsXx52fbj66QmoyJLj8ezUOQ1NKJphWekEIrB51vWDrH0FKLKyeGYQxIkmZ8inIi9yOp1OeAVQGyCHCYN6d8O%2Ff2Bqqk0OmE7kn%2FZ2wRxBQE6H6PWTHZY%2ByMBv0mBCGGwHP6ZwVExUlBw%3D%3D"></script>
+</body>
+</html>
