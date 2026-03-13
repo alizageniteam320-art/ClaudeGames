@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .game-board {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        #gameCanvas {
+            display: block;
+            border-radius: 8px;
+        }
+
+        .game-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 200px;
+        }
+
+        .info-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .info-panel h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .score-display {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .level-display {
+            font-size: 18px;
+            text-align: center;
+            color: #ffff00;
+            margin-top: 5px;
+        }
+
+        .lines-display {
+            font-size: 16px;
+            text-align: center;
+            color: #ff00ff;
+            margin-top: 5px;
+        }
+
+        #nextCanvas {
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #00ffff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .controls h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #ff0000;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            color: #ff0000;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ff006e, #8338ec);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .game-info {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-board">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div class="game-over" id="gameOver">
+                <h2>GAME OVER</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>Level Reached: <span id="finalLevel">1</span></p>
+                <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <div class="info-panel">
+                <h3>SCORE</h3>
+                <div class="score-display" id="score">0</div>
+                <div class="level-display">Level: <span id="level">1</span></div>
+                <div class="lines-display">Lines: <span id="lines">0</span></div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>NEXT PIECE</h3>
+                <canvas id="nextCanvas" width="120" height="120"></canvas>
+            </div>
+            
+            <div class="controls">
+                <h3>CONTROLS</h3>
+                <p>← → Move</p>
+                <p>↓ Soft Drop</p>
+                <p>↑ Rotate</p>
+                <p>Space: Hard Drop</p>
+                <p>P: Pause</p>
+            </div>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZIfAHQFswERavH8S85SErtqcYpA2/sessions/meMsSYswHmPs83scA4Oc/games/NXIsAYF4zyjldFBGsHFb.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=bLhEMAnaq1%2FVCOmYUhFkdHsa9eNQ2AV8qEBq1Etqx%2Fwe96Pq9qkjMRu%2BtM%2F8sw9%2BlX7D579v6SATXgF6YuiOfEt8bleYUrIR2HzdZbmHERVXyGfC4ICLIeNPOkhBri4zLwlk6IvMtB80ZL9UPh7GZ%2BGWz0xnCyJ1PKmfjH%2B17UjSOtfV7Wo61lPXx%2F%2Bm0zrkCxQ3sbtXLu5n8U%2Fs0Fno%2BiDGXtlu9baijtg11FlgRXnfQ%2BzdWjmR7djbmQT3V1VVHMYw4YqUOV32QgAp3zU2r%2BHSka7VrGQpeTqf9TXF2DlAf4vEdzhTrFq1oqjpULHow%2FjHyxEgytxO%2FZV%2BcyT8pg%3D%3D"></script>
+</body>
+</html>
