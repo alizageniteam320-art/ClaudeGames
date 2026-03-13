@@ -3,6 +3,8 @@
 <head>
 
 
+
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dog Hunt</title>
@@ -18,7 +20,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: #ff0000;
+            background: #0000ff;
             font-family: 'Courier New', monospace;
             overflow: hidden;
             cursor: none;
@@ -271,12 +273,50 @@
         #lbBtn:hover {
             background: #e6b800;
         }
+
+        /* Power-up HUD display */
+        #powerupHud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        .powerup-indicator {
+            background: rgba(0,0,0,0.75);
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid #fff;
+            animation: powerupPulse 1s infinite alternate;
+        }
+
+        @keyframes powerupPulse {
+            from { opacity: 0.85; }
+            to { opacity: 1; }
+        }
+
+        .powerup-indicator.rapid-fire { border-color: #ff6600; color: #ff9944; }
+        .powerup-indicator.double-score { border-color: #ffcc00; color: #ffee66; }
+        .powerup-indicator.slow-mo { border-color: #00ccff; color: #66eeff; }
+        .powerup-indicator.extra-ammo { border-color: #00ff88; color: #66ffbb; }
+        .powerup-indicator.shield { border-color: #cc66ff; color: #dd99ff; }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         <div id="crosshair"></div>
+        <div id="powerupHud" id="powerupHud"></div>
         <div id="hud">
             <div>
                 <div>SCORE: <span id="score">0</span></div>
@@ -323,8 +363,10 @@
     </div>
 
     <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773380704145/games/Wq4xguPBEqVHWfXb6JK3.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=VIXH6nojlaaIYoJp3wccJdAlTM0Dr%2B5%2BBSI%2F8qfyOd2Yk8VTOD4Ec%2FmlrOwHFrefZrU%2BfeIOpkpiqRBoJq8%2F9GBJdOL5n2Fs0hRjaVykZ2JrTBb%2BdstjhHngoc6TfDOHAj3JwBCN7FLM7NTQCI6ZfMqJSlGbj%2B4NoC409bSB9uhjIGa%2FZhHSdN%2Bx5T4bKZZmrdzfT1H3V5rJgB2HyPdopk%2BP9YyBInHxP%2BEZiXT60MImFHXhiT%2BdwMkYiuh8WXpbuWmbsWxeaXI%2Ffaoj%2B5hIYvWAvtcVrQohPoXclFkPY1SAA7Uj3XNvDIn44Qd7Uaf7Wo0MZdC6ZBpXeFqkrwxn7w%3D%3D"></script>
+    <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773380704145/games/GN51YcbmjGLZlB5NCYLM.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=hnSAOL3l6DGWvnFbR%2BPsefZE%2FKx3Jh2y9RA3FepL3enOvKPrmyQD7gOpnguFDr9UZ9dxlrodXX3ImgYdtQpKWmhEqudJVuK0mfGfJF1tK%2BK4sxYAaZ2cOxdTKZydyajlroX6BfKJzbhvRSN8cxz3XYicATPJE23iDXYs%2BPZrhM0ELDFaoPZSfvAW97eNQwEp%2FvvKW2m9swsXx52fbj66QmoyJLj8ezUOQ1NKJphWekEIrB51vWDrH0FKLKyeGYQxIkmZ8inIi9yOp1OeAVQGyCHCYN6d8O%2Ff2Bqqk0OmE7kn%2FZ2wRxBQE6H6PWTHZY%2ByMBv0mBCGGwHP6ZwVExUlBw%3D%3D"></script>
 
     
-  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773380704145/games/GN51YcbmjGLZlB5NCYLM.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=hnSAOL3l6DGWvnFbR%2BPsefZE%2FKx3Jh2y9RA3FepL3enOvKPrmyQD7gOpnguFDr9UZ9dxlrodXX3ImgYdtQpKWmhEqudJVuK0mfGfJF1tK%2BK4sxYAaZ2cOxdTKZydyajlroX6BfKJzbhvRSN8cxz3XYicATPJE23iDXYs%2BPZrhM0ELDFaoPZSfvAW97eNQwEp%2FvvKW2m9swsXx52fbj66QmoyJLj8ezUOQ1NKJphWekEIrB51vWDrH0FKLKyeGYQxIkmZ8inIi9yOp1OeAVQGyCHCYN6d8O%2Ff2Bqqk0OmE7kn%2FZ2wRxBQE6H6PWTHZY%2ByMBv0mBCGGwHP6ZwVExUlBw%3D%3D"></script>
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773381356463/games/cHkXkpwH4UndSJO40fN9.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=RqiyCBPup0nrF%2BflXCcMYsXSHU0wJrvaoL7aq2iU9%2FSNn3NYUao%2F4uhj5HJ82ZLA5plTZmkRuoLQq%2Bz%2BWKWzj9Itof0tBw%2BJhJDZd7VU6g9dL0glio4F6gNQCWAMj1JiZWwF6BdQbvtPBVZVs4onKx%2FXmfDyBU85nSGBUteX6k8eMIE8s4h%2BjHTvjMMSgLQA12G%2B1y0jKNn%2BLyh7YdKE69BzM%2FQUoHfJuolJQRSRZ9q7SKL%2FsvTPRLUFs0kAV7EjR2FAOnkMBRE%2FXKgqGS%2B63mcvNcrXpx2vKYZl5lKNfzyhwDi%2BJOVjiYt3d1%2FqDhg%2FEATUIczT5xDvqoVfG6q0ng%3D%3D"></script>
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/X9hqyUxhP3cQskV8xI9jehSGYmn2/sessions/comm-1773381356463/games/UHoYSKJydVWA9PFg41bl.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=BScxSfGktsAIA7DcbGET1G0wM%2B19t0Re45WNY7%2Bp6%2FZ1ZJQF4EjBldcgzvgiYsQW%2FsMXPDFJBf0mAYlApSAz10MuY%2F4oz3%2FwNOkUmwP1Eh5VD6%2FIb2aRSc%2BGfOv3s3ZBf%2FrJhyndldloDcUFXtd%2FZv7PEWAJKjaaEoi4ESHlypefUq%2FGPeS9joEhcG6dW8%2FCH1MfIITIsE3MC7tQOqPr%2Fj9do%2FkfzXO3hNi0T7qe9MqAuH4XVW0TXdX3FvWeywderh0922ONhgc%2BAHQR5nmTWhSx7XydXWKJ2u%2FGjCgNVvHTzKDYqdw%2B6eh%2FTeSZGJ8dHlzGY3YXFLPBJmtq6ON2Vg%3D%3D"></script>
 </body>
 </html>
