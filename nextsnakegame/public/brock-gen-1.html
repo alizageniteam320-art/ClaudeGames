@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .game-board {
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 200px;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #ff6b6b;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .score-display {
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        .next-piece {
+            text-align: center;
+        }
+
+        .next-preview {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            margin: 10px auto;
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #45b7d1;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 14px;
+            line-height: 1.6;
+            box-shadow: 0 0 20px rgba(69, 183, 209, 0.3);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #ff4757;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            z-index: 1000;
+            animation: gameOverPulse 1s ease-in-out;
+            box-shadow: 0 0 40px rgba(255, 71, 87, 0.6);
+        }
+
+        @keyframes gameOverPulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+
+        .line-clear-effect {
+            position: absolute;
+            width: 100%;
+            height: 30px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            animation: lineClear 0.5s ease-out;
+            z-index: 100;
+        }
+
+        @keyframes lineClear {
+            0% { opacity: 0; transform: scaleX(0); }
+            50% { opacity: 1; transform: scaleX(1); }
+            100% { opacity: 0; transform: scaleX(0); }
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffff00;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle 1s ease-out forwards;
+        }
+
+        @keyframes particle {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0) translate(var(--dx), var(--dy)); }
+        }
+
+        .glow {
+            animation: glow 0.3s ease-out;
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px currentColor; }
+            100% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-board">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div id="gameOver" class="game-over" style="display: none;">
+                <h2>🎮 GAME OVER 🎮</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>Lines Cleared: <span id="finalLines">0</span></p>
+                <button class="restart-btn" onclick="restartGame()">Play Again</button>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-box">
+                <div class="score-display">
+                    <div>SCORE: <span id="score">0</span></div>
+                    <div>LEVEL: <span id="level">1</span></div>
+                    <div>LINES: <span id="lines">0</span></div>
+                </div>
+            </div>
+            
+            <div class="info-box next-piece">
+                <h3>NEXT PIECE</h3>
+                <canvas id="nextCanvas" class="next-preview" width="120" height="80"></canvas>
+            </div>
+            
+            <div class="controls">
+                <h3>CONTROLS</h3>
+                <div>← → Move</div>
+                <div>↓ Soft Drop</div>
+                <div>↑ Rotate</div>
+                <div>SPACE Hard Drop</div>
+                <div>P Pause</div>
+            </div>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZIfAHQFswERavH8S85SErtqcYpA2/sessions/rZ9LtX8LuMNxnqiN34Zi/games/IONlfW6rgqi35v480bQH.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=HnH7oQbH0PfBAK8fLjNcu%2BZ72QLBtY0deIdDJgKj0oKdcjbT4RePogXUzQpMlDzCAagKPo1x9M35VqUqzugXOtVNIOQp5Dta1lRX09J8X9AoPYMhljl0IJCRG6jTzgumzjxZIMi7mdtJe978JaE3j%2BHXlifp6CR1RCvEVh9yx4Bmr3Ew7BNCeNaxt7Gs152oh7eHfYisj7MQdXWil1cuRBRyA9IYR%2B5a5fPuBh4JscAbepOnt6XZzZRQvu%2FYHwuRVl1leVyger38IZNXdLusuzOvW4WDLOlrBT3%2BiVkx4i%2BSaNnqhnViRIaEC2sQ%2FpTpSF2xx89DHUQ2gYwCGuNDww%3D%3D"></script>
+</body>
+</html>
