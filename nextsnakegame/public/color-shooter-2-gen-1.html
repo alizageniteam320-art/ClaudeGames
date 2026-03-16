@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Crystal Catcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 480px;
+            height: 720px;
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(100, 100, 255, 0.3);
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(100, 200, 255, 0.8);
+        }
+
+        #lives-display {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #ff6b6b;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 100, 100, 0.8);
+        }
+
+        #level-display {
+            position: absolute;
+            top: 45px;
+            left: 20px;
+            color: #a0f0a0;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(100, 255, 100, 0.5);
+        }
+
+        #combo-display {
+            position: absolute;
+            top: 45px;
+            right: 20px;
+            color: #ffdd57;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 220, 80, 0.8);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 46, 0.95);
+            border-radius: 12px;
+            pointer-events: all;
+            z-index: 10;
+        }
+
+        #game-over-screen {
+            display: none;
+        }
+
+        .screen-title {
+            font-size: 42px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(100, 150, 255, 0.8), 0 0 40px rgba(100, 150, 255, 0.4);
+            margin-bottom: 10px;
+        }
+
+        .screen-subtitle {
+            font-size: 16px;
+            color: #8888cc;
+            margin-bottom: 40px;
+        }
+
+        .btn {
+            padding: 15px 50px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            pointer-events: all;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        #final-score {
+            font-size: 28px;
+            color: #ffdd57;
+            margin: 20px 0;
+            text-shadow: 0 0 15px rgba(255, 220, 80, 0.6);
+        }
+
+        #high-score {
+            font-size: 16px;
+            color: #a0a0ff;
+            margin-bottom: 30px;
+        }
+
+        .crystal-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .instructions {
+            color: #6666aa;
+            font-size: 13px;
+            margin-top: 25px;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="480" height="720"></canvas>
+        <div id="ui-overlay">
+            <div id="score-display">Score: 0</div>
+            <div id="lives-display">❤️ ❤️ ❤️</div>
+            <div id="level-display">Level 1</div>
+            <div id="combo-display">Combo x1</div>
+        </div>
+
+        <div id="start-screen">
+            <div class="crystal-icon">💎</div>
+            <div class="screen-title">Crystal Catcher</div>
+            <div class="screen-subtitle">Catch the gems, dodge the bombs!</div>
+            <button class="btn" id="startBtn">Play</button>
+            <div class="instructions">
+                🖱️ Move mouse or touch to control paddle<br>
+                💎 Catch crystals for points<br>
+                ⭐ Golden stars give bonus points<br>
+                💣 Avoid bombs — they cost a life!
+            </div>
+        </div>
+
+        <div id="game-over-screen">
+            <div class="crystal-icon">💔</div>
+            <div class="screen-title">Game Over</div>
+            <div id="final-score">Score: 0</div>
+            <div id="high-score">Best: 0</div>
+            <button class="btn" id="restartBtn">Play Again</button>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/IhKi2rWFSUWqQ1tPLo8Ct4mBjXN2/sessions/comm-1773665102694/games/2mQnben2jpLACo7CzltV.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=DKqW4Knno7Kv2pWuEQb6zq1Qm%2FfQWbFk%2FoR8Zj%2Bg816%2BDXHWJOngbeiRKhXRhNxSXSTt0NmfX7ecjDNSaYxD%2B%2F57aHuIc9sS13VCRPeo41%2FIJvVCofzFaqrjUZ4CIClE%2FVhOU3d4932k79YSbCpt0Nm7AgIMX%2FNAxccv6jiknsE6fUe1GFhdB%2FerwgCHVkh5sodxNJCFpn1Ay9%2BcO4RltZpLg%2FSvfWlEjbD85R1sUpaMQ2V%2FK7aHawnnAVMemvYMoIYybSmamvDkPFWnBzY5mVShovFmvFMNCD4rCRHxkxGxTlSMT%2Fe%2Bz6ioqVcIW3OWWz6%2Bu%2F6LJsy3KI50mBwigw%3D%3D"></script>
+</body>
+</html>
