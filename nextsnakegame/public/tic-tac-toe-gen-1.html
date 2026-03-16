@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Tic-Tac-Toe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #1a1a2e;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .game-container {
+    background: #f5f5f5;
+    border-radius: 20px;
+    padding: 20px;
+    max-width: 700px;
+    width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+
+  .turn-label {
+    font-size: 16px;
+    font-weight: 800;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .turn-label.active {
+    color: #2196F3;
+    text-shadow: 0 0 10px rgba(33,150,243,0.3);
+  }
+
+  .turn-label.active.ai {
+    color: #e74c3c;
+    text-shadow: 0 0 10px rgba(231,76,60,0.3);
+  }
+
+  .timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .timer-icon {
+    font-size: 24px;
+  }
+
+  .timer-bar-bg {
+    width: 200px;
+    height: 14px;
+    background: #333;
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .timer-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f1c40f, #e67e22);
+    border-radius: 7px;
+    transition: width 1s linear;
+    width: 100%;
+  }
+
+  .timer-bar-fill.low {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+  }
+
+  .timer-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+  }
+
+  .meta-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6px;
+    background: #333;
+    border-radius: 12px;
+    padding: 6px;
+    aspect-ratio: 1;
+    max-width: 580px;
+    margin: 0 auto;
+  }
+
+  .small-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 2px;
+    background: #bbb;
+    border-radius: 8px;
+    padding: 3px;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .small-board.active-board {
+    background: #f1c40f;
+    box-shadow: 0 0 15px rgba(241,196,15,0.6);
+    transform: scale(1.02);
+  }
+
+  .small-board.won-x {
+    background: rgba(33,150,243,0.3);
+  }
+
+  .small-board.won-o {
+    background: rgba(231,76,60,0.3);
+  }
+
+  .small-board.draw-board {
+    background: rgba(150,150,150,0.3);
+  }
+
+  .small-board .won-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 60px;
+    font-weight: 900;
+    border-radius: 8px;
+    z-index: 10;
+    pointer-events: none;
+    animation: popIn 0.4s ease;
+  }
+
+  .small-board .won-overlay.x-won {
+    color: #2196F3;
+    background: rgba(33,150,243,0.15);
+    text-shadow: 0 2px 10px rgba(33,150,243,0.4);
+  }
+
+  .small-board .won-overlay.o-won {
+    color: #e74c3c;
+    background: rgba(231,76,60,0.15);
+    text-shadow: 0 2px 10px rgba(231,76,60,0.4);
+  }
+
+  .small-board .won-overlay.draw-over {
+    color: #888;
+    background: rgba(150,150,150,0.15);
+    font-size: 30px;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .cell {
+    background: #fff;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: 900;
+    transition: all 0.15s ease;
+    aspect-ratio: 1;
+    user-select: none;
+  }
+
+  .cell:hover:not(.taken) {
+    background: #e8e8e8;
+    transform: scale(1.05);
+  }
+
+  .cell.taken {
+    cursor: default;
+  }
+
+  .cell.x-cell {
+    color: #2196F3;
+  }
+
+  .cell.o-cell {
+    color: #e74c3c;
+  }
+
+  .cell.highlight {
+    background: #fff9c4;
+  }
+
+  .footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 15px;
+    gap: 20px;
+  }
+
+  .meta-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .reset-btn {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+  }
+
+  .reset-btn:hover {
+    background: #555;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .players-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    margin-bottom: 10px;
+  }
+
+  .player-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .player-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    font-weight: 900;
+  }
+
+  .player-avatar.you {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(33,150,243,0.4);
+  }
+
+  .player-avatar.ai {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(231,76,60,0.4);
+  }
+
+  .player-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+  }
+
+  .player-score {
+    font-size: 11px;
+    color: #888;
+  }
+
+  .status-bar {
+    text-align: center;
+    padding: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #555;
+    min-height: 35px;
+  }
+
+  .status-bar.winner-x {
+    color: #2196F3;
+    font-size: 18px;
+    animation: pulse 1s infinite;
+  }
+
+  .status-bar.winner-o {
+    color: #e74c3c;
+    font-size: 18px;
+    animation: pulse 1s infinite;
+  }
+
+  .status-bar.draw-game {
+    color: #888;
+    font-size: 18px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .overlay.show {
+    display: flex;
+  }
+
+  .overlay-content {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    animation: popIn 0.5s ease;
+    max-width: 400px;
+  }
+
+  .overlay-content h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: #333;
+  }
+
+  .overlay-content h2.x-win { color: #2196F3; }
+  .overlay-content h2.o-win { color: #e74c3c; }
+
+  .overlay-content p {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 16px;
+  }
+
+  .overlay-content .play-again-btn {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: #fff;
+    border: none;
+    padding: 12px 40px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .overlay-content .play-again-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(33,150,243,0.4);
+  }
+
+  .instruction-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 500px) {
+    .game-container { padding: 12px; }
+    .cell { font-size: 14px; }
+    .small-board .won-overlay { font-size: 40px; }
+    .meta-board { gap: 4px; padding: 4px; }
+    .small-board { gap: 1px; padding: 2px; }
+    .timer-bar-bg { width: 120px; }
+    .turn-label { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="header">
+    <div class="turn-label active" id="yourTurnLabel">YOUR TURN</div>
+    <div class="timer-container">
+      <div class="timer-icon">⏱️</div>
+      <div class="timer-bar-bg">
+        <div class="timer-bar-fill" id="timerBarFill"></div>
+      </div>
+      <div class="timer-text" id="timerText">5:00</div>
+    </div>
+    <div class="turn-label ai" id="aiTurnLabel">AI TURN</div>
+  </div>
+
+  <div class="players-row">
+    <div class="player-info">
+      <div class="player-avatar you">X</div>
+      <div>
+        <div class="player-name">You</div>
+        <div class="player-score" id="yourScore">Wins: 0</div>
+      </div>
+    </div>
+    <div class="meta-label">META</div>
+    <div class="player-info">
+      <div>
+        <div class="player-name" style="text-align:right">AI</div>
+        <div class="player-score" style="text-align:right" id="aiScore">Wins: 0</div>
+      </div>
+      <div class="player-avatar ai">O</div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">Click any cell to start!</div>
+
+  <div class="meta-board" id="metaBoard"></div>
+
+  <div class="footer">
+    <button class="reset-btn" onclick="resetGame()">RESET</button>
+  </div>
+
+  <div class="instruction-hint">Your move determines which board the AI plays on next. Yellow = active board.</div>
+</div>
+
+<div class="overlay" id="gameOverlay">
+  <div class="overlay-content">
+    <h2 id="overlayTitle">Game Over!</h2>
+    <p id="overlayMessage">Well played!</p>
+    <button class="play-again-btn" onclick="resetGame()">Play Again</button>
+  </div>
+</div>
+
+
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/VuWtDpdqXWfs6efKUKyi1VOebg02/sessions/dG2A493khR7aYUfx3VXP/games/w1c7U7CfXvh3Ufh9RRAo.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=mL2qewZAC5GbrPGdRGYiCQADZyXT1CIPBf8Z32U%2BIVnecYzzqqmWpgggvGldIxXWHtPszbCc4LZIFTVLYS7z8Mgv6hPNAo%2Fe5ydsFbFLj9I73wjtzax5Uc2YU6GCkcdr%2Bj%2Bb0DGezm26HgbioaYNEXDiGIvItcL1qGPsJ52raT4EAF7ZNoglNALaub2LIYLOTFU1klQdSqq6GQ6JHVFEyZ2fRmLxBt3rvesJjeEjaI58b5q7vLvafJlYe6aCzW3uFYWt7eJEBuATlJnYzN2TeDrBINBS5HjRRWE4CVurJJeCv2cw0qKdPVsQ%2FoHYJjGe5IbM4IF3wGqNULbgnHgZ0w%3D%3D"></script>
+</body>
+</html>
