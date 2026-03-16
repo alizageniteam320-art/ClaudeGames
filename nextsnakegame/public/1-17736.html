@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Polyfill for localStorage and sessionStorage to prevent SecurityError in data: iframes
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        // Storage access is blocked, implement in-memory polyfill
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+             console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Duck Hunt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #0a0a2e 0%, #1a1a5e 40%, #2d5a27 100%);
+            font-family: 'Courier New', monospace;
+            cursor: none;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 4px solid #8B4513;
+            box-shadow: 0 0 40px rgba(100, 200, 255, 0.4), 0 0 80px rgba(50, 100, 200, 0.2);
+            border-radius: 4px;
+        }
+
+        .ui {
+            position: absolute;
+            top: 15px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(100, 220, 255, 0.9), 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .ui div {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(100, 220, 255, 0.5);
+            border-radius: 8px;
+            padding: 6px 16px;
+            backdrop-filter: blur(4px);
+            letter-spacing: 1px;
+        }
+
+        .ui span {
+            color: #7df9ff;
+        }
+
+        .crosshair {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 5;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 0 4px rgba(255, 80, 80, 0.8));
+            transition: transform 0.05s ease;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(10,10,40,0.97) 0%, rgba(20,20,80,0.97) 100%);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 24px;
+            display: none;
+            z-index: 20;
+            border: 2px solid rgba(100, 220, 255, 0.6);
+            box-shadow: 0 0 40px rgba(100, 200, 255, 0.3), inset 0 0 40px rgba(0,0,50,0.5);
+        }
+
+        .game-over h2 {
+            font-size: 42px;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 50, 50, 0.8);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            animation: pulse 1s infinite alternate;
+        }
+
+        .game-over p {
+            margin: 10px 0;
+            color: #aad4ff;
+            font-size: 20px;
+        }
+
+        .game-over p span {
+            color: #7df9ff;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            from { text-shadow: 0 0 10px rgba(255, 50, 50, 0.6); }
+            to   { text-shadow: 0 0 30px rgba(255, 50, 50, 1), 0 0 60px rgba(255, 100, 100, 0.5); }
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #1a7a2e, #2ecc71);
+            color: white;
+            border: 2px solid #2ecc71;
+            padding: 14px 36px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .restart-btn:hover {
+            background: linear-gradient(135deg, #2ecc71, #1a7a2e);
+            box-shadow: 0 0 30px rgba(46, 204, 113, 0.8);
+            transform: scale(1.05);
+        }
+
+        /* Animated stars background */
+        .stars {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle linear infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.4); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Starfield background -->
+    <div class="stars" id="stars"></div>
+
+    <div class="ui">
+        <div>🎯 SCORE: <span id="score">0</span></div>
+        <div>🌀 ROUND: <span id="round">1</span></div>
+        <div>💥 MISSES: <span id="misses">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="1200" height="800"></canvas>
+
+    <div class="crosshair" id="crosshair">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+            <defs>
+                <radialGradient id="crossGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(255,80,80,0.3)"/>
+                    <stop offset="100%" stop-color="rgba(255,80,80,0)"/>
+                </radialGradient>
+            </defs>
+            <circle cx="22" cy="22" r="20" fill="url(#crossGlow)" stroke="rgba(255,80,80,0.4)" stroke-width="1"/>
+            <circle cx="22" cy="22" r="14" fill="none" stroke="#ff4444" stroke-width="2" stroke-dasharray="4 2"/>
+            <line x1="22" y1="2" x2="22" y2="10" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="22" y1="34" x2="22" y2="42" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="2" y1="22" x2="10" y2="22" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="34" y1="22" x2="42" y2="22" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="22" cy="22" r="2.5" fill="#ff4444"/>
+            <circle cx="22" cy="22" r="1" fill="white"/>
+        </svg>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>GAME OVER!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Rounds Completed: <span id="finalRound">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">▶ PLAY AGAIN</button>
+    </div>
+
+    <script>
+        // Generate starfield
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 80; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() * 3 + 1;
+            star.style.cssText = `
+                width: ${size}px;
+                height: ${size}px;
+                top: ${Math.random() * 60}%;
+                left: ${Math.random() * 100}%;
+                animation-duration: ${Math.random() * 3 + 2}s;
+                animation-delay: ${Math.random() * 3}s;
+            `;
+            starsContainer.appendChild(star);
+        }
+
+        // Crosshair follow mouse
+        const crosshair = document.getElementById('crosshair');
+        document.addEventListener('mousemove', (e) => {
+            crosshair.style.left = e.clientX + 'px';
+            crosshair.style.top = e.clientY + 'px';
+        });
+    </script>
+
+    <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/ZIfAHQFswERavH8S85SErtqcYpA2/sessions/2fIAYMhxKjUzhLJCHgTG/games/ZW2RemfDlrz9EYr59h5F.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=alqUU9eZUaUDwID3qNw5vCfIODb%2F6ldi0ntkK3QuuWIYSMAOgk6xcKvbM%2FA%2BuwBlekVblJ0OZkyRezs4PSqJvcB5g6vmf6iDrGb%2BVIWJekPMefhLUVKFnInbPnndU%2FPHBbqA4lb4xgya0MTsWaMGTuhwHnFUxOlhMSBTODEGKpy8DriE7g4he%2FGC0%2BPFIC1bqkJM3DKDyeYdBtn%2FLSrroEUYzFIrEikv%2BrpibX4XMHEBJao7HW0aQwm%2FXm%2F%2FtOV8Bl424kLZhkaZGeJ0%2FZ%2B63HXtIO3JwCeBdmmh1DaeelRaONau%2FSbV5CZkc1AqDsnYkVN%2B%2FGsKLN6fg9qdbLhxVQ%3D%3D"></script>
+
+    <script>
+        // Post-load canvas enhancement: override canvas rendering with richer visuals
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('gameCanvas');
+            if (!canvas) return;
+
+            const origGetContext = canvas.getContext.bind(canvas);
+            // Patch: add a subtle vignette overlay on top of the canvas via a second canvas
+            const overlay = document.createElement('canvas');
+            overlay.width = canvas.width;
+            overlay.height = canvas.height;
+            overlay.style.cssText = `
+                position: absolute;
+                pointer-events: none;
+                z-index: 4;
+                border-radius: 4px;
+            `;
+
+            // Position overlay exactly over the canvas
+            function positionOverlay() {
+                const rect = canvas.getBoundingClientRect();
+                overlay.style.left = rect.left + 'px';
+                overlay.style.top = rect.top + 'px';
+                overlay.style.width = rect.width + 'px';
+                overlay.style.height = rect.height + 'px';
+            }
+
+            document.body.appendChild(overlay);
+            positionOverlay();
+            window.addEventListener('resize', positionOverlay);
+
+            const octx = overlay.getContext('2d');
+
+            function drawOverlay() {
+                octx.clearRect(0, 0, overlay.width, overlay.height);
+
+                // Vignette
+                const vignette = octx.createRadialGradient(
+                    overlay.width / 2, overlay.height / 2, overlay.height * 0.3,
+                    overlay.width / 2, overlay.height / 2, overlay.height * 0.85
+                );
+                vignette.addColorStop(0, 'rgba(0,0,0,0)');
+                vignette.addColorStop(1, 'rgba(0,0,20,0.55)');
+                octx.fillStyle = vignette;
+                octx.fillRect(0, 0, overlay.width, overlay.height);
+
+                // Scanlines for retro feel
+                octx.fillStyle = 'rgba(0,0,0,0.04)';
+                for (let y = 0; y < overlay.height; y += 4) {
+                    octx.fillRect(0, y, overlay.width, 2);
+                }
+
+                requestAnimationFrame(drawOverlay);
+            }
+
+            drawOverlay();
+        });
+    </script>
+</body>
+</html>
