@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Polyfill for localStorage and sessionStorage to prevent SecurityError in data: iframes
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        // Storage access is blocked, implement in-memory polyfill
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+             console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+
+<script>
+// Polyfill for localStorage and sessionStorage to prevent SecurityError in data: iframes
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+            console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Duck Hunt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #0a0a2e 0%, #1a1a5e 40%, #2d5a27 100%);
+            font-family: 'Courier New', monospace;
+            cursor: none;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 4px solid #8B4513;
+            box-shadow: 0 0 40px rgba(100, 200, 255, 0.4), 0 0 80px rgba(50, 100, 200, 0.2);
+            border-radius: 4px;
+        }
+
+        .ui {
+            position: absolute;
+            top: 15px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(100, 220, 255, 0.9), 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .ui div {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(100, 220, 255, 0.5);
+            border-radius: 8px;
+            padding: 6px 16px;
+            backdrop-filter: blur(4px);
+            letter-spacing: 1px;
+        }
+
+        .ui span {
+            color: #7df9ff;
+        }
+
+        .crosshair {
+            position: fixed;
+            width: 44px;
+            height: 44px;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 0 4px rgba(255, 80, 80, 0.8));
+            transition: transform 0.05s ease;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(10,10,40,0.97) 0%, rgba(20,20,80,0.97) 100%);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 24px;
+            display: none;
+            z-index: 200;
+            border: 2px solid rgba(100, 220, 255, 0.6);
+            box-shadow: 0 0 40px rgba(100, 200, 255, 0.3), inset 0 0 40px rgba(0,0,50,0.5);
+        }
+
+        .game-over h2 {
+            font-size: 42px;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 50, 50, 0.8);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            animation: pulse 1s infinite alternate;
+        }
+
+        .game-over p {
+            margin: 10px 0;
+            color: #aad4ff;
+            font-size: 20px;
+        }
+
+        .game-over p span {
+            color: #7df9ff;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            from { text-shadow: 0 0 10px rgba(255, 50, 50, 0.6); }
+            to   { text-shadow: 0 0 30px rgba(255, 50, 50, 1), 0 0 60px rgba(255, 100, 100, 0.5); }
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #1a7a2e, #2ecc71);
+            color: white;
+            border: 2px solid #2ecc71;
+            padding: 14px 36px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .restart-btn:hover {
+            background: linear-gradient(135deg, #2ecc71, #1a7a2e);
+            box-shadow: 0 0 30px rgba(46, 204, 113, 0.8);
+            transform: scale(1.05);
+        }
+
+        .stars {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle linear infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.4); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars" id="stars"></div>
+
+    <div class="ui">
+        <div>🎯 SCORE: <span id="score">0</span></div>
+        <div>🌀 ROUND: <span id="round">1</span></div>
+        <div>💥 MISSES: <span id="misses">0</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="1200" height="800"></canvas>
+
+    <div class="crosshair" id="crosshair">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+            <defs>
+                <radialGradient id="crossGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="rgba(255,80,80,0.3)"/>
+                    <stop offset="100%" stop-color="rgba(255,80,80,0)"/>
+                </radialGradient>
+            </defs>
+            <circle cx="22" cy="22" r="20" fill="url(#crossGlow)" stroke="rgba(255,80,80,0.4)" stroke-width="1"/>
+            <circle cx="22" cy="22" r="14" fill="none" stroke="#ff4444" stroke-width="2" stroke-dasharray="4 2"/>
+            <line x1="22" y1="2" x2="22" y2="10" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="22" y1="34" x2="22" y2="42" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="2" y1="22" x2="10" y2="22" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="34" y1="22" x2="42" y2="22" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="22" cy="22" r="2.5" fill="#ff4444"/>
+            <circle cx="22" cy="22" r="1" fill="white"/>
+        </svg>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>GAME OVER!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Rounds Completed: <span id="finalRound">0</span></p>
+        <button class="restart-btn" onclick="restartGame()">▶ PLAY AGAIN</button>
+    </div>
+
+    <script>
+        // Generate starfield
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 80; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() * 3 + 1;
+            star.style.cssText = `
+                width: ${size}px;
+                height: ${size}px;
+                top: ${Math.random() * 60}%;
+                left: ${Math.random() * 100}%;
+                animation-duration: ${Math.random() * 3 + 2}s;
+                animation-delay: ${Math.random() * 3}s;
+            `;
+            starsContainer.appendChild(star);
+        }
+
+        // Crosshair follow mouse
+        const crosshair = document.getElementById('crosshair');
+        document.addEventListener('mousemove', (e) => {
+            crosshair.style.left = e.clientX + 'px';
+            crosshair.style.top = e.clientY + 'px';
+        });
+    </script>
+
+    <script>
+    // =====================================================================
+    // DUCK HUNT GAME ENGINE (self-contained, no external JS dependency)
+    // =====================================================================
+    (function() {
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const W = canvas.width;
+        const H = canvas.height;
+
+        // --- Audio Context ---
+        let audioCtx = null;
+        function getAudioCtx() {
+            if (!audioCtx) {
+                try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+            }
+            return audioCtx;
+        }
+
+        function playShot() {
+            const ac = getAudioCtx(); if (!ac) return;
+            const buf = ac.createBuffer(1, ac.sampleRate * 0.15, ac.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+            }
+            const src = ac.createBufferSource();
+            src.buffer = buf;
+            const gain = ac.createGain();
+            gain.gain.setValueAtTime(0.4, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
+            src.connect(gain); gain.connect(ac.destination);
+            src.start();
+        }
+
+        function playHit() {
+            const ac = getAudioCtx(); if (!ac) return;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(440, ac.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(110, ac.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.3, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
+            osc.connect(gain); gain.connect(ac.destination);
+            osc.start(); osc.stop(ac.currentTime + 0.3);
+        }
+
+        function playMiss() {
+            const ac = getAudioCtx(); if (!ac) return;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, ac.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, ac.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.2, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4);
+            osc.connect(gain); gain.connect(ac.destination);
+            osc.start(); osc.stop(ac.currentTime + 0.4);
+        }
+
+        // --- Game State ---
+        let score = 0;
+        let misses = 0;
+        let round = 1;
+        let gameRunning = true;
+        let ducks = [];
+        let particles = [];
+        let flashEffects = [];
+        let animFrame = null;
+        const MAX_MISSES = 10;
+
+        // --- Duck class ---
+        const DUCK_COLORS = [
+            { body: '#4CAF50', wing: '#2E7D32', beak: '#FFC107', eye: '#fff' },
+            { body: '#2196F3', wing: '#1565C0', beak: '#FF9800', eye: '#fff' },
+            { body: '#F44336', wing: '#B71C1C', beak: '#FFEB3B', eye: '#fff' },
+            { body: '#9C27B0', wing: '#6A1B9A', beak: '#FF5722', eye: '#fff' },
+            { body: '#FF9800', wing: '#E65100', beak: '#FFEB3B', eye: '#fff' },
+        ];
+
+        function randomDuckColor() {
+            return DUCK_COLORS[Math.floor(Math.random() * DUCK_COLORS.length)];
+        }
+
+        class Duck {
+            constructor(roundNum) {
+                this.radius = 28;
+                this.color = randomDuckColor();
+                this.speed = 2 + roundNum * 0.5 + Math.random() * 1.5;
+                this.wingAngle = 0;
+                this.wingDir = 1;
+                this.alive = true;
+                this.falling = false;
+                this.fallSpeed = 0;
+                this.hit = false;
+                this.hitTimer = 0;
+                this.scored = false;
+
+                // Spawn from edges
+                const edge = Math.floor(Math.random() * 4);
+                if (edge === 0) { // left
+                    this.x = -40; this.y = 100 + Math.random() * (H - 200);
+                    this.vx = this.speed; this.vy = (Math.random() - 0.5) * this.speed;
+                } else if (edge === 1) { // right
+                    this.x = W + 40; this.y = 100 + Math.random() * (H - 200);
+                    this.vx = -this.speed; this.vy = (Math.random() - 0.5) * this.speed;
+                } else if (edge === 2) { // top
+                    this.x = 100 + Math.random() * (W - 200); this.y = -40;
+                    this.vx = (Math.random() - 0.5) * this.speed; this.vy = this.speed;
+                } else { // bottom
+                    this.x = 100 + Math.random() * (W - 200); this.y = H + 40;
+                    this.vx = (Math.random() - 0.5) * this.speed; this.vy = -this.speed;
+                }
+
+                this.changeTimer = 0;
+                this.changeInterval = 80 + Math.random() * 120;
+            }
+
+            update() {
+                if (this.hit) {
+                    this.hitTimer++;
+                    if (this.hitTimer > 18) {
+                        this.falling = true;
+                        this.hit = false;
+                    }
+                    return;
+                }
+                if (this.falling) {
+                    this.fallSpeed += 0.5;
+                    this.y += this.fallSpeed;
+                    this.x += this.vx * 0.3;
+                    if (this.y > H + 60) {
+                        this.alive = false;
+                    }
+                    return;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off edges
+                if (this.x < 30 || this.x > W - 30) { this.vx *= -1; this.x = Math.max(30, Math.min(W - 30, this.x)); }
+                if (this.y < 60 || this.y > H - 80) { this.vy *= -1; this.y = Math.max(60, Math.min(H - 80, this.y)); }
+
+                // Random direction change
+                this.changeTimer++;
+                if (this.changeTimer >= this.changeInterval) {
+                    this.changeTimer = 0;
+                    this.changeInterval = 80 + Math.random() * 120;
+                    this.vx += (Math.random() - 0.5) * 1.5;
+                    this.vy += (Math.random() - 0.5) * 1.5;
+                    // Clamp speed
+                    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (spd > this.speed * 1.5) {
+                        this.vx = (this.vx / spd) * this.speed * 1.5;
+                        this.vy = (this.vy / spd) * this.speed * 1.5;
+                    }
+                    if (spd < this.speed * 0.5) {
+                        this.vx = (this.vx / spd) * this.speed * 0.5;
+                        this.vy = (this.vy / spd) * this.speed * 0.5;
+                    }
+                }
+
+                // Wing flap
+                this.wingAngle += 0.18 * this.wingDir;
+                if (Math.abs(this.wingAngle) > 0.6) this.wingDir *= -1;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Flip based on direction
+                const facingLeft = this.vx < 0;
+                if (facingLeft) ctx.scale(-1, 1);
+
+                const c = this.color;
+
+                // Shadow
+                ctx.save();
+                ctx.globalAlpha = 0.18;
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.ellipse(0, this.radius + 6, this.radius * 0.9, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Wing (back)
+                ctx.save();
+                ctx.rotate(-this.wingAngle * 0.8);
+                ctx.fillStyle = c.wing;
+                ctx.beginPath();
+                ctx.ellipse(-8, 4, 22, 10, -0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Body
+                ctx.fillStyle = c.body;
+                ctx.beginPath();
+                ctx.ellipse(0, 4, this.radius, this.radius * 0.75, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wing (front)
+                ctx.save();
+                ctx.rotate(this.wingAngle);
+                ctx.fillStyle = c.wing;
+                ctx.beginPath();
+                ctx.ellipse(4, 0, 20, 9, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // Head
+                ctx.fillStyle = c.body;
+                ctx.beginPath();
+                ctx.arc(this.radius * 0.7, -this.radius * 0.5, this.radius * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.arc(this.radius * 0.85, -this.radius * 0.6, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(this.radius * 0.87, -this.radius * 0.62, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Beak
+                ctx.fillStyle = c.beak;
+                ctx.beginPath();
+                ctx.moveTo(this.radius * 1.1, -this.radius * 0.5);
+                ctx.lineTo(this.radius * 1.45, -this.radius * 0.42);
+                ctx.lineTo(this.radius * 1.1, -this.radius * 0.35);
+                ctx.closePath();
+                ctx.fill();
+
+                // Hit flash
+                if (this.hit) {
+                    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(this.hitTimer * 0.8);
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 4, this.radius, this.radius * 0.75, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+
+                ctx.restore();
+            }
+
+            isHit(mx, my) {
+                const dx = mx - this.x;
+                const dy = my - this.y;
+                return Math.sqrt(dx * dx + dy * dy) < this.radius + 10;
+            }
+        }
+
+        // --- Particles ---
+        function spawnParticles(x, y, color) {
+            for (let i = 0; i < 18; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 5;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.03 + Math.random() * 0.04,
+                    size: 3 + Math.random() * 5,
+                    color: color || '#FFD700'
+                });
+            }
+        }
+
+        function spawnMissParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.05 + Math.random() * 0.05,
+                    size: 2 + Math.random() * 3,
+                    color: '#ff6666'
+                });
+            }
+        }
+
+        // --- Flash effects ---
+        function addFlash(x, y, text, color) {
+            flashEffects.push({ x, y, text, color: color || '#FFD700', life: 1, vy: -1.5 });
+        }
+
+        // --- Background ---
+        function drawBackground() {
+            // Sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.72);
+            skyGrad.addColorStop(0, '#0a0a2e');
+            skyGrad.addColorStop(0.5, '#1a1a5e');
+            skyGrad.addColorStop(1, '#1a3a6e');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, H * 0.72);
+
+            // Moon
+            ctx.save();
+            ctx.fillStyle = '#fffde7';
+            ctx.shadowColor = '#fffde7';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.arc(W - 120, 80, 38, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            // Moon craters
+            ctx.fillStyle = 'rgba(200,200,180,0.3)';
+            ctx.beginPath(); ctx.arc(W - 108, 72, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(W - 130, 90, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+
+            // Ground
+            const groundGrad = ctx.createLinearGradient(0, H * 0.72, 0, H);
+            groundGrad.addColorStop(0, '#2d5a27');
+            groundGrad.addColorStop(0.3, '#1e4020');
+            groundGrad.addColorStop(1, '#0f2010');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, H * 0.72, W, H * 0.28);
+
+            // Ground line highlight
+            ctx.strokeStyle = 'rgba(100,200,80,0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, H * 0.72);
+            ctx.lineTo(W, H * 0.72);
+            ctx.stroke();
+
+            // Bushes
+            drawBushes();
+
+            // Distant hills
+            ctx.fillStyle = 'rgba(30,80,30,0.5)';
+            ctx.beginPath();
+            ctx.moveTo(0, H * 0.72);
+            for (let x = 0; x <= W; x += 60) {
+                const hillH = 30 + 20 * Math.sin(x * 0.015);
+                ctx.lineTo(x, H * 0.72 - hillH);
+            }
+            ctx.lineTo(W, H * 0.72);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawBushes() {
+            const bushPositions = [80, 220, 400, 580, 750, 920, 1080];
+            bushPositions.forEach((bx, i) => {
+                const by = H * 0.72;
+                const size = 22 + (i % 3) * 8;
+                ctx.fillStyle = '#1a5c18';
+                ctx.beginPath();
+                ctx.arc(bx, by, size, Math.PI, 0);
+                ctx.fill();
+                ctx.fillStyle = '#2d7a2a';
+                ctx.beginPath();
+                ctx.arc(bx - size * 0.4, by - size * 0.3, size * 0.7, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(bx + size * 0.4, by - size * 0.3, size * 0.7, Math.PI, 0);
+                ctx.fill();
+                ctx.fillStyle = '#3a9e36';
+                ctx.beginPath();
+                ctx.arc(bx, by - size * 0.5, size * 0.65, Math.PI, 0);
+                ctx.fill();
+            });
+        }
+
+        // --- HUD ---
+        function drawHUD() {
+            // Ammo / miss bar
+            const barW = 220;
+            const barH = 18;
+            const barX = W / 2 - barW / 2;
+            const barY = H - 36;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath();
+            ctx.roundRect(barX - 4, barY - 4, barW + 8, barH + 8, 6);
+            ctx.fill();
+            for (let i = 0; i < MAX_MISSES; i++) {
+                const filled = i < misses;
+                ctx.fillStyle = filled ? '#ff4444' : 'rgba(255,255,255,0.15)';
+                ctx.beginPath();
+                ctx.roundRect(barX + i * (barW / MAX_MISSES) + 1, barY, barW / MAX_MISSES - 3, barH, 3);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '12px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('MISSES', W / 2, barY - 6);
+        }
+
+        // --- Spawn ducks ---
+        function getDucksForRound(r) {
+            return 3 + r * 2;
+        }
+
+        let ducksToSpawn = 0;
+        let spawnTimer = 0;
+        let spawnInterval = 90;
+        let ducksSpawned = 0;
+        let ducksKilled = 0;
+        let roundOver = false;
+        let roundTransTimer = 0;
+
+        function startRound(r) {
+            round = r;
+            ducks = [];
+            particles = [];
+            flashEffects = [];
+            ducksToSpawn = getDucksForRound(r);
+            ducksSpawned = 0;
+            ducksKilled = 0;
+            spawnTimer = 0;
+            spawnInterval = Math.max(30, 90 - r * 5);
+            roundOver = false;
+            roundTransTimer = 0;
+            document.getElementById('round').textContent = r;
+        }
+
+        // --- Main update ---
+        function update() {
+            if (!gameRunning) return;
+
+            // Spawn ducks
+            if (ducksSpawned < ducksToSpawn) {
+                spawnTimer++;
+                if (spawnTimer >= spawnInterval) {
+                    spawnTimer = 0;
+                    ducks.push(new Duck(round));
+                    ducksSpawned++;
+                }
+            }
+
+            // Update ducks
+            ducks.forEach(d => d.update());
+
+            // Check for ducks that fell off screen (scored already handled on click)
+            ducks.forEach(d => {
+                if (d.falling && !d.alive && !d.scored) {
+                    d.scored = true;
+                }
+            });
+
+            // Remove dead ducks
+            ducks = ducks.filter(d => d.alive || d.hit || (d.falling && d.y <= H + 60));
+
+            // Update particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.12;
+                p.life -= p.decay;
+            });
+            particles = particles.filter(p => p.life > 0);
+
+            // Update flash effects
+            flashEffects.forEach(f => {
+                f.y += f.vy;
+                f.life -= 0.025;
+            });
+            flashEffects = flashEffects.filter(f => f.life > 0);
+
+            // Check round completion
+            if (!roundOver && ducksSpawned >= ducksToSpawn) {
+                const activeDucks = ducks.filter(d => d.alive || d.hit || d.falling);
+                if (activeDucks.length === 0) {
+                    roundOver = true;
+                    roundTransTimer = 0;
+                }
+            }
+
+            if (roundOver) {
+                roundTransTimer++;
+                if (roundTransTimer > 90) {
+                    startRound(round + 1);
+                }
+            }
+
+            // Check game over
+            if (misses >= MAX_MISSES) {
+                endGame();
+            }
+        }
+
+        // --- Draw ---
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            drawBackground();
+
+            // Draw ducks
+            ducks.forEach(d => d.draw(ctx));
+
+            // Draw particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw flash effects
+            flashEffects.forEach(f => {
+                ctx.save();
+                ctx.globalAlpha = f.life;
+                ctx.fillStyle = f.color;
+                ctx.font = 'bold 26px Courier New';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = f.color;
+                ctx.shadowBlur = 10;
+                ctx.fillText(f.text, f.x, f.y);
+                ctx.restore();
+            });
+
+            // Round transition message
+            if (roundOver && roundTransTimer < 90) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, roundTransTimer / 20) * Math.min(1, (90 - roundTransTimer) / 20);
+                ctx.fillStyle = '#7df9ff';
+                ctx.font = 'bold 52px Courier New';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = '#7df9ff';
+                ctx.shadowBlur = 20;
+                ctx.fillText('ROUND ' + (round + 1) + '!', W / 2, H / 2);
+                ctx.font = '28px Courier New';
+                ctx.fillText('Get Ready...', W / 2, H / 2 + 50);
+                ctx.restore();
+            }
+
+            drawHUD();
+        }
+
+        // --- Game loop ---
+        function gameLoop() {
+            update();
+            draw();
+            if (gameRunning) {
+                animFrame = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // --- Click handler ---
+        function onCanvasClick(e) {
+            if (!gameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = W / rect.width;
+            const scaleY = H / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            playShot();
+
+            let hit = false;
+            for (let i = ducks.length - 1; i >= 0; i--) {
+                const d = ducks[i];
+                if (!d.alive || d.hit || d.falling) continue;
+                if (d.isHit(mx, my)) {
+                    d.hit = true;
+                    d.hitTimer = 0;
+                    hit = true;
+                    score += 10 * round;
+                    ducksKilled++;
+                    document.getElementById('score').textContent = score;
+                    spawnParticles(d.x, d.y, d.color.body);
+                    addFlash(d.x, d.y - 40, '+' + (10 * round), '#FFD700');
+                    playHit();
+                    break;
+                }
+            }
+
+            if (!hit) {
+                misses++;
+                document.getElementById('misses').textContent = misses;
+                spawnMissParticles(mx, my);
+                addFlash(mx, my, 'MISS!', '#ff6666');
+                playMiss();
+            }
+        }
+
+        canvas.addEventListener('click', onCanvasClick);
+
+        // --- End game ---
+        function endGame() {
+            gameRunning = false;
+            if (animFrame) cancelAnimationFrame(animFrame);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalRound').textContent = round;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // --- Restart ---
+        window.restartGame = function() {
+            score = 0;
+            misses = 0;
+            round = 1;
+            gameRunning = true;
+            ducks = [];
+            particles = [];
+            flashEffects = [];
+            document.getElementById('score').textContent = '0';
+            document.getElementById('misses').textContent = '0';
+            document.getElementById('round').textContent = '1';
+            document.getElementById('gameOver').style.display = 'none';
+            startRound(1);
+            if (animFrame) cancelAnimationFrame(animFrame);
+            gameLoop();
+        };
+
+        // --- Start ---
+        startRound(1);
+        gameLoop();
+
+    })();
+    </script>
+
+    <script>
+        // Post-load canvas enhancement: vignette overlay
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('gameCanvas');
+            if (!canvas) return;
+
+            const overlay = document.createElement('canvas');
+            overlay.width = canvas.width;
+            overlay.height = canvas.height;
+            overlay.style.cssText = `
+                position: fixed;
+                pointer-events: none;
+                z-index: 4;
+                border-radius: 4px;
+            `;
+
+            function positionOverlay() {
+                const rect = canvas.getBoundingClientRect();
+                overlay.style.left = rect.left + 'px';
+                overlay.style.top = rect.top + 'px';
+                overlay.style.width = rect.width + 'px';
+                overlay.style.height = rect.height + 'px';
+            }
+
+            document.body.appendChild(overlay);
+            positionOverlay();
+            window.addEventListener('resize', positionOverlay);
+
+            const octx = overlay.getContext('2d');
+
+            function drawOverlay() {
+                octx.clearRect(0, 0, overlay.width, overlay.height);
+
+                // Vignette
+                const vignette = octx.createRadialGradient(
+                    overlay.width / 2, overlay.height / 2, overlay.height * 0.3,
+                    overlay.width / 2, overlay.height / 2, overlay.height * 0.85
+                );
+                vignette.addColorStop(0, 'rgba(0,0,0,0)');
+                vignette.addColorStop(1, 'rgba(0,0,20,0.55)');
+                octx.fillStyle = vignette;
+                octx.fillRect(0, 0, overlay.width, overlay.height);
+
+                // Scanlines for retro feel
+                octx.fillStyle = 'rgba(0,0,0,0.04)';
+                for (let y = 0; y < overlay.height; y += 4) {
+                    octx.fillRect(0, y, overlay.width, 2);
+                }
+
+                requestAnimationFrame(drawOverlay);
+            }
+
+            drawOverlay();
+        });
+    </script>
+</body>
+</html>
