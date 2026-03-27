@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Platformer Adventure</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 10;
+        }
+        
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .jump-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 100, 100, 0.7);
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <div>🪙 SCORE: <span id="score">0</span></div>
+        <div>LIVES: <span id="lives">3</span></div>
+        <div>LEVEL: <span id="level">1</span></div>
+    </div>
+    
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    
+    <div class="mobile-controls">
+        <div>
+            <div class="control-btn" id="leftBtn">←</div>
+        </div>
+        <div>
+            <div class="control-btn" id="rightBtn">→</div>
+        </div>
+        <div>
+            <div class="control-btn jump-btn" id="jumpBtn">↑</div>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/913YWdqethfUDeB7BOyfIBHVD1K3/sessions/Mp3PEGbxowzcbPP9y7FD/games/sMJxOcAsy611hlmdQWOz.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=dVLCIhJzXJm%2BEMODar6BwScAQ41Rv7yZt6VNtiO6ggAFl2%2FdJscwuRtqnEF9QpN9WDD85Y8eZOQtYFltbsKSPrRe5G9gmIULXjaZ8oZh2UfnqvW7ZUZLRKtovuWIsnwEPs3w8qNPj9MKKGLhVEh3ag2Pd4AnGSnxAlQPRcMycfecjre26UVPiexAmmmU2xR5UXe6mX3H9L8qSQjx2br0FNpCTRaX7wRTCeof6zI7JDaTMQQBSpDfuSRJjQGT9BdB61rrmozKDr2mdh2FzAIL1RlCGmvhxBw9kBtmIYS2Azzw3mYuD0JtLmMqgICd5uZoUgGmZ4DSOlUx%2FjKcUgjcqw%3D%3D"></script>
+</body>
+</html>
