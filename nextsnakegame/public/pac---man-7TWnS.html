@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pac-Man Maze Runner</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0a0a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+}
+canvas {
+    border: 3px solid #1a3a8a;
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(30, 80, 220, 0.4);
+}
+#gameContainer {
+    position: relative;
+}
+#mobileControls {
+    display: none;
+    position: absolute;
+    bottom: -140px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 150px;
+}
+.mBtn {
+    position: absolute;
+    width: 46px;
+    height: 46px;
+    background: rgba(30, 80, 220, 0.6);
+    border: 2px solid #4488ff;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+.mBtn:active { background: rgba(60, 120, 255, 0.8); }
+#btnUp { top: 0; left: 52px; }
+#btnDown { bottom: 0; left: 52px; }
+#btnLeft { top: 52px; left: 0; }
+#btnRight { top: 52px; right: 0; }
+@media (max-width: 600px) {
+    #mobileControls { display: block; }
+    body { align-items: flex-start; padding-top: 10px; }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="gameCanvas"></canvas>
+<div id="mobileControls">
+    <div class="mBtn" id="btnUp">▲</div>
+    <div class="mBtn" id="btnDown">▼</div>
+    <div class="mBtn" id="btnLeft">◀</div>
+    <div class="mBtn" id="btnRight">▶</div>
+</div>
+</div>
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/jtj0KMtVVZhLHGpg9odfR5J5GQ52/sessions/dDkuiPxMLLK4ecK4MlKE/games/ryBe8JUTCv7Iekhx1P9R.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=d75lMU4U5wPjQrsbHiZG9yDu8r%2FYDzu8Rgu2aq%2Fkqqo%2Bf1r4dHr7KSL1XGHOl6vziUDdclP3uAHvEN5xEhWdjZH1CPvsTUIgGrFW9%2FsQwVkn9EKnwGGiUSWPK3jre1KUiupxR8ceyGdrBLH1cH12zeq%2BwO7DNLWguGS2sSz7oDNCci5rzC9qspfd8%2BYF%2B2JzrhlCxs6aNDFExGLl0QJfOcYqW6fulf1P%2F1jBNBUStfATVs4qpQ6NYk9RNJlWS5QF1dfgWNnWjYpHCDftgf6INxtVWJev2sB0ueyIGF6T092btyCIblriMESa5jzB2P3Dwa2BNvxDGmCDjOH%2FpySXcg%3D%3D"></script>
+</body>
+</html>
