@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tennis Simulation</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    background: #1a1a2e; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+canvas { 
+    display: block; 
+    border-radius: 4px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+#ui-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#controls {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    pointer-events: all;
+}
+.ctrl-btn {
+    width: 65px; height: 65px;
+    background: rgba(255,255,255,0.85);
+    border: 3px solid #888;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.1s;
+}
+.ctrl-btn:active { transform: scale(0.9); background: rgba(200,200,200,0.9); }
+.btn-group { display: flex; gap: 10px; }
+#startScreen, #pauseScreen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+    z-index: 100;
+}
+#startScreen h1, #pauseScreen h1 {
+    color: #4CAF50;
+    font-size: 48px;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+#startScreen p, #pauseScreen p {
+    color: #ccc;
+    font-size: 16px;
+    margin-bottom: 30px;
+    text-align: center;
+    line-height: 1.6;
+}
+.menu-btn {
+    padding: 15px 40px;
+    font-size: 20px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    pointer-events: all;
+    transition: transform 0.2s;
+    margin: 5px;
+}
+.menu-btn:hover { transform: scale(1.05); }
+.menu-btn:active { transform: scale(0.95); }
+#pauseScreen { display: none; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="startScreen">
+    <h1>🎾 Tennis Pro</h1>
+    <p>Arrow Keys / Touch to Move<br>Space / SWING to Hit<br>S / SERVE to Serve<br>First to win 2 sets wins the match!</p>
+    <button class="menu-btn" id="startBtn">START MATCH</button>
+</div>
+
+<div id="pauseScreen">
+    <h1>⏸ PAUSED</h1>
+    <button class="menu-btn" id="resumeBtn">RESUME</button>
+    <button class="menu-btn" id="restartBtn" style="background: linear-gradient(135deg, #f44336, #c62828);">RESTART</button>
+</div>
+
+<div id="controls">
+    <div class="btn-group">
+        <button class="ctrl-btn" id="btnLeft">◀</button>
+        <button class="ctrl-btn" id="btnUp">▲</button>
+        <button class="ctrl-btn" id="btnDown">▼</button>
+        <button class="ctrl-btn" id="btnRight">▶</button>
+    </div>
+    <div class="btn-group">
+        <button class="ctrl-btn" id="btnSwing">SWING</button>
+        <button class="ctrl-btn" id="btnServe">SERVE</button>
+        <button class="ctrl-btn" id="btnPause">⏸</button>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/js3vy87lk2PVeyTKXFIysuTl7Jr1/sessions/0gNFY5BMtw8pnHQonlT9/games/xKMQSvObKhoecernaaGF.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=H4%2FoxktoSmZ8aiieijp29WttDgga3wIToHriUVI3REHtDstjoYpn93IaNN8mJ9wonBDHWAP0vPQr0EZhLw%2BTpCVc1c%2FXtZFVvNro23kqyIZqu28beYBM2K2nniJdczTL5xi4sCbX0Pqo1yQTVrnxKCEGaksIdWsSJ8ew1M3y7gvZKF4En5oqzvWXgs2qo1FTrtiiRvUAyRIpmUWd4a6%2FxnhtHe12BIhlzT%2BwbO%2FFyZ%2F%2BsAIuFSAN7W8wOcTtlfJFM4%2By3g7PHonxb%2FGgSsEOnoC5%2FAaHurY9pDc51JarjOijH6H8RS5d%2FM5Aa%2FegukU4FzC2eldTmfA5WUFnV4phHg%3D%3D"></script>
+</body>
+</html>
