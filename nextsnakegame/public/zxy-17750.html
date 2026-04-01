@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Runner Pac-Man</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #2d5016;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        #gameContainer {
+            text-align: center;
+            background: #2d5016;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        canvas {
+            border: 4px solid #1a2f0a;
+            background: #4a7c59;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        #ui {
+            background: #1a1a2e;
+            color: white;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        #instructions {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <span>SCORE: <span id="score">0</span></span>
+            <span>LIVES: <span id="lives">3</span></span>
+            <span>TIMER: <span id="timer">0</span></span>
+        </div>
+        <div id="instructions">
+            Use ARROW KEYS or WASD to move • Collect all yellow dots • Avoid red ghosts!
+        </div>
+        
+        <div id="gameOver">
+            <h2 id="gameOverTitle">Game Over!</h2>
+            <p id="gameOverMessage">Try again!</p>
+            <button onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/js3vy87lk2PVeyTKXFIysuTl7Jr1/sessions/uioYD0sKkcesSgdgVdIG/games/rvliUOgYWTOM8SXGDiac.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=LU1RgvWZB%2BEujkPeCcA5NC0lRL18%2F5vdJbXAE2p0AFDDpMCPN54GO9%2Bw4H8ELlGN6RxEUXGS6abVrmBTpH1iqSZPra14JJ3yoEzaO87rOO0Z3KL92JDNQJZxdit%2Fpl7E1rBcyTUO7buPoxBmjQwMoiY3zdf%2F4VbO%2BYU9dCtsqLKPUhGsoepFxuYvckLnaRKvjSGgt2cohBE43XuhfYUhVpJ0uK7sh8OI9IWr2rOTFLNIgr%2FAQWW5p1te0ZywIV66nN8tLVAaZg47a0FSua4qFEOcKo44%2FFdlgm61t37uWSX8vhM%2BgZJgceS%2BN58E0HnyWOgDthWLRiTkQXXbG3sf2Q%3D%3D"></script>
+</body>
+</html>
