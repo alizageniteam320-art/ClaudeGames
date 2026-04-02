@@ -1,0 +1,1869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Polyfill for localStorage and sessionStorage to prevent SecurityError in data: iframes
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        // Storage access is blocked, implement in-memory polyfill
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+             console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Match Pro</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        :root {
+            --primary: #6c63ff;
+            --secondary: #ff6584;
+            --accent: #43e97b;
+            --gold: #f9ca24;
+            --dark: #1a1a2e;
+            --darker: #16213e;
+            --card: rgba(255,255,255,0.07);
+            --card-border: rgba(255,255,255,0.12);
+        }
+
+        body {
+            background: var(--dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.15) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 80%, rgba(67,233,123,0.1) 0%, transparent 50%);
+            animation: bgShift 8s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes bgShift {
+            0% { transform: translate(0,0) rotate(0deg); }
+            100% { transform: translate(2%,2%) rotate(2deg); }
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 80px rgba(108,99,255,0.3), 0 0 160px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatParticle linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes floatParticle {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+        }
+
+        /* ===== SCREENS ===== */
+        .screen-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            z-index: 20;
+            transition: opacity 0.4s, transform 0.4s;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .screen-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        /* ===== MAIN MENU ===== */
+        #start-screen {
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            padding: 30px 20px;
+        }
+
+        .logo-container {
+            margin-top: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 80px;
+            background: radial-gradient(ellipse, rgba(108,99,255,0.4), transparent 70%);
+            filter: blur(20px);
+            animation: glowPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glowPulse {
+            0% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .logo-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 52px;
+            letter-spacing: 3px;
+            position: relative;
+            z-index: 1;
+            line-height: 1;
+        }
+
+        .logo-title .l1 { color: #ff4757; }
+        .logo-title .l2 { color: #ffa502; }
+        .logo-title .l3 { color: #2ed573; }
+        .logo-title .l4 { color: #1e90ff; }
+        .logo-title .l5 { color: #ff6b81; }
+        .logo-title .l6 { color: #eccc68; }
+        .logo-title .l7 { color: #a29bfe; }
+        .logo-title .l8 { color: #55efc4; }
+        .logo-title .l9 { color: #fd79a8; }
+        .logo-title .l10 { color: #74b9ff; }
+
+        .logo-subtitle {
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 6px;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        /* High Score Banner */
+        .hs-banner {
+            background: linear-gradient(135deg, rgba(249,202,36,0.15), rgba(249,202,36,0.05));
+            border: 1px solid rgba(249,202,36,0.3);
+            border-radius: 16px;
+            padding: 10px 24px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Fredoka One', cursive;
+            color: var(--gold);
+            font-size: 16px;
+        }
+
+        /* Menu Cards */
+        .menu-section {
+            width: 100%;
+            padding: 0 20px;
+            margin-top: 20px;
+        }
+
+        .section-label {
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding-left: 4px;
+        }
+
+        /* Difficulty Selector */
+        .diff-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .diff-card {
+            background: var(--card);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 14px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .diff-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0;
+            transition: opacity 0.2s;
+            border-radius: 14px;
+        }
+
+        .diff-card.easy::before { background: linear-gradient(135deg, rgba(46,213,115,0.2), rgba(46,213,115,0.05)); }
+        .diff-card.medium::before { background: linear-gradient(135deg, rgba(255,165,2,0.2), rgba(255,165,2,0.05)); }
+        .diff-card.hard::before { background: linear-gradient(135deg, rgba(255,71,87,0.2), rgba(255,71,87,0.05)); }
+        .diff-card.extreme::before { background: linear-gradient(135deg, rgba(162,155,254,0.2), rgba(162,155,254,0.05)); }
+
+        .diff-card:hover, .diff-card.selected {
+            transform: translateY(-3px);
+        }
+
+        .diff-card:hover::before, .diff-card.selected::before { opacity: 1; }
+
+        .diff-card.easy.selected { border-color: #2ed573; box-shadow: 0 0 20px rgba(46,213,115,0.3); }
+        .diff-card.medium.selected { border-color: #ffa502; box-shadow: 0 0 20px rgba(255,165,2,0.3); }
+        .diff-card.hard.selected { border-color: #ff4757; box-shadow: 0 0 20px rgba(255,71,87,0.3); }
+        .diff-card.extreme.selected { border-color: #a29bfe; box-shadow: 0 0 20px rgba(162,155,254,0.3); }
+
+        .diff-icon { font-size: 28px; display: block; margin-bottom: 4px; }
+        .diff-name {
+            font-family: 'Fredoka One', cursive;
+            font-size: 14px;
+            color: white;
+            display: block;
+        }
+        .diff-desc {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Rounds Selector */
+        .rounds-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .rounds-card {
+            background: var(--card);
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Fredoka One', cursive;
+            font-size: 18px;
+            color: white;
+        }
+
+        .rounds-card:hover, .rounds-card.selected {
+            border-color: var(--primary);
+            background: rgba(108,99,255,0.15);
+            box-shadow: 0 0 15px rgba(108,99,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .rounds-card .rounds-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            display: block;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Power-ups toggle */
+        .powerup-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pu-toggle {
+            background: var(--card);
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pu-toggle.active {
+            border-color: var(--gold);
+            background: rgba(249,202,36,0.1);
+            box-shadow: 0 0 15px rgba(249,202,36,0.2);
+        }
+
+        .pu-icon { font-size: 22px; display: block; }
+        .pu-name { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 700; display: block; margin-top: 2px; }
+        .pu-toggle.active .pu-name { color: var(--gold); }
+
+        /* Play Button */
+        .play-btn {
+            font-family: 'Fredoka One', cursive;
+            font-size: 24px;
+            padding: 18px 0;
+            width: 100%;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #6c63ff, #a855f7);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 8px 0 rgba(108,99,255,0.4), 0 12px 30px rgba(108,99,255,0.3);
+            transition: all 0.15s;
+            letter-spacing: 3px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .play-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s;
+        }
+
+        .play-btn:hover::before { left: 100%; }
+        .play-btn:hover { transform: translateY(-3px); box-shadow: 0 11px 0 rgba(108,99,255,0.4), 0 16px 35px rgba(108,99,255,0.4); }
+        .play-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(108,99,255,0.4), 0 4px 10px rgba(108,99,255,0.2); }
+
+        /* Leaderboard Button */
+        .lb-btn {
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            padding: 12px 0;
+            width: 100%;
+            border: 2px solid rgba(249,202,36,0.3);
+            border-radius: 16px;
+            background: rgba(249,202,36,0.08);
+            color: var(--gold);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        .lb-btn:hover {
+            background: rgba(249,202,36,0.15);
+            border-color: rgba(249,202,36,0.6);
+            transform: translateY(-2px);
+        }
+
+        /* ===== LEADERBOARD SCREEN ===== */
+        #leaderboard-screen {
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            padding: 30px 20px;
+        }
+
+        .screen-header {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 24px;
+            gap: 12px;
+        }
+
+        .back-btn {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            background: var(--card);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .back-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+
+        .screen-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 28px;
+            color: white;
+            flex: 1;
+        }
+
+        .lb-tabs {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .lb-tab {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            background: var(--card);
+            color: rgba(255,255,255,0.5);
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .lb-tab.active {
+            border-color: var(--primary);
+            background: rgba(108,99,255,0.2);
+            color: white;
+        }
+
+        .lb-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .lb-entry {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .lb-entry:nth-child(1) { border-color: rgba(255,215,0,0.4); background: rgba(255,215,0,0.06); }
+        .lb-entry:nth-child(2) { border-color: rgba(192,192,192,0.4); background: rgba(192,192,192,0.06); }
+        .lb-entry:nth-child(3) { border-color: rgba(205,127,50,0.4); background: rgba(205,127,50,0.06); }
+
+        .lb-rank {
+            font-family: 'Fredoka One', cursive;
+            font-size: 20px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .lb-entry:nth-child(1) .lb-rank { color: gold; }
+        .lb-entry:nth-child(2) .lb-rank { color: silver; }
+        .lb-entry:nth-child(3) .lb-rank { color: #cd7f32; }
+        .lb-entry:nth-child(n+4) .lb-rank { color: rgba(255,255,255,0.4); }
+
+        .lb-info { flex: 1; }
+        .lb-name {
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            color: white;
+        }
+        .lb-meta {
+            font-size: 11px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 2px;
+        }
+
+        .lb-score {
+            font-family: 'Fredoka One', cursive;
+            font-size: 22px;
+            color: var(--gold);
+        }
+
+        .lb-empty {
+            text-align: center;
+            color: rgba(255,255,255,0.3);
+            font-family: 'Fredoka One', cursive;
+            font-size: 18px;
+            padding: 40px 0;
+        }
+
+        /* ===== GAME SCREEN ===== */
+        #game-screen {
+            background: transparent;
+            padding: 0;
+            justify-content: flex-start;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 16px 8px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .top-btn {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            background: var(--card);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .top-btn:hover { background: rgba(255,255,255,0.15); transform: scale(1.05); }
+
+        /* Difficulty Badge */
+        .diff-badge {
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        .diff-badge.easy { background: rgba(46,213,115,0.2); color: #2ed573; border: 1px solid rgba(46,213,115,0.3); }
+        .diff-badge.medium { background: rgba(255,165,2,0.2); color: #ffa502; border: 1px solid rgba(255,165,2,0.3); }
+        .diff-badge.hard { background: rgba(255,71,87,0.2); color: #ff4757; border: 1px solid rgba(255,71,87,0.3); }
+        .diff-badge.extreme { background: rgba(162,155,254,0.2); color: #a29bfe; border: 1px solid rgba(162,155,254,0.3); }
+
+        /* Stats Row */
+        .stats-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 16px;
+            gap: 8px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 10px 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-family: 'Fredoka One', cursive;
+            font-size: 20px;
+            color: white;
+            margin-top: 2px;
+        }
+
+        .stat-value.score-val { color: var(--gold); }
+        .stat-value.streak-val { color: #ff6b81; }
+
+        /* Timer Section */
+        .timer-section {
+            width: 100%;
+            padding: 12px 16px 0;
+            position: relative;
+            z-index: 5;
+        }
+
+        .timer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .timer-label {
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 2px;
+        }
+
+        .timer-value {
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            color: white;
+        }
+
+        .timer-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .timer-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.1s linear, background 0.3s;
+        }
+
+        .timer-bar-fill.green { background: linear-gradient(90deg, #2ed573, #7bed9f); box-shadow: 0 0 10px rgba(46,213,115,0.5); }
+        .timer-bar-fill.yellow { background: linear-gradient(90deg, #ffa502, #ffdd59); box-shadow: 0 0 10px rgba(255,165,2,0.5); }
+        .timer-bar-fill.red { background: linear-gradient(90deg, #ff4757, #ff6b81); box-shadow: 0 0 10px rgba(255,71,87,0.5); }
+
+        /* Color Word Area */
+        .word-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px 10px;
+            position: relative;
+            z-index: 5;
+            flex: 1;
+        }
+
+        .word-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .word-card::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.03), transparent 60%);
+            pointer-events: none;
+        }
+
+        .instruction-tag {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .color-word {
+            font-family: 'Fredoka One', cursive;
+            font-size: 72px;
+            transition: all 0.3s;
+            letter-spacing: 4px;
+            line-height: 1;
+            text-shadow: 0 0 30px currentColor;
+        }
+
+        .round-indicator {
+            display: flex;
+            gap: 6px;
+            margin-top: 14px;
+            justify-content: center;
+        }
+
+        .round-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transition: all 0.3s;
+        }
+
+        .round-dot.done { background: rgba(255,255,255,0.4); }
+        .round-dot.current { background: var(--primary); box-shadow: 0 0 8px var(--primary); transform: scale(1.3); }
+        .round-dot.correct { background: #2ed573; }
+        .round-dot.wrong { background: #ff4757; }
+
+        /* Power-up Bar */
+        .powerup-bar {
+            display: flex;
+            gap: 10px;
+            padding: 0 16px;
+            justify-content: center;
+            position: relative;
+            z-index: 5;
+            margin-bottom: 6px;
+        }
+
+        .pu-btn {
+            background: var(--card);
+            border: 2px solid var(--card-border);
+            border-radius: 14px;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            color: white;
+            position: relative;
+        }
+
+        .pu-btn:hover:not(.used):not(.inactive) {
+            transform: translateY(-2px);
+            border-color: var(--gold);
+            box-shadow: 0 0 15px rgba(249,202,36,0.3);
+        }
+
+        .pu-btn.used, .pu-btn.inactive {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .pu-btn .pu-emoji { font-size: 18px; }
+        .pu-count {
+            position: absolute;
+            top: -6px; right: -6px;
+            width: 18px; height: 18px;
+            background: var(--gold);
+            color: #1a1a2e;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Fredoka One', cursive;
+        }
+
+        /* Color Buttons */
+        .color-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 0 16px 16px;
+            width: 100%;
+            position: relative;
+            z-index: 5;
+        }
+
+        .color-buttons.four-col {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .color-btn {
+            height: 80px;
+            border-radius: 18px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fredoka One', cursive;
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        .color-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 50%;
+            background: rgba(255,255,255,0.12);
+            border-radius: 15px 15px 50% 50%;
+        }
+
+        .color-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 15px;
+            background: rgba(255,255,255,0);
+            transition: background 0.15s;
+        }
+
+        .color-btn:hover::after { background: rgba(255,255,255,0.1); }
+        .color-btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+        .color-btn:active { transform: translateY(2px) scale(0.98); }
+
+        .color-btn.red { background: linear-gradient(145deg, #ff6b6b, #cc0000); box-shadow: 0 6px 20px rgba(204,0,0,0.4); }
+        .color-btn.blue { background: linear-gradient(145deg, #74b9ff, #0044cc); box-shadow: 0 6px 20px rgba(0,68,204,0.4); }
+        .color-btn.green { background: linear-gradient(145deg, #55efc4, #00aa55); box-shadow: 0 6px 20px rgba(0,170,85,0.4); }
+        .color-btn.yellow { background: linear-gradient(145deg, #fdcb6e, #e17055); box-shadow: 0 6px 20px rgba(225,112,85,0.4); }
+        .color-btn.purple { background: linear-gradient(145deg, #a29bfe, #6c5ce7); box-shadow: 0 6px 20px rgba(108,92,231,0.4); }
+        .color-btn.orange { background: linear-gradient(145deg, #fd9644, #e55039); box-shadow: 0 6px 20px rgba(229,80,57,0.4); }
+        .color-btn.pink { background: linear-gradient(145deg, #fd79a8, #c0392b); box-shadow: 0 6px 20px rgba(192,57,43,0.4); }
+        .color-btn.cyan { background: linear-gradient(145deg, #00cec9, #0984e3); box-shadow: 0 6px 20px rgba(9,132,227,0.4); }
+
+        .color-btn.correct-flash {
+            animation: correctFlash 0.4s ease;
+            border-color: #2ed573 !important;
+        }
+
+        .color-btn.wrong-flash {
+            animation: wrongFlash 0.4s ease;
+            border-color: #ff4757 !important;
+        }
+
+        @keyframes correctFlash {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        @keyframes wrongFlash {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .color-btn.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Feedback */
+        .feedback {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-family: 'Fredoka One', cursive;
+            font-size: 56px;
+            z-index: 30;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .feedback.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .feedback.correct { color: #2ed573; text-shadow: 0 0 20px rgba(46,213,115,0.6), 2px 2px 0 rgba(0,0,0,0.2); }
+        .feedback.wrong { color: #ff4757; text-shadow: 0 0 20px rgba(255,71,87,0.6), 2px 2px 0 rgba(0,0,0,0.2); }
+        .feedback.timeout { color: #ffa502; text-shadow: 0 0 20px rgba(255,165,2,0.6), 2px 2px 0 rgba(0,0,0,0.2); }
+        .feedback.powerup { color: var(--gold); text-shadow: 0 0 20px rgba(249,202,36,0.6), 2px 2px 0 rgba(0,0,0,0.2); }
+
+        /* ===== RESULTS SCREEN ===== */
+        #results-screen {
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            padding: 30px 20px;
+            justify-content: center;
+        }
+
+        .results-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 30px 24px;
+            width: 100%;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .results-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 32px;
+            color: white;
+            margin-bottom: 6px;
+        }
+
+        .results-diff-badge {
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .stars {
+            font-size: 44px;
+            margin-bottom: 16px;
+            letter-spacing: 4px;
+        }
+
+        .score-display {
+            background: rgba(249,202,36,0.1);
+            border: 1px solid rgba(249,202,36,0.2);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .score-big {
+            font-family: 'Fredoka One', cursive;
+            font-size: 72px;
+            color: var(--gold);
+            line-height: 1;
+            text-shadow: 0 0 30px rgba(249,202,36,0.4);
+        }
+
+        .score-label {
+            font-family: 'Fredoka One', cursive;
+            font-size: 14px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 2px;
+        }
+
+        .grade-text {
+            font-family: 'Fredoka One', cursive;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .results-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .res-stat {
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 12px 8px;
+        }
+
+        .res-stat-val {
+            font-family: 'Fredoka One', cursive;
+            font-size: 22px;
+            color: white;
+        }
+
+        .res-stat-label {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .new-record {
+            background: linear-gradient(135deg, rgba(249,202,36,0.2), rgba(249,202,36,0.05));
+            border: 1px solid rgba(249,202,36,0.4);
+            border-radius: 12px;
+            padding: 10px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            color: var(--gold);
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .new-record.show { display: block; }
+
+        .results-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .play-again-btn {
+            font-family: 'Fredoka One', cursive;
+            font-size: 20px;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #6c63ff, #a855f7);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 0 rgba(108,99,255,0.4);
+            transition: all 0.15s;
+            letter-spacing: 2px;
+        }
+
+        .play-again-btn:hover { transform: translateY(-2px); }
+        .play-again-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(108,99,255,0.4); }
+
+        .menu-return-btn {
+            font-family: 'Fredoka One', cursive;
+            font-size: 16px;
+            padding: 12px;
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            background: var(--card);
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+
+        .menu-return-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        /* Combo indicator */
+        .combo-display {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-family: 'Fredoka One', cursive;
+            font-size: 20px;
+            color: #ff6b81;
+            z-index: 31;
+            pointer-events: none;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .combo-display.show {
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* Shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+
+        .shake { animation: shake 0.4s ease; }
+
+        @keyframes bounceIn {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            60% { transform: translate(-50%, -50%) scale(1.15); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .color-word { font-size: 52px; }
+            .color-btn { height: 65px; }
+            .logo-title { font-size: 40px; }
+        }
+
+        @media (max-height: 700px) {
+            .color-word { font-size: 52px; }
+            .color-btn { height: 65px; }
+            .word-area { padding: 10px 16px 6px; }
+        }
+
+        /* Glow ring on word card based on difficulty */
+        .word-card.easy { box-shadow: 0 0 30px rgba(46,213,115,0.1); }
+        .word-card.medium { box-shadow: 0 0 30px rgba(255,165,2,0.1); }
+        .word-card.hard { box-shadow: 0 0 30px rgba(255,71,87,0.1); }
+        .word-card.extreme { box-shadow: 0 0 30px rgba(162,155,254,0.15); }
+
+        /* Freeze overlay */
+        .freeze-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,200,255,0.08);
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 0;
+        }
+
+        .freeze-overlay.active { opacity: 1; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+
+    <!-- Particles -->
+    <div id="particles"></div>
+
+    <!-- Freeze Overlay -->
+    <div class="freeze-overlay" id="freeze-overlay"></div>
+
+    <!-- Feedback -->
+    <div class="feedback" id="feedback"></div>
+    <div class="combo-display" id="combo-display"></div>
+
+    <!-- ===== MAIN MENU ===== -->
+    <div class="screen-overlay" id="start-screen">
+        <div class="logo-container">
+            <div class="logo-glow"></div>
+            <div class="logo-title">
+                <span class="l1">C</span><span class="l2">O</span><span class="l3">L</span><span class="l4">O</span><span class="l5">R</span>
+                &nbsp;
+                <span class="l6">M</span><span class="l7">A</span><span class="l8">T</span><span class="l9">C</span><span class="l10">H</span>
+            </div>
+            <div class="logo-subtitle">PRO</div>
+        </div>
+
+        <div class="hs-banner" id="hs-banner">
+            🏆 &nbsp; BEST: <span id="hs-display">—</span>
+        </div>
+
+        <div class="menu-section">
+            <div class="section-label">⚡ Difficulty</div>
+            <div class="diff-grid">
+                <div class="diff-card easy selected" onclick="selectDifficulty('easy')">
+                    <span class="diff-icon">🌱</span>
+                    <span class="diff-name">Easy</span>
+                    <span class="diff-desc">7s • 4 colors</span>
+                </div>
+                <div class="diff-card medium" onclick="selectDifficulty('medium')">
+                    <span class="diff-icon">🔥</span>
+                    <span class="diff-name">Medium</span>
+                    <span class="diff-desc">5s • 6 colors</span>
+                </div>
+                <div class="diff-card hard" onclick="selectDifficulty('hard')">
+                    <span class="diff-icon">💀</span>
+                    <span class="diff-name">Hard</span>
+                    <span class="diff-desc">3s • 6 colors</span>
+                </div>
+            </div>
+            <div class="diff-grid" style="grid-template-columns: 1fr;">
+                <div class="diff-card extreme" onclick="selectDifficulty('extreme')" style="display:flex; align-items:center; gap:12px; padding:12px 16px;">
+                    <span class="diff-icon" style="font-size:24px; margin:0;">👁️</span>
+                    <div style="text-align:left;">
+                        <span class="diff-name" style="font-size:16px;">EXTREME</span>
+                        <span class="diff-desc" style="font-size:11px;">2s • 8 colors • Tricky words!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <div class="section-label">🎯 Rounds</div>
+            <div class="rounds-grid">
+                <div class="rounds-card" onclick="selectRounds(5)">5<span class="rounds-label">Quick</span></div>
+                <div class="rounds-card selected" onclick="selectRounds(10)">10<span class="rounds-label">Normal</span></div>
+                <div class="rounds-card" onclick="selectRounds(15)">15<span class="rounds-label">Long</span></div>
+                <div class="rounds-card" onclick="selectRounds(20)">20<span class="rounds-label">Marathon</span></div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <div class="section-label">⚡ Power-Ups</div>
+            <div class="powerup-grid">
+                <div class="pu-toggle active" id="pu-toggle-freeze" onclick="togglePowerup('freeze')">
+                    <span class="pu-icon">❄️</span>
+                    <span class="pu-name">FREEZE</span>
+                </div>
+                <div class="pu-toggle active" id="pu-toggle-skip" onclick="togglePowerup('skip')">
+                    <span class="pu-icon">⏭️</span>
+                    <span class="pu-name">SKIP</span>
+                </div>
+                <div class="pu-toggle active" id="pu-toggle-reveal" onclick="togglePowerup('reveal')">
+                    <span class="pu-icon">💡</span>
+                    <span class="pu-name">REVEAL</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <button class="play-btn" onclick="startGame()">▶ &nbsp; PLAY</button>
+            <button class="lb-btn" onclick="showLeaderboard()">🏆 &nbsp; LEADERBOARD</button>
+        </div>
+    </div>
+
+    <!-- ===== LEADERBOARD SCREEN ===== -->
+    <div class="screen-overlay hidden" id="leaderboard-screen">
+        <div class="screen-header" style="padding-top:30px; padding-left:20px; padding-right:20px;">
+            <button class="back-btn" onclick="showScreen('start-screen')">←</button>
+            <div class="screen-title">🏆 Leaderboard</div>
+        </div>
+
+        <div style="width:100%; padding: 0 20px;">
+            <div class="lb-tabs">
+                <div class="lb-tab active" onclick="switchLbTab('easy', this)">Easy</div>
+                <div class="lb-tab" onclick="switchLbTab('medium', this)">Medium</div>
+                <div class="lb-tab" onclick="switchLbTab('hard', this)">Hard</div>
+                <div class="lb-tab" onclick="switchLbTab('extreme', this)">Extreme</div>
+            </div>
+            <div class="lb-list" id="lb-list"></div>
+        </div>
+    </div>
+
+    <!-- ===== GAME SCREEN ===== -->
+    <div class="screen-overlay hidden" id="game-screen">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <button class="top-btn" onclick="quitGame()" title="Menu">☰</button>
+            <div class="diff-badge easy" id="game-diff-badge">EASY</div>
+            <button class="top-btn" onclick="quitGame()" title="Quit">✕</button>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">Score</div>
+                <div class="stat-value score-val" id="score-text">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Round</div>
+                <div class="stat-value" id="round-text">1/10</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Streak 🔥</div>
+                <div class="stat-value streak-val" id="streak-text">0</div>
+            </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-section">
+            <div class="timer-header">
+                <div class="timer-label">⏱ TIME</div>
+                <div class="timer-value" id="timer-text">5.0s</div>
+            </div>
+            <div class="timer-bar-bg">
+                <div class="timer-bar-fill green" id="timer-bar" style="width:100%"></div>
+            </div>
+        </div>
+
+        <!-- Word Area -->
+        <div class="word-area">
+            <div class="word-card easy" id="word-card">
+                <div class="instruction-tag">MATCH THE WORD ↓</div>
+                <div class="color-word" id="color-word">RED</div>
+                <div class="round-indicator" id="round-indicator"></div>
+            </div>
+        </div>
+
+        <!-- Power-up Bar -->
+        <div class="powerup-bar" id="powerup-bar">
+            <button class="pu-btn" id="pu-freeze-btn" onclick="usePowerup('freeze')" title="Freeze timer">
+                <span class="pu-emoji">❄️</span> Freeze
+                <span class="pu-count" id="pu-freeze-count">1</span>
+            </button>
+            <button class="pu-btn" id="pu-skip-btn" onclick="usePowerup('skip')" title="Skip round">
+                <span class="pu-emoji">⏭️</span> Skip
+                <span class="pu-count" id="pu-skip-count">1</span>
+            </button>
+            <button class="pu-btn" id="pu-reveal-btn" onclick="usePowerup('reveal')" title="Reveal answer">
+                <span class="pu-emoji">💡</span> Reveal
+                <span class="pu-count" id="pu-reveal-count">1</span>
+            </button>
+        </div>
+
+        <!-- Color Buttons -->
+        <div class="color-buttons four-col" id="color-buttons">
+            <button class="color-btn red" data-color="red" onclick="handleClick('red')">RED</button>
+            <button class="color-btn blue" data-color="blue" onclick="handleClick('blue')">BLUE</button>
+            <button class="color-btn green" data-color="green" onclick="handleClick('green')">GREEN</button>
+            <button class="color-btn yellow" data-color="yellow" onclick="handleClick('yellow')">YELLOW</button>
+        </div>
+    </div>
+
+    <!-- ===== RESULTS SCREEN ===== -->
+    <div class="screen-overlay hidden" id="results-screen">
+        <div style="width:100%; padding: 30px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100%;">
+            <div class="results-card">
+                <div class="results-title">GAME OVER!</div>
+                <div class="results-diff-badge">
+                    <div class="diff-badge easy" id="results-diff-badge">EASY</div>
+                </div>
+                <div class="stars" id="stars">⭐⭐⭐</div>
+                <div class="score-display">
+                    <div class="score-label">FINAL SCORE</div>
+                    <div class="score-big" id="final-score">0/10</div>
+                </div>
+                <div class="grade-text" id="grade"></div>
+                <div class="results-stats">
+                    <div class="res-stat">
+                        <div class="res-stat-val" id="res-correct">0</div>
+                        <div class="res-stat-label">Correct</div>
+                    </div>
+                    <div class="res-stat">
+                        <div class="res-stat-val" id="res-streak">0</div>
+                        <div class="res-stat-label">Best Streak</div>
+                    </div>
+                    <div class="res-stat">
+                        <div class="res-stat-val" id="res-time">0s</div>
+                        <div class="res-stat-label">Avg Time</div>
+                    </div>
+                </div>
+                <div class="new-record" id="new-record">🎉 NEW RECORD!</div>
+                <div class="results-btns">
+                    <button class="play-again-btn" onclick="startGame()">▶ PLAY AGAIN</button>
+                    <button class="menu-return-btn" onclick="showScreen('start-screen')">← MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ===== GAME STATE =====
+let gameState = {
+    difficulty: 'easy',
+    totalRounds: 10,
+    currentRound: 0,
+    score: 0,
+    streak: 0,
+    bestStreak: 0,
+    timerInterval: null,
+    timeLeft: 7,
+    maxTime: 7,
+    isPlaying: false,
+    currentWord: '',
+    currentDisplayColor: '',
+    correctAnswer: '',
+    roundResults: [],
+    powerupsEnabled: { freeze: true, skip: true, reveal: true },
+    powerupsLeft: { freeze: 1, skip: 1, reveal: 1 },
+    isFrozen: false,
+    freezeTimeout: null,
+    roundTimings: [],
+    roundStartTime: 0,
+    currentLbTab: 'easy'
+};
+
+// ===== DIFFICULTY CONFIG =====
+const DIFFICULTIES = {
+    easy:    { time: 7,  colors: ['red','blue','green','yellow'],                                    label: 'EASY',    class: 'easy'    },
+    medium:  { time: 5,  colors: ['red','blue','green','yellow','purple','orange'],                  label: 'MEDIUM',  class: 'medium'  },
+    hard:    { time: 3,  colors: ['red','blue','green','yellow','purple','orange'],                  label: 'HARD',    class: 'hard'    },
+    extreme: { time: 2,  colors: ['red','blue','green','yellow','purple','orange','pink','cyan'],    label: 'EXTREME', class: 'extreme' }
+};
+
+const COLOR_NAMES = {
+    red: 'RED', blue: 'BLUE', green: 'GREEN', yellow: 'YELLOW',
+    purple: 'PURPLE', orange: 'ORANGE', pink: 'PINK', cyan: 'CYAN'
+};
+
+const CSS_COLORS = {
+    red: '#ff4757', blue: '#74b9ff', green: '#2ed573', yellow: '#fdcb6e',
+    purple: '#a29bfe', orange: '#fd9644', pink: '#fd79a8', cyan: '#00cec9'
+};
+
+// ===== PARTICLES =====
+function createParticles() {
+    const container = document.getElementById('particles');
+    container.innerHTML = '';
+    const colors = ['#6c63ff','#ff6584','#43e97b','#f9ca24','#74b9ff','#fd79a8'];
+    for (let i = 0; i < 15; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 6 + 2;
+        p.style.cssText = `
+            width: ${size}px; height: ${size}px;
+            background: ${colors[Math.floor(Math.random() * colors.length)]};
+            left: ${Math.random() * 100}%;
+            animation-duration: ${Math.random() * 15 + 10}s;
+            animation-delay: ${Math.random() * 10}s;
+            opacity: 0.4;
+        `;
+        container.appendChild(p);
+    }
+}
+
+// ===== SCREEN MANAGEMENT =====
+function showScreen(id) {
+    document.querySelectorAll('.screen-overlay').forEach(s => s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    if (id === 'start-screen') updateHSDisplay();
+    if (id === 'leaderboard-screen') renderLeaderboard(gameState.currentLbTab);
+}
+
+function showLeaderboard() {
+    showScreen('leaderboard-screen');
+}
+
+// ===== MENU SELECTIONS =====
+function selectDifficulty(diff) {
+    gameState.difficulty = diff;
+    document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.diff-card.' + diff).forEach(c => c.classList.add('selected'));
+}
+
+function selectRounds(n) {
+    gameState.totalRounds = n;
+    document.querySelectorAll('.rounds-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.rounds-card').forEach(c => {
+        if (c.textContent.trim().startsWith(n.toString())) c.classList.add('selected');
+    });
+}
+
+function togglePowerup(type) {
+    gameState.powerupsEnabled[type] = !gameState.powerupsEnabled[type];
+    const el = document.getElementById('pu-toggle-' + type);
+    el.classList.toggle('active', gameState.powerupsEnabled[type]);
+}
+
+// ===== LEADERBOARD =====
+function getLeaderboard(diff) {
+    try {
+        return JSON.parse(localStorage.getItem('cmPro_lb_' + diff) || '[]');
+    } catch(e) { return []; }
+}
+
+function saveScore(diff, score, rounds, streak) {
+    const lb = getLeaderboard(diff);
+    const entry = {
+        score: score,
+        rounds: rounds,
+        streak: streak,
+        date: new Date().toLocaleDateString(),
+        name: 'YOU'
+    };
+    lb.push(entry);
+    lb.sort((a,b) => (b.score/b.rounds) - (a.score/a.rounds) || b.score - a.score);
+    lb.splice(10);
+    localStorage.setItem('cmPro_lb_' + diff, JSON.stringify(lb));
+    return lb.findIndex(e => e === entry || (e.score === entry.score && e.date === entry.date));
+}
+
+function getBestScore(diff) {
+    const lb = getLeaderboard(diff);
+    if (!lb.length) return null;
+    return lb[0];
+}
+
+function updateHSDisplay() {
+    const best = getBestScore(gameState.difficulty);
+    const el = document.getElementById('hs-display');
+    if (best) {
+        el.textContent = best.score + '/' + best.rounds + ' (' + best.date + ')';
+    } else {
+        el.textContent = '—';
+    }
+}
+
+function renderLeaderboard(diff) {
+    gameState.currentLbTab = diff;
+    const lb = getLeaderboard(diff);
+    const list = document.getElementById('lb-list');
+    list.innerHTML = '';
+    if (!lb.length) {
+        list.innerHTML = '<div class="lb-empty">🎮<br>No scores yet!<br>Be the first to play!</div>';
+        return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    lb.forEach((entry, i) => {
+        const div = document.createElement('div');
+        div.className = 'lb-entry';
+        div.style.animationDelay = (i * 0.05) + 's';
+        div.innerHTML = `
+            <div class="lb-rank">${medals[i] || (i+1)}</div>
+            <div class="lb-info">
+                <div class="lb-name">${entry.name || 'Player'}</div>
+                <div class="lb-meta">${entry.date} &nbsp;•&nbsp; Streak: ${entry.streak || 0} 🔥</div>
+            </div>
+            <div class="lb-score">${entry.score}/${entry.rounds}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function switchLbTab(diff, el) {
+    document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    renderLeaderboard(diff);
+}
+
+// ===== GAME LOGIC =====
+function startGame() {
+    const cfg = DIFFICULTIES[gameState.difficulty];
+
+    // Reset state
+    gameState.currentRound = 0;
+    gameState.score = 0;
+    gameState.streak = 0;
+    gameState.bestStreak = 0;
+    gameState.isPlaying = true;
+    gameState.roundResults = [];
+    gameState.roundTimings = [];
+    gameState.isFrozen = false;
+    gameState.powerupsLeft = {
+        freeze: gameState.powerupsEnabled.freeze ? 1 : 0,
+        skip:   gameState.powerupsEnabled.skip   ? 1 : 0,
+        reveal: gameState.powerupsEnabled.reveal ? 1 : 0
+    };
+
+    // Update UI
+    document.getElementById('game-diff-badge').textContent = cfg.label;
+    document.getElementById('game-diff-badge').className = 'diff-badge ' + cfg.class;
+    document.getElementById('word-card').className = 'word-card ' + cfg.class;
+
+    // Setup power-up buttons
+    updatePowerupButtons();
+    const puBar = document.getElementById('powerup-bar');
+    const anyEnabled = Object.values(gameState.powerupsEnabled).some(v => v);
+    puBar.style.display = anyEnabled ? 'flex' : 'none';
+
+    // Setup color buttons
+    setupColorButtons(cfg.colors);
+
+    // Build round indicator
+    buildRoundIndicator();
+
+    showScreen('game-screen');
+    nextRound();
+}
+
+function setupColorButtons(colors) {
+    const container = document.getElementById('color-buttons');
+    container.innerHTML = '';
+    const count = colors.length;
+    container.className = 'color-buttons';
+    if (count <= 4) {
+        container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    } else if (count === 6) {
+        container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    } else {
+        container.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    }
+
+    colors.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'color-btn ' + color;
+        btn.dataset.color = color;
+        btn.textContent = COLOR_NAMES[color];
+        btn.onclick = () => handleClick(color);
+        container.appendChild(btn);
+    });
+}
+
+function buildRoundIndicator() {
+    const ind = document.getElementById('round-indicator');
+    ind.innerHTML = '';
+    const max = Math.min(gameState.totalRounds, 20);
+    for (let i = 0; i < max; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'round-dot';
+        dot.id = 'dot-' + i;
+        ind.appendChild(dot);
+    }
+}
+
+function updateRoundIndicator() {
+    for (let i = 0; i < gameState.totalRounds; i++) {
+        const dot = document.getElementById('dot-' + i);
+        if (!dot) continue;
+        dot.className = 'round-dot';
+        if (i < gameState.currentRound - 1) {
+            dot.classList.add(gameState.roundResults[i] ? 'correct' : 'wrong');
+        } else if (i === gameState.currentRound - 1) {
+            dot.classList.add('current');
+        }
+    }
+}
+
+function nextRound() {
+    if (gameState.currentRound >= gameState.totalRounds) {
+        endGame();
+        return;
+    }
+
+    gameState.currentRound++;
+    gameState.isFrozen = false;
+    document.getElementById('freeze-overlay').classList.remove('active');
+
+    const cfg = DIFFICULTIES[gameState.difficulty];
+    const colors = cfg.colors;
+
+    // Pick word and display color (different for challenge)
+    const wordColor = colors[Math.floor(Math.random() * colors.length)];
+    let displayColor;
+    do {
+        displayColor = colors[Math.floor(Math.random() * colors.length)];
+    } while (displayColor === wordColor && colors.length > 1);
+
+    gameState.currentWord = wordColor;
+    gameState.currentDisplayColor = displayColor;
+    gameState.correctAnswer = wordColor;
+
+    // Update word display
+    const wordEl = document.getElementById('color-word');
+    wordEl.textContent = COLOR_NAMES[wordColor];
+    wordEl.style.color = CSS_COLORS[displayColor];
+
+    // Update stats
+    document.getElementById('score-text').textContent = gameState.score;
+    document.getElementById('round-text').textContent = gameState.currentRound + '/' + gameState.totalRounds;
+    document.getElementById('streak-text').textContent = gameState.streak;
+
+    updateRoundIndicator();
+
+    // Enable buttons
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('disabled', 'correct-flash', 'wrong-flash'));
+
+    // Start timer
+    gameState.timeLeft = cfg.time;
+    gameState.maxTime = cfg.time;
+    gameState.roundStartTime = Date.now();
+    updateTimerBar();
+
+    clearInterval(gameState.timerInterval);
+    gameState.timerInterval = setInterval(timerTick, 100);
+}
+
+function timerTick() {
+    if (gameState.isFrozen) return;
+    gameState.timeLeft -= 0.1;
+    updateTimerBar();
+    if (gameState.timeLeft <= 0) {
+        clearInterval(gameState.timerInterval);
+        handleTimeout();
+    }
+}
+
+function updateTimerBar() {
+    const pct = Math.max(0, (gameState.timeLeft / gameState.maxTime) * 100);
+    const bar = document.getElementById('timer-bar');
+    bar.style.width = pct + '%';
+    document.getElementById('timer-text').textContent = Math.max(0, gameState.timeLeft).toFixed(1) + 's';
+
+    bar.className = 'timer-bar-fill';
+    if (pct > 60) bar.classList.add('green');
+    else if (pct > 30) bar.classList.add('yellow');
+    else bar.classList.add('red');
+}
+
+function handleClick(color) {
+    if (!gameState.isPlaying) return;
+    clearInterval(gameState.timerInterval);
+
+    const elapsed = (Date.now() - gameState.roundStartTime) / 1000;
+    gameState.roundTimings.push(elapsed);
+
+    const correct = color === gameState.correctAnswer;
+    gameState.roundResults.push(correct);
+
+    // Flash button
+    const btn = document.querySelector(`.color-btn[data-color="${color}"]`);
+    if (btn) btn.classList.add(correct ? 'correct-flash' : 'wrong-flash');
+
+    if (correct) {
+        gameState.score++;
+        gameState.streak++;
+        if (gameState.streak > gameState.bestStreak) gameState.bestStreak = gameState.streak;
+        showFeedback('✓ CORRECT!', 'correct');
+        if (gameState.streak >= 3) showCombo(gameState.streak);
+    } else {
+        gameState.streak = 0;
+        showFeedback('✗ WRONG!', 'wrong');
+        // Shake word card
+        const wc = document.getElementById('word-card');
+        wc.classList.add('shake');
+        setTimeout(() => wc.classList.remove('shake'), 400);
+    }
+
+    disableButtons();
+    setTimeout(() => nextRound(), 700);
+}
+
+function handleTimeout() {
+    if (!gameState.isPlaying) return;
+    gameState.roundResults.push(false);
+    gameState.streak = 0;
+    showFeedback('⏱ TIME!', 'timeout');
+    disableButtons();
+    setTimeout(() => nextRound(), 700);
+}
+
+function disableButtons() {
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.add('disabled'));
+}
+
+function showFeedback(text, type) {
+    const fb = document.getElementById('feedback');
+    fb.textContent = text;
+    fb.className = 'feedback ' + type;
+    void fb.offsetWidth;
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 600);
+}
+
+function showCombo(streak) {
+    const cd = document.getElementById('combo-display');
+    const msgs = {3:'🔥 COMBO x3!', 4:'🔥🔥 COMBO x4!', 5:'⚡ COMBO x5!', 6:'⚡⚡ COMBO x6!', 7:'💥 UNSTOPPABLE!', 8:'💥💥 GODLIKE!'};
+    cd.textContent = msgs[streak] || '💥 x' + streak + '!';
+    cd.classList.add('show');
+    setTimeout(() => cd.classList.remove('show'), 800);
+}
+
+// ===== POWER-UPS =====
+function updatePowerupButtons() {
+    ['freeze','skip','reveal'].forEach(type => {
+        const btn = document.getElementById('pu-' + type + '-btn');
+        const count = document.getElementById('pu-' + type + '-count');
+        if (!btn) return;
+        const left = gameState.powerupsLeft[type];
+        const enabled = gameState.powerupsEnabled[type];
+        count.textContent = left;
+        btn.classList.toggle('inactive', !enabled);
+        btn.classList.toggle('used', enabled && left <= 0);
+        btn.style.display = enabled ? 'flex' : 'none';
+    });
+}
+
+function usePowerup(type) {
+    if (!gameState.isPlaying) return;
+    if (!gameState.powerupsEnabled[type]) return;
+    if (gameState.powerupsLeft[type] <= 0) return;
+
+    gameState.powerupsLeft[type]--;
+    updatePowerupButtons();
+
+    if (type === 'freeze') {
+        gameState.isFrozen = true;
+        document.getElementById('freeze-overlay').classList.add('active');
+        showFeedback('❄️ FROZEN!', 'powerup');
+        if (gameState.freezeTimeout) clearTimeout(gameState.freezeTimeout);
+        gameState.freezeTimeout = setTimeout(() => {
+            gameState.isFrozen = false;
+            document.getElementById('freeze-overlay').classList.remove('active');
+        }, 3000);
+    } else if (type === 'skip') {
+        clearInterval(gameState.timerInterval);
+        gameState.roundResults.push(null); // null = skipped
+        showFeedback('⏭️ SKIPPED!', 'powerup');
+        disableButtons();
+        setTimeout(() => nextRound(), 600);
+    } else if (type === 'reveal') {
+        // Highlight correct button
+        const correct = gameState.correctAnswer;
+        document.querySelectorAll('.color-btn').forEach(b => {
+            if (b.dataset.color !== correct) {
+                b.style.opacity = '0.25';
+                b.style.transform = 'scale(0.9)';
+            } else {
+                b.style.border = '3px solid #f9ca24';
+                b.style.boxShadow = '0 0 20px rgba(249,202,36,0.6)';
+            }
+        });
+        showFeedback('💡 REVEALED!', 'powerup');
+        setTimeout(() => {
+            document.querySelectorAll('.color-btn').forEach(b => {
+                b.style.opacity = '';
+                b.style.transform = '';
+                b.style.border = '';
+                b.style.boxShadow = '';
+            });
+        }, 2000);
+    }
+}
+
+// ===== END GAME =====
+function endGame() {
+    clearInterval(gameState.timerInterval);
+    gameState.isPlaying = false;
+
+    const total = gameState.totalRounds;
+    const score = gameState.score;
+    const pct = score / total;
+
+    // Stars
+    let stars = '⭐';
+    if (pct >= 0.9) stars = '⭐⭐⭐';
+    else if (pct >= 0.6) stars = '⭐⭐';
+
+    // Grade
+    let grade = '';
+    if (pct >= 0.9) grade = '🏆 OUTSTANDING!';
+    else if (pct >= 0.7) grade = '🎉 GREAT JOB!';
+    else if (pct >= 0.5) grade = '👍 GOOD EFFORT!';
+    else if (pct >= 0.3) grade = '💪 KEEP TRYING!';
+    else grade = '🎮 PRACTICE MORE!';
+
+    // Grade color
+    const gradeColors = { '🏆 OUTSTANDING!': '#f9ca24', '🎉 GREAT JOB!': '#2ed573', '👍 GOOD EFFORT!': '#74b9ff', '💪 KEEP TRYING!': '#ffa502', '🎮 PRACTICE MORE!': '#ff4757' };
+    document.getElementById('grade').textContent = grade;
+    document.getElementById('grade').style.color = gradeColors[grade] || 'white';
+
+    document.getElementById('stars').textContent = stars;
+    document.getElementById('final-score').textContent = score + '/' + total;
+
+    // Stats
+    document.getElementById('res-correct').textContent = score;
+    document.getElementById('res-streak').textContent = gameState.bestStreak;
+    const avgTime = gameState.roundTimings.length
+        ? (gameState.roundTimings.reduce((a,b) => a+b, 0) / gameState.roundTimings.length).toFixed(1)
+        : '—';
+    document.getElementById('res-time').textContent = avgTime + 's';
+
+    // Diff badge
+    const cfg = DIFFICULTIES[gameState.difficulty];
+    const resBadge = document.getElementById('results-diff-badge');
+    resBadge.textContent = cfg.label;
+    resBadge.className = 'diff-badge ' + cfg.class;
+
+    // Save & check record
+    const prevBest = getBestScore(gameState.difficulty);
+    saveScore(gameState.difficulty, score, total, gameState.bestStreak);
+    const newBest = getBestScore(gameState.difficulty);
+    const isNewRecord = !prevBest || (newBest && newBest.score > prevBest.score);
+    document.getElementById('new-record').classList.toggle('show', isNewRecord && score > 0);
+
+    showScreen('results-screen');
+}
+
+function quitGame() {
+    clearInterval(gameState.timerInterval);
+    gameState.isPlaying = false;
+    showScreen('start-screen');
+}
+
+function resetGame() {
+    clearInterval(gameState.timerInterval);
+    gameState.isPlaying = false;
+    showScreen('start-screen');
+}
+
+// ===== INIT =====
+createParticles();
+updateHSDisplay();
+showScreen('start-screen');
+</script>
+
+<script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/AYYrcGJk4Xhm76WXqCQts7URocu1/sessions/Un5PJabwjb5FpDvXkb09/games/5pYwlbsIn7W8QpPz4WOj.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=bM8FluFOnNQ9xYqpUUZzUirwIxvmBhIkpPh337Typ2Bcc3HrjCaHgzlgBtyr15NKmCr0UITAQIIE6l0SzdaSbV5BlhYdZD1OOXLF84WOwJbw%2BG8qMUrbsg%2FDxiYuId1I00IQxwCKrl8kXMecLbUdKiQlAaAQeiNDSbf4fuUbSgOTYBTLlk0HP9RQLMXSR%2FlsoJNIlZ7XzeM7JfJIugC1ufJMs9%2F84VSmNBKezY2ulEn1zZZhtIZx6v1zSpGPQzeFByjHZBNuHl99t3drqAVTrfnF1QKqzPGsKP2wr4%2Bvw8YB1%2FHkjBU%2Bwz6eUe6qaCDnZHDYjmeb1zg9H1GBeAKDFA%3D%3D"></script>
+</body>
+</html>
