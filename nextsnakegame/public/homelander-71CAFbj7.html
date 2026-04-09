@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bandicoot Adventure</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Comic Sans MS', cursive;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            border: 3px solid #8B4513;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="lives">❤️❤️❤️</div>
+    </div>
+    <div id="score">
+        <div>SCORE: <span id="scoreValue">0</span></div>
+        <div>FRUITS: <span id="fruitsValue">0</span></div>
+    </div>
+    <div id="instructions">
+        Use ARROW KEYS to move, SPACEBAR to jump/spin
+    </div>
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/913YWdqethfUDeB7BOyfIBHVD1K3/sessions/NBqynJ23qQ1BYDMo9Lg1/games/71CAFbj7SqP5vt3NmZNi.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=hBph%2B%2BSvE6XjqKUkRYh2AGrE5EDhZJWmx0%2BeIDYwjzP50VbYEGvucFCmSmVrCJLg8kxw0xIXzSxWdOmrvlS%2FRuHdyMVpIeKUPsgkwnxgn%2FzOs%2Bz5M1%2B3B%2FXvD7LQyG2iWtJrp15TYhhGBlNPLegSUAC3goWLuPmX%2F3W7oaJOOqffmek93hTOogr5zC8jIWnFOQycDGc9N7BS5iw6hy4vxN%2BrSEvGQLE%2BDTUNz84tMUW%2FDNdnIyOfnmfpTtQTyf83WXiRhOl%2BCCHfTIRYQxBK0Z7Y0OtL6qiQ6qbSRa%2FKSDSBwv9KXxPB%2BrVyor9aiyyEkH717TiUmRUJnnO12GMqMQ%3D%3D"></script>
+</body>
+</html>
