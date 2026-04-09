@@ -1,0 +1,1273 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pizza Shop Rush</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    background: #1a1a2e; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+canvas { 
+    border-radius: 12px; 
+    box-shadow: 0 0 30px rgba(255,100,50,0.3);
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Responsive sizing
+const W = canvas.width = Math.min(1200, window.innerWidth - 20);
+const H = canvas.height = Math.min(700, window.innerHeight - 20);
+const SCALE = W / 1200;
+
+// Game State
+let gameState = 'menu'; // menu, playing, paused, gameover, win, shop
+let tips = 0;
+let timeLeft = 300; // 5 minutes in seconds
+let lastTime = 0;
+let customers = [];
+let currentPizza = null;
+let ovenPizza = null;
+let ovenTimer = 0;
+let ovenMaxTime = 8; // seconds to bake
+let ovenSpeed = 1;
+let hasHelper = false;
+let helperTimer = 0;
+let helperPizza = null;
+let customerSpeed = 12; // seconds between new customers
+let customerTimer = 0;
+let maxCustomers = 4;
+let difficultyTimer = 0;
+let particles = [];
+let floatingTexts = [];
+let totalServed = 0;
+let totalFailed = 0;
+let upgradeOvenCost = 50;
+let upgradeHelperCost = 100;
+let ovenUpgradeLevel = 0;
+let helperHired = false;
+let dragIngredient = null;
+let dragX = 0, dragY = 0;
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let steamParticles = [];
+let shiftNumber = 1;
+
+// Ingredients
+const INGREDIENTS = {
+    sauce: { name: 'Sauce', color: '#e74c3c', emoji: '🍅', icon: 'sauce' },
+    cheese: { name: 'Cheese', color: '#f39c12', emoji: '🧀', icon: 'cheese' },
+    pepperoni: { name: 'Pepperoni', color: '#c0392b', emoji: '🔴', icon: 'pepperoni' },
+    mushroom: { name: 'Mushroom', color: '#8e6f47', emoji: '🍄', icon: 'mushroom' },
+    pepper: { name: 'Pepper', color: '#27ae60', emoji: '🫑', icon: 'pepper' },
+    olive: { name: 'Olive', color: '#2c3e50', emoji: '⚫', icon: 'olive' },
+    basil: { name: 'Basil', color: '#2ecc71', emoji: '🌿', icon: 'basil' },
+    onion: { name: 'Onion', color: '#9b59b6', emoji: '🧅', icon: 'onion' }
+};
+
+const INGREDIENT_KEYS = Object.keys(INGREDIENTS);
+
+const CUSTOMER_COLORS = ['#e67e22','#3498db','#e74c3c','#2ecc71','#9b59b6','#1abc9c','#f39c12','#e91e63'];
+const CUSTOMER_HAIR = ['#4a3728','#d4770b','#2c2c2c','#c0392b','#f1c40f','#7f8c8d','#e74c3c','#1a1a1a'];
+const SHIRT_COLORS = ['#27ae60','#2980b9','#8e44ad','#c0392b','#16a085','#d35400','#2c3e50','#e74c3c'];
+
+// Order generation
+function generateOrder(complexity) {
+    let numIngredients = Math.min(2 + Math.floor(complexity / 30), 6);
+    numIngredients = Math.max(2, Math.min(numIngredients, INGREDIENT_KEYS.length));
+    let ingredients = ['sauce', 'cheese']; // always need sauce and cheese
+    let available = INGREDIENT_KEYS.filter(k => !ingredients.includes(k));
+    for (let i = 2; i < numIngredients; i++) {
+        if (available.length === 0) break;
+        let idx = Math.floor(Math.random() * available.length);
+        ingredients.push(available[idx]);
+        available.splice(idx, 1);
+    }
+    return ingredients;
+}
+
+// Customer class
+class Customer {
+    constructor(slot) {
+        this.slot = slot;
+        this.order = generateOrder(totalServed + shiftNumber * 10);
+        this.patience = Math.max(25, 60 - totalServed * 0.5); // seconds
+        this.maxPatience = this.patience;
+        this.colorIdx = Math.floor(Math.random() * CUSTOMER_COLORS.length);
+        this.hairIdx = Math.floor(Math.random() * CUSTOMER_HAIR.length);
+        this.shirtIdx = Math.floor(Math.random() * SHIRT_COLORS.length);
+        this.enterAnim = 0;
+        this.leaving = false;
+        this.leaveAnim = 0;
+        this.served = false;
+        this.angry = false;
+        this.bobTimer = Math.random() * Math.PI * 2;
+        this.expression = 'happy'; // happy, neutral, angry
+    }
+}
+
+// Pizza class
+class Pizza {
+    constructor() {
+        this.ingredients = [];
+        this.baked = false;
+        this.baking = false;
+    }
+    addIngredient(ing) {
+        if (!this.ingredients.includes(ing)) {
+            this.ingredients.push(ing);
+            return true;
+        }
+        return false;
+    }
+    matches(order) {
+        if (this.ingredients.length !== order.length) return false;
+        for (let o of order) {
+            if (!this.ingredients.includes(o)) return false;
+        }
+        return true;
+    }
+    accuracy(order) {
+        let correct = 0;
+        for (let o of order) {
+            if (this.ingredients.includes(o)) correct++;
+        }
+        let extra = this.ingredients.length - correct;
+        return Math.max(0, (correct / order.length) - (extra * 0.2));
+    }
+}
+
+// Particle system
+function addParticle(x, y, color, type) {
+    particles.push({
+        x, y, color, type,
+        vx: (Math.random() - 0.5) * 4,
+        vy: -Math.random() * 3 - 1,
+        life: 1,
+        decay: 0.02 + Math.random() * 0.02,
+        size: 3 + Math.random() * 4
+    });
+}
+
+function addFloatingText(x, y, text, color) {
+    floatingTexts.push({ x, y, text, color, life: 1, vy: -1.5 });
+}
+
+function addSteam(x, y) {
+    for (let i = 0; i < 3; i++) {
+        steamParticles.push({
+            x: x + (Math.random() - 0.5) * 30,
+            y: y,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -Math.random() * 1.5 - 0.5,
+            life: 1,
+            size: 5 + Math.random() * 8,
+            decay: 0.01 + Math.random() * 0.01
+        });
+    }
+}
+
+// UI Buttons
+const buttons = {};
+
+function defineButtons() {
+    const s = SCALE;
+    // Ingredient tray buttons
+    const trayX = 180 * s;
+    const trayY = 500 * s;
+    const trayW = 440 * s;
+    const trayH = 90 * s;
+    const cols = 4;
+    const rows = 2;
+    const btnW = trayW / cols;
+    const btnH = trayH / rows;
+    
+    INGREDIENT_KEYS.forEach((key, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        buttons['ing_' + key] = {
+            x: trayX + col * btnW,
+            y: trayY + row * btnH,
+            w: btnW,
+            h: btnH,
+            ingredient: key
+        };
+    });
+
+    // Oven button
+    buttons.oven = { x: 680 * s, y: 380 * s, w: 180 * s, h: 100 * s };
+    
+    // Serve buttons for each customer
+    for (let i = 0; i < maxCustomers; i++) {
+        buttons['serve_' + i] = {
+            x: (200 + i * 180) * s,
+            y: 260 * s,
+            w: 80 * s,
+            h: 35 * s
+        };
+    }
+
+    // New dough button
+    buttons.newDough = { x: 30 * s, y: 500 * s, w: 130 * s, h: 80 * s };
+
+    // Trash button
+    buttons.trash = { x: 30 * s, y: 420 * s, w: 130 * s, h: 70 * s };
+
+    // Upgrade buttons
+    buttons.upgradeOven = { x: 900 * s, y: 500 * s, w: 140 * s, h: 80 * s };
+    buttons.upgradeHelper = { x: 1050 * s, y: 500 * s, w: 140 * s, h: 80 * s };
+
+    // Menu buttons
+    buttons.startGame = { x: W/2 - 120, y: H/2 + 40, w: 240, h: 60 };
+    buttons.playAgain = { x: W/2 - 120, y: H/2 + 60, w: 240, h: 60 };
+}
+
+function isInButton(btn, x, y) {
+    return x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h;
+}
+
+// Drawing functions
+function drawRoundRect(x, y, w, h, r, fill, stroke, lineW) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineW || 2; ctx.stroke(); }
+}
+
+function drawBackground() {
+    const s = SCALE;
+    // Sky gradient
+    let grad = ctx.createLinearGradient(0, 0, 0, H * 0.4);
+    grad.addColorStop(0, '#2c3e6b');
+    grad.addColorStop(1, '#4a6fa5');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H * 0.4);
+
+    // City silhouette
+    ctx.fillStyle = '#1a2744';
+    for (let i = 0; i < 12; i++) {
+        let bx = i * 110 * s;
+        let bh = 60 + Math.sin(i * 1.5) * 40;
+        ctx.fillRect(bx, H * 0.25 - bh * s, 90 * s, bh * s + H * 0.15);
+        // Windows
+        ctx.fillStyle = '#ffd700';
+        for (let wy = 0; wy < bh - 15; wy += 18) {
+            for (let wx = 10; wx < 80; wx += 22) {
+                if (Math.random() > 0.3) {
+                    ctx.fillRect(bx + wx * s, H * 0.25 - (bh - wy) * s, 10 * s, 10 * s);
+                }
+            }
+        }
+        ctx.fillStyle = '#1a2744';
+    }
+
+    // Shop background
+    let shopGrad = ctx.createLinearGradient(0, H * 0.3, 0, H);
+    shopGrad.addColorStop(0, '#4a8c5c');
+    shopGrad.addColorStop(0.1, '#3d7a4f');
+    shopGrad.addColorStop(1, '#2d5a3a');
+    ctx.fillStyle = shopGrad;
+    ctx.fillRect(0, H * 0.3, W, H * 0.7);
+
+    // Shop awning
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(0, H * 0.28, W, 40 * s);
+    // Stripes
+    for (let i = 0; i < W; i += 60 * s) {
+        ctx.fillStyle = i % (120 * s) < 60 * s ? '#e74c3c' : '#c0392b';
+        ctx.fillRect(i, H * 0.28, 60 * s, 40 * s);
+    }
+    // Awning bottom scallop
+    ctx.fillStyle = '#e74c3c';
+    for (let i = 0; i < W; i += 40 * s) {
+        ctx.beginPath();
+        ctx.arc(i + 20 * s, H * 0.28 + 40 * s, 20 * s, 0, Math.PI);
+        ctx.fill();
+    }
+
+    // Counter
+    let counterGrad = ctx.createLinearGradient(0, H * 0.58, 0, H * 0.65);
+    counterGrad.addColorStop(0, '#5dba6e');
+    counterGrad.addColorStop(1, '#3d8a4e');
+    ctx.fillStyle = counterGrad;
+    ctx.fillRect(0, H * 0.58, W, H * 0.08);
+    
+    // Counter edge
+    ctx.fillStyle = '#2d6a3a';
+    ctx.fillRect(0, H * 0.65, W, 6 * s);
+
+    // Floor
+    let floorGrad = ctx.createLinearGradient(0, H * 0.66, 0, H);
+    floorGrad.addColorStop(0, '#8ecda0');
+    floorGrad.addColorStop(1, '#6db87f');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, H * 0.66, W, H * 0.34);
+
+    // Floor tiles
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < W; i += 80 * s) {
+        ctx.beginPath();
+        ctx.moveTo(i, H * 0.66);
+        ctx.lineTo(i, H);
+        ctx.stroke();
+    }
+
+    // Drawers under counter
+    ctx.fillStyle = '#5a4a3a';
+    for (let i = 0; i < 5; i++) {
+        let dx = 100 * s + i * 200 * s;
+        drawRoundRect(dx, H * 0.66 + 5 * s, 120 * s, 50 * s, 5, '#6b5a4a', '#4a3a2a', 2);
+        // Drawer handle
+        ctx.fillStyle = '#d4a050';
+        ctx.fillRect(dx + 45 * s, H * 0.66 + 25 * s, 30 * s, 6 * s);
+        ctx.fillStyle = '#6b5a4a';
+    }
+}
+
+function drawOven() {
+    const s = SCALE;
+    const ox = 680 * s;
+    const oy = 310 * s;
+
+    // Oven body - stone/brick
+    drawRoundRect(ox - 20 * s, oy, 220 * s, 170 * s, 15, '#8b7355', '#6b5335', 3);
+    
+    // Brick pattern
+    ctx.fillStyle = '#9b8365';
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 5; col++) {
+            let bx = ox - 15 * s + col * 43 * s + (row % 2) * 20 * s;
+            let by = oy + 5 + row * 40 * s;
+            drawRoundRect(bx, by, 38 * s, 35 * s, 3, '#a08060', '#7b6345', 1);
+        }
+    }
+
+    // Oven opening
+    ctx.beginPath();
+    ctx.ellipse(ox + 90 * s, oy + 100 * s, 70 * s, 55 * s, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+    ctx.strokeStyle = '#5a4a3a';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Fire inside
+    if (ovenPizza || true) {
+        let fireColors = ['#ff6600', '#ff9900', '#ffcc00', '#ff4400'];
+        for (let i = 0; i < 8; i++) {
+            let fx = ox + 50 * s + Math.sin(Date.now() / 200 + i) * 30 * s;
+            let fy = oy + 130 * s;
+            let fh = 30 + Math.sin(Date.now() / 150 + i * 0.7) * 15;
+            ctx.beginPath();
+            ctx.ellipse(fx, fy, 10 * s, fh * s * 0.5, 0, 0, Math.PI * 2);
+            ctx.fillStyle = fireColors[i % fireColors.length];
+            ctx.globalAlpha = 0.7;
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // Pizza in oven
+    if (ovenPizza) {
+        drawMiniPizza(ox + 70 * s, oy + 85 * s, 35 * s, ovenPizza);
+        
+        // Baking progress bar
+        let prog = ovenTimer / ovenMaxTime;
+        let barW = 140 * s;
+        let barH = 16 * s;
+        let barX = ox + 20 * s;
+        let barY = oy + 155 * s;
+        drawRoundRect(barX, barY, barW, barH, 5, '#333', '#555', 2);
+        let progColor = prog < 0.5 ? '#e74c3c' : prog < 0.9 ? '#f39c12' : '#2ecc71';
+        drawRoundRect(barX + 2, barY + 2, (barW - 4) * Math.min(prog, 1), barH - 4, 4, progColor);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${12 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(Math.ceil(ovenMaxTime - ovenTimer) + 's', barX + barW / 2, barY + 13 * s);
+    }
+
+    // Oven label
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `bold ${16 * s}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🔥 OVEN', ox + 90 * s, oy - 8 * s);
+    
+    if (ovenUpgradeLevel > 0) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.font = `${11 * s}px Arial`;
+        ctx.fillText('Lv.' + ovenUpgradeLevel, ox + 90 * s, oy - 22 * s);
+    }
+
+    // Steam
+    if (ovenPizza && ovenTimer / ovenMaxTime > 0.5) {
+        addSteam(ox + 90 * s, oy + 30 * s);
+    }
+}
+
+function drawMiniPizza(x, y, r, pizza) {
+    // Dough
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = pizza.baked ? '#d4a050' : '#f0d9a0';
+    ctx.fill();
+    ctx.strokeStyle = pizza.baked ? '#b8862d' : '#c4a870';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Crust edge
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = pizza.baked ? '#c8923a' : '#dcc080';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Ingredients on pizza
+    const s = SCALE;
+    pizza.ingredients.forEach((ing, i) => {
+        let angle = (i / pizza.ingredients.length) * Math.PI * 2 - Math.PI / 2;
+        let dist = r * 0.5;
+        let ix = x + Math.cos(angle) * dist;
+        let iy = y + Math.sin(angle) * dist;
+        
+        ctx.font = `${r * 0.5}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(INGREDIENTS[ing].emoji, ix, iy);
+    });
+}
+
+function drawPizzaWorkstation() {
+    const s = SCALE;
+    
+    // Cutting board
+    drawRoundRect(440 * s, 380 * s, 200 * s, 110 * s, 10, '#d4a050', '#b8862d', 3);
+    drawRoundRect(445 * s, 385 * s, 190 * s, 100 * s, 8, '#e8c070');
+
+    if (currentPizza) {
+        drawMiniPizza(540 * s, 435 * s, 45 * s, currentPizza);
+        
+        // Ingredient list on pizza
+        ctx.fillStyle = '#fff';
+        ctx.font = `${10 * s}px Arial`;
+        ctx.textAlign = 'left';
+    }
+
+    // "Put in Oven" indicator
+    if (currentPizza && !currentPizza.baking && currentPizza.ingredients.length >= 2 && !ovenPizza) {
+        ctx.fillStyle = 'rgba(255,200,0,0.3)';
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(640 * s, 435 * s);
+        ctx.lineTo(680 * s, 435 * s);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = '#ffd700';
+        ctx.font = `bold ${11 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('→ Bake!', 665 * s, 425 * s);
+    }
+}
+
+function drawIngredientTray() {
+    const s = SCALE;
+    const trayX = 180 * s;
+    const trayY = 495 * s;
+    
+    // Tray background
+    drawRoundRect(trayX - 10 * s, trayY - 10 * s, 460 * s, 110 * s, 10, '#f5e6c8', '#c4a870', 3);
+    
+    ctx.fillStyle = '#8b7355';
+    ctx.font = `bold ${12 * s}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('INGREDIENTS', trayX + 220 * s, trayY - 15 * s);
+
+    INGREDIENT_KEYS.forEach((key, i) => {
+        let btn = buttons['ing_' + key];
+        if (!btn) return;
+        
+        let hover = isInButton(btn, mouseX, mouseY);
+        let baseColor = hover ? '#fff8e0' : '#fef9ee';
+        
+        drawRoundRect(btn.x + 3, btn.y + 3, btn.w - 6, btn.h - 6, 8, baseColor, INGREDIENTS[key].color, 2);
+        
+        ctx.font = `${22 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(INGREDIENTS[key].emoji, btn.x + btn.w / 2, btn.y + btn.h / 2 - 4 * s);
+        
+        ctx.fillStyle = '#333';
+        ctx.font = `${9 * s}px Arial`;
+        ctx.fillText(INGREDIENTS[key].name, btn.x + btn.w / 2, btn.y + btn.h - 10 * s);
+    });
+}
+
+function drawCustomer(customer, index) {
+    const s = SCALE;
+    let baseX = (170 + index * 160) * s;
+    let baseY = 320 * s;
+    
+    // Enter animation
+    let offsetY = 0;
+    if (customer.enterAnim < 1) {
+        offsetY = (1 - customer.enterAnim) * 100 * s;
+    }
+    if (customer.leaving) {
+        offsetY = customer.leaveAnim * 100 * s;
+    }
+    
+    let cy = baseY + offsetY;
+    let bob = Math.sin(customer.bobTimer) * 3 * s;
+    cy += bob;
+
+    // Patience indicator
+    let patRatio = customer.patience / customer.maxPatience;
+    let patColor = patRatio > 0.5 ? '#2ecc71' : patRatio > 0.25 ? '#f39c12' : '#e74c3c';
+    
+    // Update expression
+    if (patRatio > 0.5) customer.expression = 'happy';
+    else if (patRatio > 0.25) customer.expression = 'neutral';
+    else customer.expression = 'angry';
+
+    // Body
+    ctx.fillStyle = SHIRT_COLORS[customer.shirtIdx];
+    drawRoundRect(baseX - 15 * s, cy + 20 * s, 50 * s, 45 * s, 8, SHIRT_COLORS[customer.shirtIdx]);
+
+    // Head
+    ctx.beginPath();
+    ctx.arc(baseX + 10 * s, cy, 22 * s, 0, Math.PI * 2);
+    ctx.fillStyle = '#f4c794';
+    ctx.fill();
+    ctx.strokeStyle = '#d4a774';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Hair
+    ctx.beginPath();
+    ctx.arc(baseX + 10 * s, cy - 8 * s, 22 * s, Math.PI, Math.PI * 2);
+    ctx.fillStyle = CUSTOMER_HAIR[customer.hairIdx];
+    ctx.fill();
+
+    // Eyes
+    let eyeY = cy - 2 * s;
+    ctx.fillStyle = '#333';
+    if (customer.expression === 'angry') {
+        ctx.fillRect(baseX - 2 * s, eyeY - 2 * s, 8 * s, 5 * s);
+        ctx.fillRect(baseX + 14 * s, eyeY - 2 * s, 8 * s, 5 * s);
+    } else {
+        ctx.beginPath();
+        ctx.arc(baseX + 2 * s, eyeY, 3 * s, 0, Math.PI * 2);
+        ctx.arc(baseX + 18 * s, eyeY, 3 * s, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Mouth
+    ctx.beginPath();
+    if (customer.expression === 'happy') {
+        ctx.arc(baseX + 10 * s, cy + 8 * s, 6 * s, 0, Math.PI);
+    } else if (customer.expression === 'neutral') {
+        ctx.moveTo(baseX + 4 * s, cy + 10 * s);
+        ctx.lineTo(baseX + 16 * s, cy + 10 * s);
+    } else {
+        ctx.arc(baseX + 10 * s, cy + 15 * s, 6 * s, Math.PI, Math.PI * 2);
+    }
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Order bubble
+    let bubX = baseX - 20 * s;
+    let bubY = cy - 90 * s;
+    let bubW = 70 * s;
+    let bubH = 55 * s;
+    
+    drawRoundRect(bubX, bubY, bubW, bubH, 8, '#fff', '#ccc', 2);
+    // Bubble tail
+    ctx.beginPath();
+    ctx.moveTo(bubX + 20 * s, bubY + bubH);
+    ctx.lineTo(bubX + 15 * s, bubY + bubH + 12 * s);
+    ctx.lineTo(bubX + 30 * s, bubY + bubH);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(bubX + 21 * s, bubY + bubH - 2, 8 * s, 4);
+
+    // Order ingredients in bubble
+    let cols = Math.min(3, customer.order.length);
+    let rows = Math.ceil(customer.order.length / cols);
+    customer.order.forEach((ing, i) => {
+        let col = i % cols;
+        let row = Math.floor(i / cols);
+        let ix = bubX + 10 * s + col * 20 * s;
+        let iy = bubY + 15 * s + row * 22 * s;
+        ctx.font = `${16 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(INGREDIENTS[ing].emoji, ix, iy);
+    });
+
+    // Patience bar
+    let barW = 50 * s;
+    let barH = 6 * s;
+    let barX = baseX - 15 * s;
+    let barY = cy + 70 * s;
+    drawRoundRect(barX, barY, barW, barH, 3, '#444');
+    drawRoundRect(barX, barY, barW * patRatio, barH, 3, patColor);
+
+    // Serve button
+    if (ovenPizza === null && currentPizza && currentPizza.baked) {
+        let servBtn = buttons['serve_' + index];
+        if (servBtn) {
+            let hover = isInButton(servBtn, mouseX, mouseY);
+            drawRoundRect(servBtn.x, servBtn.y, servBtn.w, servBtn.h, 6, 
+                hover ? '#27ae60' : '#2ecc71', '#1a8a4a', 2);
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11 * s}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('SERVE', servBtn.x + servBtn.w / 2, servBtn.y + servBtn.h / 2 + 4 * s);
+        }
+    }
+}
+
+function drawUI() {
+    const s = SCALE;
+    
+    // Top bar background
+    drawRoundRect(10 * s, 5 * s, W - 20 * s, 50 * s, 12, 'rgba(0,0,0,0.6)', '#ffd700', 2);
+
+    // Timer
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${14 * s}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillText('⏱️ TIME', 30 * s, 25 * s);
+    
+    let mins = Math.floor(timeLeft / 60);
+    let secs = Math.floor(timeLeft % 60);
+    let timeColor = timeLeft > 60 ? '#2ecc71' : timeLeft > 30 ? '#f39c12' : '#e74c3c';
+    ctx.fillStyle = timeColor;
+    ctx.font = `bold ${20 * s}px Arial`;
+    ctx.fillText(`${mins}:${secs.toString().padStart(2, '0')}`, 30 * s, 48 * s);
+
+    // Tips
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${14 * s}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('💰 TIPS', W / 2, 25 * s);
+    
+    let tipColor = tips >= 300 ? '#2ecc71' : tips >= 200 ? '#f39c12' : '#ffd700';
+    ctx.fillStyle = tipColor;
+    ctx.font = `bold ${22 * s}px Arial`;
+    ctx.fillText('$' + Math.floor(tips), W / 2, 50 * s);
+
+    // Goal
+    ctx.fillStyle = '#aaa';
+    ctx.font = `${11 * s}px Arial`;
+    ctx.fillText('Goal: $300', W / 2 + 80 * s, 50 * s);
+
+    // Progress bar to goal
+    let goalProg = Math.min(tips / 300, 1);
+    let gpX = W / 2 - 60 * s;
+    let gpY = 52 * s;
+    drawRoundRect(gpX, gpY, 120 * s, 6 * s, 3, '#333');
+    drawRoundRect(gpX, gpY, 120 * s * goalProg, 6 * s, 3, tipColor);
+
+    // Pizza counter
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${14 * s}px Arial`;
+    ctx.textAlign = 'right';
+    ctx.fillText('🍕 SERVED', W - 30 * s, 25 * s);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `bold ${20 * s}px Arial`;
+    ctx.fillText(totalServed.toString(), W - 30 * s, 48 * s);
+
+    // New Dough button
+    let ndBtn = buttons.newDough;
+    if (ndBtn) {
+        let hover = isInButton(ndBtn, mouseX, mouseY);
+        let canMake = !currentPizza || (currentPizza.baked);
+        drawRoundRect(ndBtn.x, ndBtn.y, ndBtn.w, ndBtn.h, 10, 
+            canMake ? (hover ? '#f0d9a0' : '#e8c070') : '#888', '#b8862d', 2);
+        ctx.fillStyle = canMake ? '#5a4020' : '#555';
+        ctx.font = `bold ${12 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🫓 NEW', ndBtn.x + ndBtn.w / 2, ndBtn.y + 35 * s);
+        ctx.fillText('DOUGH', ndBtn.x + ndBtn.w / 2, ndBtn.y + 55 * s);
+    }
+
+    // Trash button
+    let trBtn = buttons.trash;
+    if (trBtn) {
+        let hover = isInButton(trBtn, mouseX, mouseY);
+        drawRoundRect(trBtn.x, trBtn.y, trBtn.w, trBtn.h, 10,
+            hover ? '#c0392b' : '#e74c3c', '#8b2020', 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${12 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🗑️ TRASH', trBtn.x + trBtn.w / 2, trBtn.y + 42 * s);
+    }
+
+    // Upgrade buttons
+    let uoBtn = buttons.upgradeOven;
+    if (uoBtn) {
+        let hover = isInButton(uoBtn, mouseX, mouseY);
+        let canAfford = tips >= upgradeOvenCost && ovenUpgradeLevel < 3;
+        drawRoundRect(uoBtn.x, uoBtn.y, uoBtn.w, uoBtn.h, 10,
+            canAfford ? (hover ? '#d35400' : '#e67e22') : '#666', '#8b5e00', 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${11 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('⬆️ OVEN', uoBtn.x + uoBtn.w / 2, uoBtn.y + 30 * s);
+        ctx.font = `${10 * s}px Arial`;
+        if (ovenUpgradeLevel >= 3) {
+            ctx.fillText('MAXED', uoBtn.x + uoBtn.w / 2, uoBtn.y + 50 * s);
+        } else {
+            ctx.fillText('$' + upgradeOvenCost, uoBtn.x + uoBtn.w / 2, uoBtn.y + 50 * s);
+        }
+        ctx.fillText('Lv.' + ovenUpgradeLevel, uoBtn.x + uoBtn.w / 2, uoBtn.y + 68 * s);
+    }
+
+    let uhBtn = buttons.upgradeHelper;
+    if (uhBtn) {
+        let hover = isInButton(uhBtn, mouseX, mouseY);
+        let canAfford = tips >= upgradeHelperCost && !helperHired;
+        drawRoundRect(uhBtn.x, uhBtn.y, uhBtn.w, uhBtn.h, 10,
+            canAfford ? (hover ? '#8e44ad' : '#9b59b6') : (helperHired ? '#27ae60' : '#666'), '#5a2d7a', 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${11 * s}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('👨‍🍳 HELPER', uhBtn.x + uhBtn.w / 2, uhBtn.y + 30 * s);
+        ctx.font = `${10 * s}px Arial`;
+        if (helperHired) {
+            ctx.fillText('HIRED!', uhBtn.x + uhBtn.w / 2, uhBtn.y + 50 * s);
+        } else {
+            ctx.fillText('$' + upgradeHelperCost, uhBtn.x + uhBtn.w / 2, uhBtn.y + 50 * s);
+        }
+    }
+
+    // Order panel (left side)
+    drawRoundRect(880 * s, 70 * s, 310 * s, 230 * s, 12, 'rgba(200,50,50,0.85)', '#c0392b', 3);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${15 * s}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('📋 ORDERS', 1035 * s, 95 * s);
+
+    customers.forEach((c, i) => {
+        if (c.leaving) return;
+        let oy = 105 * s + i * 50 * s;
+        let patRatio = c.patience / c.maxPatience;
+        let bgColor = patRatio > 0.5 ? 'rgba(46,204,113,0.3)' : patRatio > 0.25 ? 'rgba(243,156,18,0.3)' : 'rgba(231,76,60,0.3)';
+        drawRoundRect(890 * s, oy, 290 * s, 42 * s, 6, bgColor, 'rgba(255,255,255,0.3)', 1);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = `${10 * s}px Arial`;
+        ctx.textAlign = 'left';
+        ctx.fillText(`#${i + 1}:`, 900 * s, oy + 18 * s);
+        
+        c.order.forEach((ing, j) => {
+            ctx.font = `${16 * s}px Arial`;
+            ctx.fillText(INGREDIENTS[ing].emoji, 930 * s + j * 25 * s, oy + 20 * s);
+        });
+
+        // Time remaining
+        ctx.fillStyle = patRatio > 0.25 ? '#fff' : '#ff6666';
+        ctx.font = `${10 * s}px Arial`;
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.ceil(c.patience) + 's', 1175 * s, oy + 18 * s);
+
+        // Mini patience bar
+        drawRoundRect(1100 * s, oy + 25 * s, 70 * s, 5 * s, 2, '#333');
+        let pc = patRatio > 0.5 ? '#2ecc71' : patRatio > 0.25 ? '#f39c12' : '#e74c3c';
+        drawRoundRect(1100 * s, oy + 25 * s, 70 * s * patRatio, 5 * s, 2, pc);
+    });
+
+    // Tip jar
+    drawRoundRect(870 * s, 360 * s, 80 * s, 100 * s, 10, 'rgba(255,215,0,0.2)', '#ffd700', 2);
+    ctx.font = `${30 * s}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🫙', 910 * s, 400 * s);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `bold ${14 * s}px Arial`;
+    ctx.fillText('TIP JAR', 910 * s, 440 * s);
+    ctx.font = `bold ${12 * s}px Arial`;
+    ctx.fillText('$' + Math.floor(tips), 910 * s, 455 * s);
+
+    // Helper chef indicator
+    if (helperHired) {
+        let hx = 960 * s;
+        let hy = 400 * s;
+        ctx.font = `${35 * s}px Arial`;
+        ctx.fillText('👨‍🍳', hx, hy);
+        ctx.fillStyle = '#2ecc71';
+        ctx.font = `bold ${10 * s}px Arial`;
+        ctx.fillText('HELPER', hx, hy + 25 * s);
+        if (helperPizza) {
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText('Working...', hx, hy + 40 * s);
+        }
+    }
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    steamParticles.forEach(p => {
+        ctx.globalAlpha = p.life * 0.4;
+        ctx.fillStyle = '#ddd';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    floatingTexts.forEach(ft => {
+        ctx.globalAlpha = ft.life;
+        ctx.fillStyle = ft.color;
+        ctx.font = `bold ${18 * SCALE}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(ft.text, ft.x, ft.y);
+    });
+    ctx.globalAlpha = 1;
+}
+
+function drawDragIngredient() {
+    if (dragIngredient) {
+        ctx.font = `${40 * SCALE}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(INGREDIENTS[dragIngredient].emoji, dragX, dragY);
+        ctx.globalAlpha = 1;
+    }
+}
+
+function drawMenu() {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#e74c3c';
+    ctx.font = `bold ${50 * SCALE}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText('🍕 PIZZA SHOP RUSH 🍕', W / 2, H / 2 - 100);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = `${18 * SCALE}px Arial`;
+    ctx.fillText('Make pizzas, serve customers, earn $300 in tips!', W / 2, H / 2 - 40);
+
+    ctx.font = `${14 * SCALE}px Arial`;
+    ctx.fillStyle = '#ccc';
+    ctx.fillText('Click ingredients to add to dough → Bake in oven → Serve to customers', W / 2, H / 2 - 10);
+    ctx.fillText('Upgrade your oven and hire a helper chef!', W / 2, H / 2 + 15);
+
+    let btn = buttons.startGame;
+    drawRoundRect(btn.x, btn.y, btn.w, btn.h, 15, '#e74c3c', '#c0392b', 3);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${22 * SCALE}px Arial`;
+    ctx.fillText('START SHIFT!', W / 2, btn.y + 38);
+}
+
+function drawGameOver() {
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(0, 0, W, H);
+
+    let won = tips >= 300;
+    ctx.fillStyle = won ? '#2ecc71' : '#e74c3c';
+    ctx.font = `bold ${45 * SCALE}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(won ? '🎉 SHIFT COMPLETE! 🎉' : '⏰ TIME\'S UP! ⏰', W / 2, H / 2 - 100);
+
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `bold ${30 * SCALE}px Arial`;
+    ctx.fillText('Tips Earned: $' + Math.floor(tips), W / 2, H / 2 - 40);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = `${18 * SCALE}px Arial`;
+    ctx.fillText('Pizzas Served: ' + totalServed, W / 2, H / 2);
+    ctx.fillText('Orders Failed: ' + totalFailed, W / 2, H / 2 + 30);
+
+    if (!won) {
+        ctx.fillStyle = '#ff6666';
+        ctx.font = `${16 * SCALE}px Arial`;
+        ctx.fillText('You needed $300 in tips to pass the shift!', W / 2, H / 2 + 65);
+    } else {
+        ctx.fillStyle = '#2ecc71';
+        ctx.font = `${16 * SCALE}px Arial`;
+        ctx.fillText('Amazing work, chef! 🌟', W / 2, H / 2 + 65);
+    }
+
+    let btn = buttons.playAgain;
+    drawRoundRect(btn.x, btn.y, btn.w, btn.h, 15, '#e74c3c', '#c0392b', 3);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${22 * SCALE}px Arial`;
+    ctx.fillText('PLAY AGAIN', W / 2, btn.y + 38);
+}
+
+// Game Logic
+function spawnCustomer() {
+    if (customers.length >= maxCustomers) return;
+    let slot = -1;
+    for (let i = 0; i < maxCustomers; i++) {
+        if (!customers.find(c => c.slot === i)) { slot = i; break; }
+    }
+    if (slot === -1) return;
+    customers.push(new Customer(slot));
+}
+
+function servePizza(customerIndex) {
+    if (!currentPizza || !currentPizza.baked) return;
+    if (customerIndex >= customers.length) return;
+    
+    let customer = customers[customerIndex];
+    if (customer.leaving) return;
+    
+    let acc = currentPizza.accuracy(customer.order);
+    let speedBonus = customer.patience / customer.maxPatience;
+    let tipAmount = Math.floor((acc * 15 + speedBonus * 10) * (1 + totalServed * 0.05));
+    
+    if (acc >= 0.8) {
+        tips += tipAmount;
+        totalServed++;
+        addFloatingText(
+            (200 + customer.slot * 160) * SCALE,
+            250 * SCALE,
+            '+$' + tipAmount,
+            acc >= 1 ? '#2ecc71' : '#f39c12'
+        );
+        for (let i = 0; i < 10; i++) {
+            addParticle(
+                (200 + customer.slot * 160) * SCALE,
+                300 * SCALE,
+                acc >= 1 ? '#ffd700' : '#f39c12',
+                'spark'
+            );
+        }
+        customer.served = true;
+    } else {
+        tipAmount = Math.max(2, Math.floor(tipAmount * 0.3));
+        tips += tipAmount;
+        totalServed++;
+        addFloatingText(
+            (200 + customer.slot * 160) * SCALE,
+            250 * SCALE,
+            '+$' + tipAmount + ' (wrong!)',
+            '#e74c3c'
+        );
+    }
+
+    customer.leaving = true;
+    currentPizza = null;
+
+    // Check win
+    if (tips >= 300) {
+        setTimeout(() => { gameState = 'gameover'; }, 500);
+    }
+}
+
+function updateGame(dt) {
+    if (gameState !== 'playing') return;
+
+    timeLeft -= dt;
+    if (timeLeft <= 0) {
+        timeLeft = 0;
+        gameState = 'gameover';
+        return;
+    }
+
+    // Spawn customers
+    customerTimer += dt;
+    if (customerTimer >= customerSpeed) {
+        customerTimer = 0;
+        spawnCustomer();
+        // Speed up over time
+        customerSpeed = Math.max(5, customerSpeed - 0.3);
+    }
+
+    // Update customers
+    for (let i = customers.length - 1; i >= 0; i--) {
+        let c = customers[i];
+        
+        if (c.enterAnim < 1) {
+            c.enterAnim += dt * 3;
+            if (c.enterAnim > 1) c.enterAnim = 1;
+        }
+        
+        c.bobTimer += dt * 3;
+        
+        if (c.leaving) {
+            c.leaveAnim += dt * 3;
+            if (c.leaveAnim >= 1) {
+                customers.splice(i, 1);
+                continue;
+            }
+        } else {
+            c.patience -= dt;
+            if (c.patience <= 0) {
+                c.patience = 0;
+                c.leaving = true;
+                c.angry = true;
+                totalFailed++;
+                addFloatingText(
+                    (200 + c.slot * 160) * SCALE,
+                    250 * SCALE,
+                    '😡 LEFT!',
+                    '#e74c3c'
+                );
+            }
+        }
+    }
+
+    // Oven
+    if (ovenPizza) {
+        ovenTimer += dt * ovenSpeed;
+        if (ovenTimer >= ovenMaxTime) {
+            ovenPizza.baked = true;
+            ovenPizza.baking = false;
+            currentPizza = ovenPizza;
+            ovenPizza = null;
+            ovenTimer = 0;
+            addFloatingText(750 * SCALE, 350 * SCALE, '🍕 Ready!', '#2ecc71');
+            for (let i = 0; i < 15; i++) {
+                addParticle(750 * SCALE, 400 * SCALE, '#ffd700', 'spark');
+            }
+        }
+    }
+
+    // Helper chef auto-serves
+    if (helperHired) {
+        helperTimer += dt;
+        if (helperTimer >= 15 && customers.length > 0) { // Every 15 seconds
+            // Find a customer and auto-complete an order
+            let targetCustomer = customers.find(c => !c.leaving && c.patience > 5);
+            if (targetCustomer) {
+                let tipAmount = Math.floor(8 + Math.random() * 5);
+                tips += tipAmount;
+                totalServed++;
+                targetCustomer.leaving = true;
+                targetCustomer.served = true;
+                addFloatingText(
+                    (200 + targetCustomer.slot * 160) * SCALE,
+                    250 * SCALE,
+                    '👨‍🍳 +$' + tipAmount,
+                    '#9b59b6'
+                );
+                helperTimer = 0;
+            }
+        }
+    }
+
+    // Difficulty increase
+    difficultyTimer += dt;
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= p.decay;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    for (let i = steamParticles.length - 1; i >= 0; i--) {
+        let p = steamParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        p.size += 0.1;
+        if (p.life <= 0) steamParticles.splice(i, 1);
+    }
+
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ft.y += ft.vy;
+        ft.life -= dt * 0.5;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+}
+
+function render() {
+    ctx.clearRect(0, 0, W, H);
+    
+    if (gameState === 'menu') {
+        drawBackground();
+        drawOven();
+        drawPizzaWorkstation();
+        drawIngredientTray();
+        drawMenu();
+        return;
+    }
+
+    drawBackground();
+    
+    // Draw customers
+    customers.forEach((c, i) => {
+        drawCustomer(c, c.slot);
+    });
+
+    drawOven();
+    drawPizzaWorkstation();
+    drawIngredientTray();
+    drawUI();
+    drawParticles();
+    drawDragIngredient();
+
+    if (gameState === 'gameover') {
+        drawGameOver();
+    }
+}
+
+function gameLoop(timestamp) {
+    let dt = (timestamp - lastTime) / 1000;
+    if (dt > 0.1) dt = 0.1; // cap delta
+    lastTime = timestamp;
+
+    updateGame(dt);
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+function resetGame() {
+    tips = 0;
+    timeLeft = 300;
+    customers = [];
+    currentPizza = null;
+    ovenPizza = null;
+    ovenTimer = 0;
+    ovenMaxTime = 8;
+    ovenSpeed = 1;
+    ovenUpgradeLevel = 0;
+    helperHired = false;
+    helperTimer = 0;
+    helperPizza = null;
+    customerSpeed = 12;
+    customerTimer = 0;
+    difficultyTimer = 0;
+    particles = [];
+    floatingTexts = [];
+    steamParticles = [];
+    totalServed = 0;
+    totalFailed = 0;
+    upgradeOvenCost = 50;
+    upgradeHelperCost = 100;
+    dragIngredient = null;
+    
+    // Spawn initial customers
+    spawnCustomer();
+    setTimeout(() => spawnCustomer(), 1500);
+}
+
+// Input handling
+canvas.addEventListener('mousemove', (e) => {
+    let rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) * (W / rect.width);
+    mouseY = (e.clientY - rect.top) * (H / rect.height);
+    
+    if (dragIngredient) {
+        dragX = mouseX;
+        dragY = mouseY;
+    }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    let rect = canvas.getBoundingClientRect();
+    let x = (e.clientX - rect.left) * (W / rect.width);
+    let y = (e.clientY - rect.top) * (H / rect.height);
+    mouseDown = true;
+
+    if (gameState === 'menu') {
+        if (isInButton(buttons.startGame, x, y)) {
+            gameState = 'playing';
+            resetGame();
+        }
+        return;
+    }
+
+    if (gameState === 'gameover') {
+        if (isInButton(buttons.playAgain, x, y)) {
+            gameState = 'playing';
+            resetGame();
+        }
+        return;
+    }
+
+    if (gameState !== 'playing') return;
+
+    // Check ingredient buttons
+    for (let key of INGREDIENT_KEYS) {
+        let btn = buttons['ing_' + key];
+        if (btn && isInButton(btn, x, y)) {
+            if (currentPizza && !currentPizza.baked && !currentPizza.baking) {
+                if (currentPizza.addIngredient(key)) {
+                    addParticle(540 * SCALE, 435 * SCALE, INGREDIENTS[key].color, 'spark');
+                    addFloatingText(540 * SCALE, 400 * SCALE, '+' + INGREDIENTS[key].emoji, INGREDIENTS[key].color);
+                }
+            }
+            return;
+        }
+    }
+
+    // Check oven click (put pizza in oven)
+    if (isInButton(buttons.oven, x, y)) {
+        if (currentPizza && !currentPizza.baked && !currentPizza.baking && !ovenPizza && currentPizza.ingredients.length >= 2) {
+            ovenPizza = currentPizza;
+            ovenPizza.baking = true;
+            currentPizza = null;
+            ovenTimer = 0;
+        }
+        return;
+    }
+
+    // Serve buttons
+    for (let i = 0; i < maxCustomers; i++) {
+        let btn = buttons['serve_' + i];
+        if (btn && isInButton(btn, x, y)) {
+            // Find customer in this slot
+            let custIdx = customers.findIndex(c => c.slot === i && !c.leaving);
+            if (custIdx !== -1) {
+                servePizza(custIdx);
+            }
+            return;
+        }
+    }
+
+    // New dough
+    if (isInButton(buttons.newDough, x, y)) {
+        if (!currentPizza || currentPizza.baked) {
+            currentPizza = new Pizza();
+            addFloatingText(90 * SCALE, 520 * SCALE, '🫓 New Dough!', '#e8c070');
+        }
