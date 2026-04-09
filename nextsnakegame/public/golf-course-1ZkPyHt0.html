@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mini Golf Tournament</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  background: #1a3a1a; 
+  overflow: hidden; 
+  font-family: Arial, Helvetica, sans-serif;
+  touch-action: none;
+  user-select: none;
+}
+canvas { display: block; }
+#gameCanvas { 
+  position: absolute; 
+  top: 0; left: 0; 
+}
+#ui-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#ui-overlay > * { pointer-events: auto; }
+.ui-panel {
+  background: rgba(0,0,0,0.7);
+  border: 2px solid #4a4;
+  border-radius: 12px;
+  color: white;
+  padding: 8px 16px;
+  font-weight: bold;
+  font-size: 14px;
+}
+#top-bar {
+  position: absolute;
+  top: 10px; left: 10px; right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+#top-bar > * { pointer-events: auto; }
+#power-meter-container {
+  background: rgba(0,0,0,0.8);
+  border: 2px solid #f90;
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 140px;
+}
+#power-meter-label {
+  color: #f90;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+#power-meter-bg {
+  background: #333;
+  border-radius: 6px;
+  height: 14px;
+  overflow: hidden;
+}
+#power-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #4f4, #ff0, #f60, #f00);
+  transition: width 0.05s;
+}
+#stroke-display {
+  text-align: center;
+  background: rgba(0,0,0,0.8);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  padding: 4px 20px;
+}
+#stroke-display .label { font-size: 11px; color: #aaa; }
+#stroke-display .value { font-size: 22px; color: #fff; }
+#score-panel {
+  text-align: right;
+  background: rgba(0,0,0,0.8);
+  border: 2px solid #f44;
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+#score-panel .row { display: flex; justify-content: space-between; gap: 12px; }
+#score-panel .label { color: #aaa; font-size: 11px; }
+#score-panel .value { color: #fff; font-size: 16px; }
+#bottom-bar {
+  position: absolute;
+  bottom: 10px; left: 10px; right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+#bottom-bar > * { pointer-events: auto; }
+#par-display {
+  background: rgba(255,255,255,0.95);
+  border: 3px solid #e44;
+  border-radius: 14px;
+  padding: 8px 18px;
+  text-align: center;
+}
+#par-display .par-num { font-size: 32px; font-weight: bold; color: #333; }
+#par-display .par-label { font-size: 13px; font-weight: bold; color: #e44; }
+#hole-display {
+  background: rgba(255,255,255,0.95);
+  border: 3px solid #48f;
+  border-radius: 14px;
+  padding: 8px 18px;
+  text-align: center;
+}
+#hole-display .hole-num { font-size: 32px; font-weight: bold; color: #333; }
+#hole-display .hole-label { font-size: 13px; font-weight: bold; color: #48f; }
+#course-select, #ball-select, #hole-complete, #game-complete, #splash-screen {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  color: white;
+}
+.menu-title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.menu-subtitle {
+  font-size: 16px;
+  color: #aaa;
+  margin-bottom: 24px;
+}
+.menu-btn {
+  background: linear-gradient(180deg, #5c5, #393);
+  border: 3px solid #2a2;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 14px 40px;
+  margin: 6px;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  min-width: 200px;
+}
+.menu-btn:hover { background: linear-gradient(180deg, #6d6, #4a4); }
+.menu-btn.blue { background: linear-gradient(180deg, #58f, #36c); border-color: #24a; }
+.menu-btn.blue:hover { background: linear-gradient(180deg, #69f, #47d); }
+.menu-btn.gold { background: linear-gradient(180deg, #fc4, #da2); border-color: #b80; color: #333; }
+.menu-btn.gold:hover { background: linear-gradient(180deg, #fd5, #eb3); }
+.menu-btn.red { background: linear-gradient(180deg, #f55, #c33); border-color: #a22; }
+.menu-btn.red:hover { background: linear-gradient(180deg, #f66, #d44); }
+.ball-option {
+  display: inline-block;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  margin: 8px;
+  cursor: pointer;
+  border: 3px solid #555;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.ball-option:hover { transform: scale(1.15); }
+.ball-option.selected { border-color: #ff0; transform: scale(1.2); }
+.ball-option.locked { opacity: 0.4; cursor: not-allowed; }
+#message-popup {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.9);
+  border: 3px solid #ff0;
+  border-radius: 16px;
+  padding: 20px 40px;
+  color: #ff0;
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  z-index: 50;
+  display: none;
+  pointer-events: none;
+  text-shadow: 0 0 10px rgba(255,255,0,0.5);
+}
+.scorecard {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #4a4;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  width: 80%;
+  max-width: 400px;
+}
+.scorecard-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 8px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.scorecard-row.header { color: #ff0; font-weight: bold; border-bottom: 2px solid #ff0; }
+.scorecard-row .under { color: #4f4; }
+.scorecard-row .over { color: #f44; }
+.scorecard-row .even { color: #fff; }
+.trick-shot {
+  position: absolute;
+  color: #ff0;
+  font-size: 20px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 40;
+  text-shadow: 0 0 8px rgba(255,255,0,0.8);
+  animation: floatUp 1.5s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="ui-overlay">
+  <div id="top-bar">
+    <div id="power-meter-container">
+      <div id="power-meter-label">POWER METER</div>
+      <div id="power-meter-bg"><div id="power-meter-fill"></div></div>
+    </div>
+    <div id="stroke-display">
+      <div class="label">STROKE</div>
+      <div class="value" id="stroke-val">0</div>
+    </div>
+    <div id="score-panel">
+      <div class="row"><span class="label">TOTAL</span><span class="value" id="total-score">0</span></div>
+      <div class="row"><span class="label">VS PAR</span><span class="value" id="vs-par">E</span></div>
+    </div>
+  </div>
+  <div id="bottom-bar">
+    <div id="hole-display">
+      <div class="hole-num" id="hole-num">1</div>
+      <div class="hole-label">HOLE</div>
+    </div>
+    <div id="par-display">
+      <div class="par-num" id="par-num">3</div>
+      <div class="par-label">PAR</div>
+    </div>
+  </div>
+  <div id="message-popup"></div>
+</div>
+
+<div id="splash-screen">
+  <div style="font-size:60px; margin-bottom:4px;">⛳</div>
+  <div class="menu-title" style="color:#4f4;">MINI GOLF</div>
+  <div class="menu-title" style="font-size:24px; color:#ff0; margin-bottom:20px;">TOURNAMENT</div>
+  <div class="menu-subtitle">18 Holes • 3 Courses • Trick Shots</div>
+  <button class="menu-btn" onclick="showCourseSelect()">PLAY</button>
+</div>
+
+<div id="course-select" style="display:none;">
+  <div class="menu-title">SELECT COURSE</div>
+  <div class="menu-subtitle">Choose your challenge</div>
+  <button class="menu-btn" onclick="startCourse(0)">🌿 Beginner (Holes 1-6)</button>
+  <button class="menu-btn blue" onclick="startCourse(1)">🏆 Pro (Holes 7-12)</button>
+  <button class="menu-btn gold" onclick="startCourse(2)">✨ Fantasy (Holes 13-18)</button>
+  <button class="menu-btn red" onclick="startCourse(3)" style="margin-top:12px;">🎯 Full Tournament (All 18)</button>
+</div>
+
+<div id="ball-select" style="display:none;">
+  <div class="menu-title">SELECT BALL</div>
+  <div class="menu-subtitle">Unlock more by completing courses!</div>
+  <div id="ball-options"></div>
+  <button class="menu-btn" onclick="confirmBall()" style="margin-top:16px;">START</button>
+</div>
+
+<div id="hole-complete" style="display:none;">
+  <div class="menu-title" id="hole-result-title">NICE!</div>
+  <div class="menu-subtitle" id="hole-result-sub">Par</div>
+  <div id="hole-bonus" style="color:#ff0; font-size:18px; margin-bottom:12px;"></div>
+  <button class="menu-btn" onclick="nextHole()">NEXT HOLE</button>
+</div>
+
+<div id="game-complete" style="display:none;">
+  <div class="menu-title" id="game-result-title">TOURNAMENT COMPLETE!</div>
+  <div class="menu-subtitle" id="game-result-sub"></div>
+  <div class="scorecard" id="final-scorecard"></div>
+  <button class="menu-btn" onclick="showCourseSelect()">PLAY AGAIN</button>
+  <button class="menu-btn blue" onclick="showSplash()" style="margin-top:4px;">MAIN MENU</button>
+</div>
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/Kmh4y9ciW1ReFXYbUN3yr6YLuku1/sessions/nJ7Gi44SVg7RBQt1NoRI/games/1ZkPyHt09e3YW8r7Rg5Z.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=Epw3ClKDePUlCwk0%2FgSvppqQrlFNul80yXHRfaTP%2BarT%2FdKzymjHud2Xt0NtKyRaNyA0pcr203mkPtnFW2wq6YJgwPm5X7Anu2HNhdjDBe3LIogk6kQzhcWdM9YFSADcMJ6yh%2B0EHj1B7lG8cLaqnuGv9FW%2FI5A%2Ft%2B6kGQMV7WQeFT6qgX2ogpTLTlHGN24dm5Z8RXABojysuY0ZakQ8NFPKk915rHpPUp9IC%2FFAe%2BM2N9RFFJR9fGzQTJwQRVFQ5sBFJEPLX3xGY68RsCxnREplzTrIQPEhZQFgpu%2FHFqfIYGMGkVm13yC0En8xTb0aJXqTOqs%2BMwoBsF%2FGgeP09g%3D%3D"></script>
+</body>
+
+</html>
