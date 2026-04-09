@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Monkey Forest Adventure</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+}
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #1a3a1a;
+    font-family: Arial, Helvetica, sans-serif;
+}
+#gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+canvas {
+    display: block;
+    background: #87CEEB;
+    image-rendering: pixelated;
+}
+#touchControls {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: none;
+    justify-content: space-between;
+    padding: 0 15px;
+    pointer-events: none;
+    z-index: 10;
+}
+.control-group {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+.touch-btn {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 3px solid rgba(255,255,255,0.5);
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+}
+.touch-btn:active {
+    background: rgba(255,255,255,0.45);
+    transform: scale(0.95);
+}
+#jumpBtn {
+    width: 80px;
+    height: 80px;
+    font-size: 15px;
+    background: rgba(255,100,100,0.35);
+    border-color: rgba(255,150,150,0.6);
+}
+@media (max-width: 768px) {
+    #touchControls { display: flex; }
+}
+@media (pointer: coarse) {
+    #touchControls { display: flex; }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="gameCanvas"></canvas>
+<div id="touchControls">
+    <div class="control-group">
+        <button class="touch-btn" id="leftBtn">◀</button>
+        <button class="touch-btn" id="rightBtn">▶</button>
+    </div>
+    <div class="control-group">
+        <button class="touch-btn" id="jumpBtn">JUMP</button>
+    </div>
+</div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/0kjV59XdERS6BqxbP3oWPYtpYhU2/sessions/GNWvMS7zIhiQiDyaTrPs/games/TauSalpB4stVP3m7J2VM.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=lBE1tfmR1l03eCID%2FwoH8NVU2eUI9CciuNvCfmMEjXAOg3Dmv%2BiSQqdehxX3gHUdH7vDoIpOJEiGUoPaQqQmUJMSUMt08EfHQ6IPWBcphs8wF6LPdrzsOjauDOUZp0FAy4HCjISfx%2BCGhEkYmNZRYwHMW8K0Uu2f8ZYd2Eywb4FCFFuVn006yYnGzIlBREzgJH16DSt%2F6s5nO4FA6jGbEF15STDFPAvnRudTgMWFXKBR9dFNucgQCmiB2U1wljgNBd4Qv%2Bv4GLu%2BfC7nj1W77dr7lPXguahPT%2F61K4dQu27UCxZ4nRL7rW%2Fac7CGvaRo1PnSgrhm%2BJIiWu3BF0ICkQ%3D%3D"></script>
+</body>
+</html>
