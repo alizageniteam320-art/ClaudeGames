@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pixel Bike Racer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  background: #000; 
+  overflow: hidden; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  height: 100vh; 
+  font-family: Arial, Helvetica, sans-serif;
+  touch-action: none;
+}
+canvas { 
+  display: block; 
+  image-rendering: auto;
+}
+#touchControls {
+  position: fixed;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  display: none;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+  z-index: 10;
+}
+.touchBtn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  border: 3px solid rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+  pointer-events: all;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touchBtn:active { background: rgba(255,255,255,0.5); }
+#leftGroup, #rightGroup {
+  display: flex;
+  gap: 15px;
+}
+@media (pointer: coarse) {
+  #touchControls { display: flex !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="touchControls">
+  <div id="leftGroup">
+    <div class="touchBtn" id="btnLeft">◀</div>
+    <div class="touchBtn" id="btnRight">▶</div>
+  </div>
+  <div id="rightGroup">
+    <div class="touchBtn" id="btnUp">▲</div>
+    <div class="touchBtn" id="btnDown">▼</div>
+  </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/js3vy87lk2PVeyTKXFIysuTl7Jr1/sessions/x6bDP5vwbqT8JVTRd01s/games/ITstgZxpKhzfvgJDGJ4C.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=Mwb%2B3Y1kK2AkcjAB6m2IiskiYdEuNkd0ZNe5EFlmR%2BQVsVq7REkIDIf%2BMP2caLBucSQo%2FW7uCFuwznxxr5tb8H2r9m3fSuLZ%2BkY7xPsc8hhtMQj%2BkK1FXywfAVIeFl%2BpboGEkh0zqU9SbgqBIP%2FG2Tw5hmzmPAyYFCJjh%2BiTywPiO9PiWLkVGlFJMTG23zXsjW70I4LwrqhLq45bEAQFGHzZCUSt%2FzoxF0kDa6A5tR16S8L5FaRbzX3kxPsXKxINfZxfT2BoE3PD2E7Aos2oWtzzLlGcDPIL%2Bg9B6WLbUph1WhjEF4XObCEQmH680geiNQg4fydEQgh6ciqqcZ2PoA%3D%3D"></script>
+</body>
+</html>
