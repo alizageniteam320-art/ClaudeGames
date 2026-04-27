@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no">
+<title>Cutie - Fluffy Cat Adventure!</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a0a2e;
+  overflow: hidden;
+  touch-action: none;
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+#gameContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#touchLeft, #touchRight, #touchJump {
+  position: absolute;
+  bottom: 10px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  border: 3px solid rgba(255,255,255,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  color: white;
+  z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#touchLeft { left: 15px; }
+#touchRight { left: 100px; }
+#touchJump { right: 15px; }
+@media (max-width: 800px) {
+  #touchLeft, #touchRight, #touchJump { display: flex; }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+  <div id="touchLeft">◀</div>
+  <div id="touchRight">▶</div>
+  <div id="touchJump">▲</div>
+</div>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/VHA2mMt3MDfg8hSRCF41PTePrPI2/sessions/AHEmqpfNHHB7BKlHR5My/games/nO698uvf5Uke0az3FjJ4.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=AOGv0jUYBEmFOVIwv4BZPu86bf7UG%2B%2BmltlD4rYEnVfHiB2kzS2bUyIWxvdYDXkc7aLFsyKQUCB7kIaMh6GlqoKIp%2FUNH%2F%2BzVpUV1iKXH2M2AmOh7zRSliV39i9h%2FGpTTrulgUvBimhEYaadRI6BXAleJsTIzolJkE%2BlBXyEzKoo2anxhvOFB9ijVi%2Fw2rxrJ3LrF8pQkmq3z6VMqrHD9nMk%2BCJHexjk8%2F%2FphHaagJjF3ZqxzC3XfnJUzLlmfi%2FezhzKNZxx7fhZfTyC1%2F2u%2BYiZcpIz1DrSMsQDp7gbqluFCuGQx1%2FYJOzvTWbkn77ZCbtkmWWOcUeUipX2k8gKmA%3D%3D"></script>
+</body>
+</html>
