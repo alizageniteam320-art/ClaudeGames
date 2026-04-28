@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Temple Dash 3D - Endless Runner</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0505;
+  overflow: hidden;
+  touch-action: none;
+  font-family: Arial, Helvetica, sans-serif;
+  width: 100vw;
+  height: 100vh;
+}
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+#ui {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#scoreBox {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid #FFD700;
+  border-radius: 14px;
+  padding: 10px 18px;
+}
+#score {
+  color: #FFD700;
+  font-size: 28px;
+  font-weight: bold;
+  text-shadow: 0 0 12px rgba(255,215,0,0.7);
+}
+#coins {
+  color: #FFA500;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255,165,0,0.5);
+}
+#lives {
+  color: #FF4444;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255,50,50,0.5);
+  letter-spacing: 4px;
+}
+#distBox {
+  position: absolute;
+  bottom: 85px; right: 12px;
+  background: rgba(0,0,0,0.6);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 14px;
+  padding: 6px 16px;
+  text-align: right;
+}
+#distLabel { color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
+#distance { color: #fff; font-size: 22px; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.4); }
+#powerupIndicator {
+  position: absolute;
+  top: 12px; right: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  display: none;
+  background: rgba(0,0,0,0.6);
+  border-radius: 14px;
+  padding: 8px 14px;
+}
+#speedBar {
+  position: absolute;
+  right: 12px;
+  top: 60px;
+  width: 16px;
+  height: 140px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #FFD700;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#speedFill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 30%;
+  background: linear-gradient(to top, #FF4500, #FFD700);
+  border-radius: 8px;
+  transition: height 0.3s;
+}
+#controls {
+  position: absolute;
+  bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  pointer-events: all;
+}
+.ctrl-btn {
+  width: 60px; height: 60px;
+  background: rgba(139,109,20,0.4);
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 16px;
+  color: #FFD700;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s;
+  text-shadow: 0 0 8px rgba(255,215,0,0.5);
+}
+.ctrl-btn:active {
+  background: rgba(255,215,0,0.5);
+  transform: scale(0.9);
+}
+#startScreen, #gameOverScreen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(40,20,5,0.96), rgba(5,2,0,0.99));
+  pointer-events: all;
+  z-index: 20;
+}
+#startScreen h1 {
+  font-size: 46px;
+  color: #FFD700;
+  text-shadow: 0 0 40px rgba(255,165,0,0.6), 3px 3px 8px rgba(0,0,0,0.9);
+  margin-bottom: 6px;
+  letter-spacing: 3px;
+}
+.subtitle { color: #D4A017; font-size: 15px; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 22px; }
+#startScreen p, #gameOverScreen p {
+  color: #bbb; font-size: 14px; margin-bottom: 28px; text-align: center; max-width: 370px; line-height: 1.5;
+}
+#gameOverScreen h1 {
+  font-size: 42px; color: #FF4444;
+  text-shadow: 0 0 30px rgba(255,50,50,0.6), 3px 3px 8px rgba(0,0,0,0.9);
+  margin-bottom: 10px;
+}
+#finalScore { font-size: 30px; color: #FFD700; margin-bottom: 5px; text-shadow: 0 0 15px rgba(255,215,0,0.5); }
+#finalCoins { font-size: 20px; color: #FFA500; margin-bottom: 5px; }
+#finalDist { font-size: 18px; color: #ccc; margin-bottom: 18px; }
+.game-btn {
+  padding: 15px 50px; font-size: 21px; font-weight: bold; color: #fff;
+  background: linear-gradient(135deg, #D4A017, #8B6914);
+  border: 2px solid #FFD700; border-radius: 14px; cursor: pointer;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  pointer-events: all; transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+}
+.game-btn:hover {
+  background: linear-gradient(135deg, #FFD700, #B8860B);
+  box-shadow: 0 4px 30px rgba(255,215,0,0.5);
+  transform: translateY(-2px);
+}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="scoreBox">
+    <div id="score">Score: 0</div>
+    <div id="coins">🪙 0</div>
+    <div id="lives">❤️❤️❤️</div>
+  </div>
+  <div id="distBox">
+    <div id="distLabel">Distance</div>
+    <div id="distance">0m</div>
+  </div>
+  <div id="powerupIndicator"></div>
+  <div id="speedBar"><div id="speedFill"></div></div>
+  <div id="controls">
+    <div class="ctrl-btn" id="btnLeft">◀</div>
+    <div class="ctrl-btn" id="btnJump">▲</div>
+    <div class="ctrl-btn" id="btnSlide">▼</div>
+    <div class="ctrl-btn" id="btnRight">▶</div>
+  </div>
+</div>
+
+<div id="startScreen">
+  <h1>🏛️ TEMPLE DASH</h1>
+  <div class="subtitle">Endless Runner</div>
+  <p>Sprint through ancient temple ruins! Collect golden coins, grab power-ups, dodge deadly traps. Use Arrow Keys / WASD or on-screen buttons!</p>
+  <button class="game-btn" id="startBtn">▶ START RUN</button>
+</div>
+
+<div id="gameOverScreen" style="display:none;">
+  <h1>💀 GAME OVER</h1>
+  <div id="finalScore">Score: 0</div>
+  <div id="finalCoins">🪙 Coins: 0</div>
+  <div id="finalDist">📏 Distance: 0m</div>
+  <p>The temple guardian caught you!</p>
+  <button class="game-btn" id="restartBtn">🔄 RUN AGAIN</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/913YWdqethfUDeB7BOyfIBHVD1K3/sessions/Drc9mj3jek3fh2eJAOs3/games/ucZg2roUUTJ0YpfzkvYD.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=ch%2BQivwuYryCroiO%2Fx4uZZNY1c0UzsajKfEANWKnhKup1xqXBKmwWfybGqnjrje0tK2WpxIouQUQGy0M4XJBbRyULGP6THg93sR%2FB2pHHNrw62%2FY2r%2F8j6V%2BqKDADtHhEO%2FA50U0nLR4d6qBQo1%2By7P7XPPi6i2jyqWR81jx%2BzONnGuRDVOHbrpEuMA9JHuA92AxF9%2FuAuUMjSzKLCFmrTGF%2B6%2B9kePLcyiCHE1qawPL50TCQzmLplDPNMKThJHrlwD5CYS%2BI38am%2B4dtzh3j3Dr6PvEO2gFtHI3gL3SG9QYlijkg%2FweXS05Rl9%2B1FilRXfvsSt8EwzPIXIjvGCZjA%3D%3D"></script>
+</body>
+</html>
