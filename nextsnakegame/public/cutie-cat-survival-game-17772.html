@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cutie Cat Survival Game</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    user-select: none;
+}
+body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+}
+#gameCanvas {
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    cursor: default;
+    touch-action: none;
+}
+#mobileControls {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+}
+.dpad {
+    width: 150px;
+    height: 150px;
+    position: relative;
+}
+.dpad-btn {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: white;
+    cursor: pointer;
+}
+.dpad-btn:active {
+    background: rgba(255,255,255,0.5);
+}
+.dpad-up { top: 0; left: 50px; }
+.dpad-down { bottom: 0; left: 50px; }
+.dpad-left { top: 50px; left: 0; }
+.dpad-right { top: 50px; right: 0; }
+@media (max-width: 768px) {
+    #mobileControls { display: block; }
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="mobileControls">
+    <div class="dpad">
+        <div class="dpad-btn dpad-up" data-dir="up">▲</div>
+        <div class="dpad-btn dpad-down" data-dir="down">▼</div>
+        <div class="dpad-btn dpad-left" data-dir="left">◄</div>
+        <div class="dpad-btn dpad-right" data-dir="right">►</div>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/oXgu3AX8rbUHM4TiatwwHRCEUzo2/sessions/qcSEp1x7YW9NxMa8a7eY/games/dTVoBbyoD4IWir6dB3Ka.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=JWJxDP5vW8XtgZlEZaq8U57sl4wJ5sp23QAqdgAe2lRMPZnLXa8A67dNHJQ7nD5p57UgbOHz3Ot2jZYMeXcxtIkVvQKhLglDBW5AnBUm4mW7Ib1BOJn3fqmWL0E%2BeP98tjLCWJrlwamKCdM3ZrorvvP4U8lJrc%2BO8mvHtuuDg8%2B457bD3o%2FKGWnXIJMz%2FswqFJSMOxLQj3xsJUSMZoNf90sSv1dyhFKOs3yYiOBn7Pa6m42NGC7LtEqz3dz4x1pa6yRdArQumFaDNy02%2BWq5X0hz3kTupMm7GL3eYqXjZOeIqAGXdFwuDiVE2cuQvh47BbTmfL3h5CRdQNijFUh7JA%3D%3D"></script>
+</body>
+</html>
