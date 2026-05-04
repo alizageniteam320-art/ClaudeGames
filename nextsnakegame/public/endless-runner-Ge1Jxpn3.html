@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Neon Runner 3D</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  touch-action: none;
+}
+body {
+  background: #1a1a3e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  font-family: Arial, Helvetica, sans-serif;
+}
+#gameCanvas {
+  display: block;
+  background: #1a1a3e;
+}
+#ui-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#score-display {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: linear-gradient(135deg, #0077cc, #00aaff);
+  color: #fff;
+  padding: 8px 22px;
+  border-radius: 25px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid #44ccff;
+  box-shadow: 0 0 15px rgba(0,170,255,0.4);
+}
+#coin-display {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #0077cc, #00aaff);
+  color: #fff;
+  padding: 8px 22px;
+  border-radius: 25px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid #44ccff;
+  box-shadow: 0 0 15px rgba(0,170,255,0.4);
+}
+#coin-icon {
+  display: inline-block;
+  width: 22px; height: 22px;
+  background: radial-gradient(circle, #ffdd00, #ff9900);
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 6px;
+  border: 2px solid #ffaa00;
+  line-height: 22px;
+  text-align: center;
+  font-size: 12px;
+  color: #a06000;
+  font-weight: bold;
+}
+#pause-btn {
+  position: absolute;
+  top: 15px;
+  left: 20px;
+  background: linear-gradient(135deg, #0077cc, #00aaff);
+  color: #fff;
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: bold;
+  border: 2px solid #44ccff;
+  cursor: pointer;
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(0,170,255,0.4);
+}
+#mobile-controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+}
+.ctrl-btn {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 3px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ctrl-btn:active {
+  background: rgba(255,255,255,0.35);
+  transform: scale(0.92);
+}
+#left-controls {
+  display: flex;
+  gap: 15px;
+}
+#right-controls {
+  display: flex;
+  gap: 15px;
+}
+#game-over-screen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(10,10,40,0.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: all;
+}
+#game-over-screen h1 {
+  color: #ff4466;
+  font-size: 48px;
+  margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(255,68,102,0.6);
+}
+#game-over-screen .final-score {
+  color: #44ccff;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+#game-over-screen .final-coins {
+  color: #ffdd00;
+  font-size: 20px;
+  margin-bottom: 30px;
+}
+#restart-btn {
+  background: linear-gradient(135deg, #ff6600, #ffaa00);
+  color: #fff;
+  border: none;
+  padding: 15px 50px;
+  font-size: 22px;
+  font-weight: bold;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(255,170,0,0.5);
+  transition: transform 0.15s;
+}
+#restart-btn:hover {
+  transform: scale(1.08);
+}
+#start-screen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(10,10,40,0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 25;
+  pointer-events: all;
+}
+#start-screen h1 {
+  color: #44ccff;
+  font-size: 52px;
+  margin-bottom: 10px;
+  text-shadow: 0 0 30px rgba(68,204,255,0.6);
+}
+#start-screen p {
+  color: #aaccee;
+  font-size: 16px;
+  margin-bottom: 30px;
+  text-align: center;
+  line-height: 1.6;
+}
+#start-btn {
+  background: linear-gradient(135deg, #00cc66, #00ff88);
+  color: #fff;
+  border: none;
+  padding: 15px 50px;
+  font-size: 22px;
+  font-weight: bold;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(0,255,136,0.5);
+  transition: transform 0.15s;
+}
+#start-btn:hover {
+  transform: scale(1.08);
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-overlay">
+  <div id="pause-btn">❚❚</div>
+  <div id="coin-display"><span id="coin-icon">$</span> <span id="coin-count">0</span>/20</div>
+  <div id="score-display">SCORE <span id="score-value">0</span></div>
+
+  <div id="mobile-controls">
+    <div id="left-controls">
+      <div class="ctrl-btn" id="btn-left">◀</div>
+      <div class="ctrl-btn" id="btn-right">▶</div>
+    </div>
+    <div id="right-controls">
+      <div class="ctrl-btn" id="btn-slide">▼</div>
+      <div class="ctrl-btn" id="btn-jump">▲</div>
+    </div>
+  </div>
+</div>
+
+<div id="start-screen">
+  <h1>🏃 NEON RUNNER</h1>
+  <p>Dodge obstacles, collect coins, run forever!<br>
+  ← → or A/D to switch lanes<br>
+  ↑ or W or Space to Jump | ↓ or S to Slide<br>
+  Swipe on mobile!</p>
+  <button id="start-btn">▶ START</button>
+</div>
+
+<div id="game-over-screen">
+  <h1>GAME OVER</h1>
+  <div class="final-score">Distance: <span id="final-score">0</span>m</div>
+  <div class="final-coins">Coins: <span id="final-coins">0</span></div>
+  <button id="restart-btn">↻ PLAY AGAIN</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/mrZPKIAfXpceRbhfSqbHcHjluit1/sessions/zdeJt2jPZBRtP8vrheHE/games/Ge1Jxpn3pDd3LT2sGpJN.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=Ib5A38PGkvCG3OD5cxntiFTNJKKW7tsXg5kmdSLykfrAk3iPUJzNQJIBWQhPVpByR1YE0eXH50tmdMb0%2FMq2Dydk9vaa7fkaIxR%2BDW0rBQh768604Y0U%2BKDCuqISlFhQsQcIPPfMKcS4kCBFL2NvuPNnjCh4OBHaPAT14S3Xzf7kwwRh1QPUCJZa1A9PY7OkbOp6eyRZrU9WnymaoNVmtuCJD889Ukayp3dkCo8CtX3JujjiaxqyEZzOuLFt%2FZ25JDQZMwTaXE0ieospe31%2B88YzMq27RTvzlmZfdeVUtyfk1nFxZ92R%2BJW6wFcNRj3a7ctWgZ7V4EiyMxLuVAJBsA%3D%3D"></script>
+</body>
+</html>
