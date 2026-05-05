@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Chess - vs AI</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  background: #e8e0d4; 
+  overflow: hidden; 
+  font-family: Arial, Helvetica, sans-serif;
+  user-select: none;
+}
+canvas { display: block; }
+#ui-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#turn-indicator {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 30px;
+  font-size: 18px;
+  letter-spacing: 2px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#turn-dot {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  transition: background 0.3s;
+}
+#captured-panel {
+  position: absolute;
+  top: 80px; right: 20px;
+  background: rgba(0,0,0,0.45);
+  padding: 16px;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 13px;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 150px;
+}
+#captured-panel h3 {
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.6;
+}
+.captured-row { font-size: 22px; line-height: 1.5; word-wrap: break-word; max-width: 130px; min-height: 30px; }
+#status-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.6);
+  padding: 8px 22px;
+  border-radius: 20px;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+#thinking-indicator {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: #f0c040;
+  padding: 8px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: none;
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+#modal-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: all;
+}
+#modal-overlay.active { display: flex; }
+#modal-box {
+  background: linear-gradient(145deg, #3a3a5a, #1e1e36);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 22px;
+  padding: 44px 54px;
+  text-align: center;
+  color: #fff;
+}
+#modal-box h2 { font-size: 30px; margin-bottom: 12px; }
+#modal-box p { font-size: 16px; opacity: 0.65; margin-bottom: 28px; }
+#modal-box button {
+  background: linear-gradient(145deg, #e2b06f, #c4943a);
+  border: none;
+  color: #1a1a2e;
+  padding: 14px 44px;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  pointer-events: all;
+  letter-spacing: 1px;
+  transition: transform 0.15s;
+}
+#modal-box button:hover { transform: scale(1.06); }
+#difficulty-panel {
+  position: absolute;
+  top: 80px; left: 20px;
+  background: rgba(0,0,0,0.45);
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: #fff;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  pointer-events: all;
+}
+#difficulty-panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+#difficulty-panel button {
+  display: block;
+  width: 100%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+  pointer-events: all;
+}
+#difficulty-panel button:hover { background: rgba(255,255,255,0.2); }
+#difficulty-panel button.active { background: rgba(226,176,111,0.5); border-color: #e2b06f; }
+</style>
+</head>
+<body>
+<div id="ui-overlay">
+  <div id="turn-indicator"><span id="turn-dot"></span><span id="turn-text">WHITE'S TURN</span></div>
+  <div id="thinking-indicator">🤖 AI is thinking...</div>
+  <div id="captured-panel">
+    <h3>Captured</h3>
+    <div class="captured-row" id="captured-white"></div>
+    <div class="captured-row" id="captured-black"></div>
+  </div>
+  <div id="difficulty-panel">
+    <h3>AI Difficulty</h3>
+    <button id="diff-easy" onclick="setDifficulty(1)">Easy</button>
+    <button id="diff-medium" class="active" onclick="setDifficulty(2)">Medium</button>
+    <button id="diff-hard" onclick="setDifficulty(3)">Hard</button>
+  </div>
+  <div id="status-bar">Drag to rotate • Scroll to zoom • Click piece to move • You are White</div>
+</div>
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h2 id="modal-title">Checkmate!</h2>
+    <p id="modal-desc">White wins the game</p>
+    <button id="modal-btn" onclick="restartGame()">Play Again</button>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/CaByenfeI3Yy1su50lqZ5ZWNlTH3/sessions/ypor8FqNxZdamhoEdqub/games/PkSDbX6M4WUaKXfix8WF.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=DQnU4j7eOrrc57DTpHSQDTSqjIgAra%2Fh5w8Z3cOlgW8dWuegZtr2zW3l%2BmoI2L%2FpZI3rig%2BiU4pVJ93HcqF%2FSjiIFpD8FISlSJAPg%2FiW44JWzZDURDpliIr7RiOS26%2FhfSbIBgVSbDtviqWSxaVcYnJ63bG59IJtQcUuWO2i5iYwUWYYjeYvuSazIp1muxsHjaStYla2GsaPWMXO3UP0Ybs5QuJL8OjYd1Jt7EtNpPNREfMofih86Qw0CW%2B45t4LfPuOAuJIgIhiHgb0CFRm14SiQH12Qthwhxn13PtWfguuYh8ocx5CdASBLvMSQ5FUiBrER0JUXOeqnB15SPdKig%3D%3D"></script>
+</body>
+</html>
