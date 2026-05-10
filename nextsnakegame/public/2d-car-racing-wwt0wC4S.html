@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Drive Mad Chaos</title>
+    <style>
+        :root {
+            --red: #ff3333;
+            --green: #39FF14;
+            --blue: #0FF0FC;
+            --yellow: #FFD700;
+            --dark: #1a1a1a;
+            --road: #333333;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            background-color: var(--dark);
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .hud {
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+        }
+        .stats span {
+            margin-right: 20px;
+            display: inline-block;
+        }
+        .powerup-indicator {
+            color: var(--yellow);
+        }
+        #menus {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        .hidden {
+            display: none !important;
+        }
+        h1 {
+            font-size: 48px;
+            color: var(--red);
+            text-shadow: 4px 4px 0 var(--yellow);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        p {
+            font-size: 18px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+        button {
+            background: var(--red);
+            color: white;
+            border: 4px solid white;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0 #000;
+            transition: transform 0.1s;
+        }
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+        
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .dpad {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 5px;
+            pointer-events: auto;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+        }
+        .btn:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+        
+        .action-btns {
+            display: flex;
+            align-items: flex-end;
+            pointer-events: auto;
+        }
+        .fire-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 51, 51, 0.4);
+            border: 4px solid rgba(255, 51, 51, 0.8);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .fire-btn:active {
+            background: rgba(255, 51, 51, 0.8);
+        }
+        
+        @media (min-width: 768px) {
+            #mobile-controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    
+    <div id="ui-layer">
+        <div class="hud">
+            <div class="stats">
+                Score: <span id="scoreVal">0</span>
+                Lives: <span id="livesVal">3</span>
+            </div>
+            <div class="powerup-indicator">
+                Missiles: <span id="ammoVal">0</span>
+                <span id="activePowerup"></span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="mobile-controls">
+        <div class="dpad">
+            <div class="btn up" id="btn-up">↑</div>
+            <div class="btn left" id="btn-left">←</div>
+            <div class="btn right" id="btn-right">→</div>
+            <div class="btn down" id="btn-down">↓</div>
+        </div>
+        <div class="action-btns">
+            <div class="fire-btn" id="btn-fire">FIRE</div>
+        </div>
+    </div>
+    
+    <div id="menus">
+        <h1 id="menu-title">DRIVE MAD CHAOS</h1>
+        <p id="menu-desc">Survive the chaotic highway! Collect power-ups, shoot missiles, and avoid crashing.<br><br><b>Controls:</b> Arrow Keys / WASD to Drive.<br>SPACE to shoot Missiles.</p>
+        <button id="start-btn">START ENGINE</button>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/YDeECXWGM0ST9APU77NPXAJuM962/sessions/UhXurOROSNm303p5Ec28/games/wwt0wC4STW7tv0pn3yTY.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=YcMbV7hYK1UlS3TpO75e2yUsqo1HcL%2BL10qPOE83Dl5DRVKyRbtzABsfKP%2BXbcJXyu68mXjxPI8PEwZMqSshqhIe53y3KI28CZ6M6Fc7x1KhV95KfrrjoaCJadYyo%2BjddBJ2Iy6fKXvA1HIcWdnicy9NBIeraymmh7siN679SLcQeDM30uTc%2BXystjn1JQ3ssyd8N7D21hUbhfnpkuWj5WpvS1akL8cRyV1Ior2EbWpCgKAHMJuZzyjSxcn%2FJLwluL5taPk17L33D8U6yOkF2fcbUjDg8T70Ipyki%2F1qJlWSnsxbHG2g2mrDWn7t2pRWSrXK3PYeOie6fWgtPj8vBg%3D%3D"></script>
+</body>
+</html>
