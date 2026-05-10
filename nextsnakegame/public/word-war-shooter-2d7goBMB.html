@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>World War 66: The Last Stand</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-green: #00ff33;
+            --neon-red: #ff3333;
+            --dark-bg: rgba(10, 15, 20, 0.85);
+            --panel-border: rgba(0, 243, 255, 0.4);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        #uiLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through to canvas */
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Top HUD */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .mission-panel {
+            background: var(--dark-bg);
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--neon-blue);
+            padding: 10px 20px;
+            color: white;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        #objectiveCount {
+            color: var(--neon-blue);
+            font-size: 18px;
+            display: block;
+            margin-top: 5px;
+            text-shadow: 0 0 8px var(--neon-blue);
+        }
+
+        .threat-panel {
+            color: var(--neon-red);
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-red);
+            animation: pulseThreat 2s infinite;
+        }
+
+        @keyframes pulseThreat {
+            0% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.8; }
+        }
+
+        /* Bottom HUD */
+        .hud-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 20px;
+            padding-bottom: 30px;
+            pointer-events: auto; /* Buttons need clicks */
+        }
+
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 30%;
+            min-width: 250px;
+        }
+
+        .health-wrapper {
+            background: var(--dark-bg);
+            border: 2px solid #333;
+            border-radius: 4px;
+            height: 24px;
+            width: 100%;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        #healthBar {
+            height: 100%;
+            width: 100%;
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+            transition: width 0.2s ease-out, background 0.2s;
+        }
+
+        .health-text {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        .ammo-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .ammo-text {
+            color: var(--neon-blue);
+            font-size: 32px;
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+            font-family: monospace;
+        }
+
+        .ammo-label {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Controls */
+        .controls-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .action-btn {
+            background: rgba(0, 243, 255, 0.1);
+            border: 2px solid var(--neon-blue);
+            color: white;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) inset, 0 0 10px rgba(0, 243, 255, 0.2);
+            transition: all 0.1s;
+            backdrop-filter: blur(4px);
+            letter-spacing: 1px;
+        }
+
+        .action-btn:active {
+            background: rgba(0, 243, 255, 0.4);
+            transform: scale(0.95);
+        }
+
+        .action-btn.active-cover {
+            background: rgba(0, 255, 51, 0.2);
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 51, 0.2) inset, 0 0 10px rgba(0, 255, 51, 0.2);
+            color: var(--neon-green);
+        }
+
+        .action-btn:disabled {
+            border-color: #555;
+            color: #555;
+            background: rgba(0,0,0,0.5);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Screens (Menu, Game Over, Victory) */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 15, 20, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: white;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            color: transparent;
+            -webkit-text-stroke: 2px white;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        .title span {
+            color: var(--neon-blue);
+            -webkit-text-stroke: 0;
+            text-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #aaa;
+            max-width: 500px;
+            line-height: 1.5;
+            margin-bottom: 40px;
+        }
+
+        .primary-btn {
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3) inset, 0 0 15px rgba(0, 243, 255, 0.3);
+        }
+
+        .primary-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.6) inset, 0 0 30px rgba(0, 243, 255, 0.6);
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+        
+        #damageOverlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 100px rgba(255,0,0,0);
+            pointer-events: none;
+            transition: box-shadow 0.1s;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            .hud-bottom { flex-direction: column; align-items: center; gap: 20px; }
+            .stats-container { width: 90%; }
+            .mission-panel { padding: 5px 10px; font-size: 12px; }
+            .action-btn { padding: 12px 20px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="damageOverlay"></div>
+
+    <!-- UI Overlay -->
+    <div id="uiLayer">
+        <div class="hud-top">
+            <div class="mission-panel">
+                Mission Objective
+                <span id="objectiveCount">Drones Destroyed: 0 / 20</span>
+            </div>
+            <div class="threat-panel">
+                Airspace Hostile
+            </div>
+        </div>
+        <div class="hud-bottom">
+            <div class="stats-container">
+                <div class="health-wrapper">
+                    <div class="health-text" id="healthText">INTEGRITY 100%</div>
+                    <div id="healthBar"></div>
+                </div>
+                <div class="ammo-wrapper">
+                    <div class="ammo-label">Mag Capacity<br>Energy Cell</div>
+                    <div class="ammo-text" id="ammoCount">30</div>
+                </div>
+            </div>
+            <div class="controls-container">
+                <button class="action-btn" id="btnCover">Take Cover</button>
+                <button class="action-btn" id="btnReload">Reload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen">
+        <div class="title">World War <span>66</span></div>
+        <div class="subtitle">
+            The year is 2066. Enemy drones have breached the outer city limits. 
+            <br><br>
+            <strong>TAP/CLICK</strong> on the screen to fire your high-tech rifle. <br>
+            Use <strong>TAKE COVER</strong> to avoid incoming fire, but you cannot shoot while hidden. <br>
+            Manage your ammo and <strong>RELOAD</strong> when empty.
+        </div>
+        <button class="primary-btn" onclick="startGame()">Commence Defense</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="title" style="color: var(--neon-red); -webkit-text-stroke: 0; text-shadow: 0 0 20px var(--neon-red);">KIA</div>
+        <div class="subtitle">Your position was overrun. The city has fallen.</div>
+        <button class="primary-btn" style="border-color: var(--neon-red); color: var(--neon-red); box-shadow: 0 0 15px rgba(255,0,0,0.3) inset, 0 0 15px rgba(255,0,0,0.3);" onclick="resetGame()">Retry Mission</button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="screen hidden">
+        <div class="title" style="color: var(--neon-green); -webkit-text-stroke: 0; text-shadow: 0 0 20px var(--neon-green);">SECTOR CLEARED</div>
+        <div class="subtitle">You held the line. The drone wave has been eliminated. Excellent work, soldier.</div>
+        <button class="primary-btn" style="border-color: var(--neon-green); color: var(--neon-green); box-shadow: 0 0 15px rgba(0,255,0,0.3) inset, 0 0 15px rgba(0,255,0,0.3);" onclick="resetGame()">Next Sector</button>
+    </div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/42GBFMd4jPZDAO8SLKrwIzJ97jE2/sessions/xZL8M0bajy4hYimI45eK/games/2d7goBMBHG4M0nm7sisX.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=kjL%2Fkq4w3bqHPKZeFUTRxkbDVhkqICSUJy8X1j4cNA6LE6VfEOR8ULazYx%2BLEF94ApyeWyQPRgergZSPcagX90MzY9VmPOlUr3rsVt50rjfCx5mOBN8armYV7XJfDLrCQtFymbvva4aFhTjZV8bLVgw5N1zvbH%2Fg6JKvzYMV%2BrY3I1WgkIszgCa5%2FtCgMT97W%2BF%2Fe3EL85UiWTlFRKgoP%2FnooOD0mTVXZtChG0kK5XU8zqfl4AtJzyZ%2FJmjbOafgcDaPEuYkGl81s4zv%2FP%2ByX%2FwyfMujg84fj2M7wQ%2BbSMaAcZyRKJgjkZL1Otvmd6GTi2sMOmm4unOFzEy83lHE2Q%3D%3D"></script>
+</body>
+</html>
