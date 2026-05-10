@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tornado City Destruction</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #111; overflow: hidden; width: 100vw; height: 100vh; user-select: none; }
+    canvas { display: block; }
+    
+    #ui-layer {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+        display: flex; flex-direction: column; justify-content: space-between;
+    }
+    
+    #hud {
+        padding: 20px;
+        display: flex; justify-content: space-between;
+        color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    .hud-box {
+        background: rgba(0,0,0,0.5);
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 2px solid #555;
+    }
+    #score-display { font-size: 24px; font-weight: bold; color: #4CAF50; }
+    #ef-display { font-size: 28px; font-weight: bold; color: #FF9800; }
+    #progress-container {
+        width: 100%; height: 10px; background: #333; margin-top: 5px; border-radius: 5px; overflow: hidden;
+    }
+    #progress-bar { height: 100%; width: 0%; background: #FF9800; transition: width 0.2s; }
+    
+    #controls {
+        padding: 20px; display: flex; justify-content: space-between; pointer-events: auto;
+    }
+    .btn {
+        background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white;
+        padding: 20px 40px; font-size: 24px; border-radius: 12px; cursor: pointer;
+        backdrop-filter: blur(5px); touch-action: manipulation;
+    }
+    .btn:active { background: rgba(255,255,255,0.4); transform: scale(0.95); }
+    
+    #menu-screen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(10,15,20,0.9); pointer-events: auto;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+    }
+    h1 { color: #fff; font-size: 48px; margin-bottom: 10px; text-align: center; text-shadow: 0 0 10px #555; }
+    p.subtitle { color: #aaa; margin-bottom: 30px; font-size: 18px; text-align: center;}
+    
+    #level-select {
+        display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 600px; margin-bottom: 30px;
+    }
+    .ef-btn {
+        padding: 15px 25px; font-size: 20px; font-weight: bold; border-radius: 8px; cursor: pointer;
+        border: 2px solid #555; background: #222; color: #777; transition: all 0.2s;
+    }
+    .ef-btn.unlocked { color: #fff; border-color: #FF9800; background: #332000; }
+    .ef-btn.unlocked:hover { background: #4a3000; transform: translateY(-2px); }
+    .ef-btn.selected { background: #FF9800; color: #000; border-color: #fff; box-shadow: 0 0 15px #FF9800; }
+    
+    #start-btn {
+        padding: 15px 50px; font-size: 24px; font-weight: bold; border: none; border-radius: 30px;
+        background: #4CAF50; color: white; cursor: pointer; transition: transform 0.2s;
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
+    #start-btn:hover { transform: scale(1.05); }
+    #start-btn:active { transform: scale(0.95); }
+    
+    #menu-btn { pointer-events: auto; background: rgba(0,0,0,0.5); color: white; border: 1px solid #555; padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-layer">
+    <div id="hud" style="display: none;">
+        <div class="hud-box">
+            <div>DAMAGE CAUSED</div>
+            <div id="score-display">$0</div>
+            <button id="menu-btn">Quit to Menu</button>
+        </div>
+        <div class="hud-box" style="text-align: right; min-width: 200px;">
+            <div id="ef-display">EF0</div>
+            <div style="font-size: 12px; color: #aaa;">Next Category:</div>
+            <div id="progress-container"><div id="progress-bar"></div></div>
+        </div>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <button class="btn" id="btn-left">◀ LEFT</button>
+        <button class="btn" id="btn-right">RIGHT ▶</button>
+    </div>
+</div>
+
+<div id="menu-screen">
+    <h1>🌪️ TORNADO ALLEY</h1>
+    <p class="subtitle">Destroy the city. Grow your storm. Unlock higher EF levels.</p>
+    
+    <div style="color: white; margin-bottom: 10px; font-weight: bold;">Select Starting Intensity:</div>
+    <div id="level-select">
+        <!-- Generated via JS -->
+    </div>
+    
+    <button id="start-btn">SPAWN TORNADO</button>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/nGQjgz2ZdPQcnAntOv5t9vfPhqn2/sessions/hE3x0rGuR9T6Dt6fz1qp/games/oyAen1wOSkt12RCUm7Tn.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=TYLoTFd%2BAgU9m8byhfFGiO%2FLBQk0EWSKmxoAoX0zGWczGVHl5uLwQr7hQfjncqFRTj4aJ9JAtQH58XJE4H%2BuO6idwqahO6FMLCDK2YPQamHvAHMR503aRyBzRsFGq7oAP8NzCFWtStJkI4J3wOGI3HhQ1qHU9K979UMM48VSYGP9255zQ1HO1YwK0SgN8b%2FhUnsYKVxAcxBJfquTTFdAL2FA5mc9UVKPVH5AFV%2FYKnDE0SZLN5zWbjYAN5%2BVX81D7XcRRZ%2B1bH%2BkHAy3vvEwrXgbzET5UF40zFVSewAyDDq5cAR2jWjIYDpsCNnMJwzXtfvi2HPEEEsXYCuj3Cga5w%3D%3D"></script>
+</body>
+</html>
