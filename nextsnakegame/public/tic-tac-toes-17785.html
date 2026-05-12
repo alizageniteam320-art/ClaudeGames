@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic-Tac-Toe: Best of 5</title>
+    <style>
+        :root {
+            --primary-blue: #0A74F6;
+            --primary-red: #FA3E3E;
+            --bg-color: #F8F9FA;
+            --text-main: #1C1E21;
+            --text-muted: #65676B;
+            --board-bg: #E4E6EB;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #ffffff;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Bar: Round & Score */
+        .top-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .round-counter {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background: var(--bg-color);
+            padding: 15px 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .score-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .score-player { color: var(--primary-red); }
+        .score-ai { color: var(--primary-blue); }
+
+        /* Game Board */
+        .board-wrapper {
+            background-color: var(--primary-blue);
+            padding: 12px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(10, 116, 246, 0.2);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background-color: var(--primary-blue);
+        }
+
+        .cell {
+            background-color: #ffffff;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 5rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s ease;
+            user-select: none;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell.x {
+            color: var(--primary-red);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .cell.o {
+            color: var(--primary-blue);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .cell.winning-cell {
+            background-color: #FFF3CD;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Bottom Section */
+        .bottom-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .status {
+            font-size: 1.25rem;
+            font-weight: 700;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status.player-turn {
+            color: var(--text-main);
+        }
+
+        .status.ai-turn {
+            color: var(--primary-blue);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(10, 116, 246, 0.3);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        .ai-turn .spinner { display: inline-block; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn {
+            background-color: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(250, 62, 62, 0.3);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            max-width: 90%;
+            width: 350px;
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .modal-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .win-title { color: var(--primary-red); }
+        .lose-title { color: var(--primary-blue); }
+        .draw-title { color: var(--text-main); }
+
+        /* Particles */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            z-index: 1000;
+            animation: fadeOut 1s forwards;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- Top UI -->
+        <div class="top-bar">
+            <div class="round-counter" id="roundDisplay">Round 1</div>
+            <div class="scoreboard">
+                <div class="score-box">
+                    <span class="score-name">Player (X)</span>
+                    <span class="score-value score-player" id="scorePlayer">0</span>
+                </div>
+                <div class="score-box">
+                    <span class="score-name">AI (O)</span>
+                    <span class="score-value score-ai" id="scoreAI">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="board-wrapper">
+            <div class="board" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </div>
+
+        <!-- Bottom UI -->
+        <div class="bottom-section">
+            <div class="status player-turn" id="statusText">
+                <div class="spinner"></div>
+                <span id="statusMessage">Your Turn</span>
+            </div>
+            <button class="btn" id="resetBtn" onclick="resetFullGame()">Restart Game</button>
+        </div>
+    </div>
+
+    <!-- Modal for Round / Game Over -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modalTitle">Round Won!</h2>
+            <p class="modal-text" id="modalText">You won this round.</p>
+            <button class="btn" id="modalBtn" onclick="nextRound()">Next Round</button>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/TC2Llaun0jbr1bDrOd7j2r07Hdq2/sessions/5pIxKeTKeRGLXT2n1ugx/games/0l3QYmQqvGeeHETPtjow.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=pSMTJjcTQIAvtrQo%2FgRmEFqoKUu2X3VVqBOVI4x1rz6eGRZyWDnOaw30pU6pyTNdmkZK6ori2qf4KwQe4YJqCQNrXMkEYz5KYtdNFf6t2Rf%2FSm9uGdTtu%2B01gC3osgeW25pcKEr6mIAGQg0SBRyEfxHk0E1jHOGA1ua3QKQCfyOCftr%2BymYikGYjfaJgUsQWboPxHyJAXAuccYpcY40Abltu1HYj3HFrDA7dh%2FOylF2X9A1RHKltQ2QdsTPPddD9Ip8X9AnZv3Et2lLKisx%2Betr%2BmoGJWLtsy5lweY1Z3P%2FKPANtrQjHLRBwZpZH73v8oyimn8bSTr8yhK23JOvXcg%3D%3D"></script>
+</body>
+</html>
