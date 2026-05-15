@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DEAD WARD: ASYLUM OUTBREAK</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Courier New',Courier,monospace;user-select:none;-webkit-user-select:none;cursor:crosshair}
+canvas{display:block;position:absolute;top:0;left:0}
+#startScreen,#gameOverScreen,#winScreen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+#startScreen{background:radial-gradient(ellipse at center,#1a0000 0%,#000 80%)}
+#gameOverScreen,#winScreen{background:rgba(0,0,0,0.93);display:none}
+.tt{font-size:clamp(32px,7vw,68px);color:#cc0000;text-shadow:0 0 20px #ff0000,0 0 50px #880000,3px 3px 0 #440000;letter-spacing:6px;animation:tp 2s infinite}
+.tt2{font-size:clamp(16px,3.5vw,30px);color:#aa0000;text-shadow:0 0 15px #ff0000,0 0 30px #660000;letter-spacing:8px;margin-top:-5px}
+@keyframes tp{0%,100%{text-shadow:0 0 20px #ff0000,0 0 50px #880000}50%{text-shadow:0 0 50px #ff0000,0 0 100px #cc0000}}
+.st{font-size:clamp(11px,1.8vw,15px);color:#553333;letter-spacing:4px;margin:8px 0 28px}
+.btn{padding:14px 44px;font-size:clamp(15px,2.2vw,20px);font-family:'Courier New',Courier,monospace;background:linear-gradient(180deg,#8b0000,#3a0000);color:#ff4444;border:2px solid #cc0000;cursor:pointer;letter-spacing:3px;text-transform:uppercase;transition:all .2s;margin:8px}
+.btn:hover,.btn:active{background:linear-gradient(180deg,#cc0000,#5a0000);color:#fff;box-shadow:0 0 30px rgba(255,0,0,.6);transform:scale(1.05)}
+.ci{color:#553333;font-size:clamp(9px,1.3vw,12px);margin-top:22px;text-align:center;line-height:2.1}
+.sc{color:#999;font-size:clamp(14px,2vw,20px);margin:14px 0}
+.wt{font-size:clamp(28px,5vw,48px);color:#00cc44;text-shadow:0 0 25px #00ff44,0 0 50px #008822;letter-spacing:5px;margin-bottom:10px}
+#mob{display:none;position:absolute;bottom:0;left:0;right:0;height:190px;z-index:50;pointer-events:none}
+.mb{position:absolute;width:54px;height:54px;border-radius:50%;background:rgba(80,0,0,.45);border:2px solid rgba(180,0,0,.45);color:#bb0000;font-size:20px;display:flex;align-items:center;justify-content:center;pointer-events:all;-webkit-tap-highlight-color:transparent}
+.mb:active{background:rgba(180,0,0,.55)}
+#mu{bottom:120px;left:65px}#md2{bottom:12px;left:65px}#mle{bottom:66px;left:9px}#mri{bottom:66px;left:121px}
+#mfi{bottom:55px;right:16px;width:76px;height:76px;font-size:12px;letter-spacing:1px}
+#mrl2{bottom:55px;right:108px;font-size:9px}
+@media(hover:none)and (pointer:coarse){#mob{display:block}body{cursor:default}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="startScreen">
+<div class="tt">DEAD WARD</div>
+<div class="tt2">ASYLUM OUTBREAK</div>
+<div class="st">— SURVIVE THE HORROR —</div>
+<button class="btn" id="startBtn">▶ ENTER THE ASYLUM</button>
+<div class="ci">WASD/Arrows — Move &nbsp;|&nbsp; Mouse — Aim &amp; Shoot<br>R — Reload &nbsp;|&nbsp; Survive 5 waves to escape<br>Touch controls on mobile</div>
+</div>
+
+<div id="gameOverScreen">
+<div class="tt" style="font-size:clamp(28px,5vw,44px)">YOU DIED</div>
+<div class="sc" id="finalScore">Wave 1 — Score: 0</div>
+<button class="btn" id="retryBtn">↻ TRY AGAIN</button>
+</div>
+
+<div id="winScreen">
+<div class="wt">ESCAPED!</div>
+<div class="st" style="color:#0a8">YOU SURVIVED THE ASYLUM</div>
+<div class="sc" id="winScore">Score: 0</div>
+<button class="btn" id="winBtn" style="border-color:#0a4;color:#0f6;background:linear-gradient(180deg,#040,#020)">▶ PLAY AGAIN</button>
+</div>
+
+<div id="mob">
+<div class="mb" id="mu">▲</div>
+<div class="mb" id="md2">▼</div>
+<div class="mb" id="mle">◄</div>
+<div class="mb" id="mri">►</div>
+<div class="mb" id="mfi">FIRE</div>
+<div class="mb" id="mrl2">RLD</div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/oXgu3AX8rbUHM4TiatwwHRCEUzo2/sessions/NmlZorUmmeb83Yv8IcOF/games/qJr6bTmjgRjjEPS4hnKV.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=MFDP5ZeUavmxH1XTVfo5h6vJvk%2FPdt29yQ76%2BGEv5%2B8JAFDXTOYkCOCXI2Ci%2FmNICAMgbOXCzLuXSMp0E3CNK8OmrTrWAeiPFOwP8r4DI3BfyKznLcWFIMMF3BtaVW4TBfE5KTjFZxguHUpb9n2GNLvCO6jX7r5Svs2kJdzAVQJXMrt532NMaCX9S01%2FiZcQaTY%2FA4X5PR4vAnkviIDTIlD053fhE24Xhjc8ShZd5nD%2F3yFwfYVQvAobP1xzhGY0V5Ry8LNE60uMrjhsdrswJ54T5iYSxXOYZmNjQWW5%2BSUMcPG5OWTaMmmQzyx73vjnP8PLa0mslcdxiPTC3jPVdA%3D%3D"></script>
+</body>
+</html>
