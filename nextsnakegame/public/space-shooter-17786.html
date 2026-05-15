@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Galactic Defender - Smooth Arcade</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #010104;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 850px;
+            background: #050510;
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.15);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 20;
+        }
+
+        .hud {
+            padding: 20px;
+            color: #FFF;
+            font-size: 24px;
+            font-weight: 900;
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 0px 0px 10px rgba(0, 255, 255, 0.8);
+        }
+
+        .hud-left, .hud-right { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        .hud-right { text-align: right; }
+        
+        .label {
+            font-size: 14px;
+            color: #88c0d0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #screens {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(1, 1, 4, 0.85);
+            color: white;
+            z-index: 30;
+            pointer-events: auto;
+            transition: opacity 0.4s ease;
+        }
+
+        .hidden { 
+            opacity: 0; 
+            pointer-events: none !important; 
+        }
+
+        h1 {
+            color: #00FF88;
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            margin-top: 0;
+        }
+
+        h2 {
+            color: #ff3366;
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: none;
+            text-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
+        }
+
+        p {
+            font-size: 16px;
+            text-align: center;
+            color: #a0aec0;
+            margin-bottom: 40px;
+            max-width: 80%;
+            line-height: 1.6;
+            letter-spacing: 1px;
+        }
+
+        button.action-btn {
+            background: #000;
+            border: 3px solid #00FF66;
+            color: #00FF66;
+            padding: 18px 50px;
+            font-size: 24px;
+            font-family: inherit;
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
+            letter-spacing: 2px;
+        }
+
+        button.action-btn:hover, button.action-btn:active {
+            background: #00FF66;
+            color: #000;
+            box-shadow: 0 0 25px #00FF66;
+            transform: scale(1.05);
+        }
+
+        #mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            padding: 0 30px;
+            box-sizing: border-box;
+            display: none;
+            justify-content: space-between;
+            pointer-events: auto;
+            z-index: 25;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .ctrl-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 136, 0.5);
+            color: rgba(0, 255, 136, 0.9);
+            font-size: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-btn:active {
+            background: rgba(0, 255, 136, 0.4);
+            border-color: #00FF88;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls { display: flex; }
+            h1 { font-size: 36px; }
+            .hud { font-size: 20px; padding: 15px; }
+            button.action-btn { font-size: 20px; padding: 15px 40px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="600" height="850"></canvas>
+    
+    <div id="ui-layer">
+        <div class="hud" id="hud-display">
+            <div class="hud-left">
+                <span class="label">SCORE</span>
+                <span id="scoreVal">00000</span>
+            </div>
+            <div class="hud-right">
+                <span class="label">LIVES</span>
+                <span id="livesVal">3</span>
+            </div>
+        </div>
+
+        <div id="mobile-controls">
+            <div class="control-group">
+                <div class="ctrl-btn" id="btn-left">◀</div>
+                <div class="ctrl-btn" id="btn-right">▶</div>
+            </div>
+            <div class="control-group">
+                <div class="ctrl-btn" id="btn-shoot">🔥</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screens">
+        <h2 id="game-over-title">MISSION FAILED</h2>
+        <h1 id="screen-title">Galactic<br>Defender</h1>
+        <p id="screen-desc">Use Left/Right arrows to move.<br>Spacebar to shoot.<br>Destroy the alien armada!</p>
+        <button class="action-btn" id="start-btn">ENGAGE</button>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/CaByenfeI3Yy1su50lqZ5ZWNlTH3/sessions/Vtr7GTASA5KbFPxWty0q/games/60DZlEm20Q15VZPJat0r.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=eLCgkcBT7n4wVrQKXZuQsJO5o7FjCHpSloGi9B6mRb0VWOZqJa0cogq8HbrFNOfpG%2Bkhz4E6nSvUcxXab48eUPVCy8YWIzTngguXnXT%2FT1xNcd0WzaT6nrl%2BKmZky%2B9H64Qys629q%2BzRPknUTYeSisXCQUANNDMifV%2Fpy25vy5NY7E%2FtSSgwqvRTJjxQciyN7D0%2FAtDjITLn0%2B0JxPQ0dG%2F%2FbTYrEHRq2OWe3Pxtmtd8%2FmU%2BkNl119jtZXqHp8Y9M63cGMfd0ghXxo94wGw2tc9WqqMxXlm2mYcmh6WeIOYJmy4ms125%2FmUNngqKOYZRAsR1RlrvgPuX5LYMQq1MSg%3D%3D"></script>
+</body>
+</html>
