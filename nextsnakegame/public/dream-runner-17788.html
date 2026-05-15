@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Barbie Dream Runner</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #ffcce6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: 'Arial', sans-serif;
+        overflow: hidden;
+        touch-action: none;
+        user-select: none;
+    }
+    #game-container {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        height: 100vh;
+        max-height: 900px;
+        background: #000;
+        box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
+        overflow: hidden;
+    }
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    #ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    #score-board {
+        padding: 20px;
+        font-size: 26px;
+        font-weight: 900;
+        color: #fff;
+        text-shadow: 2px 2px 0px #ff1493, -1px -1px 0px #ff1493, 0px 4px 10px rgba(255, 20, 147, 0.8);
+        display: flex;
+        justify-content: space-between;
+    }
+    #powerups-ui {
+        position: absolute;
+        top: 80px;
+        left: 20px;
+        display: flex;
+        gap: 15px;
+    }
+    .powerup-icon {
+        font-size: 24px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 4px solid #ff1493;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 0 20px rgba(255, 20, 147, 0.8);
+        animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 10px rgba(255, 20, 147, 0.5); }
+        100% { transform: scale(1.1); box-shadow: 0 0 25px rgba(255, 20, 147, 1); }
+    }
+    .screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 192, 203, 0.85);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        pointer-events: auto;
+        z-index: 10;
+        text-align: center;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: opacity 0.3s ease;
+    }
+    .hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+    h1 {
+        color: #fff;
+        font-size: 48px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        text-shadow: 4px 4px 0px #ff1493, 0 0 20px rgba(255, 255, 255, 0.8);
+    }
+    p {
+        color: #fff;
+        background: rgba(255, 20, 147, 0.7);
+        border-radius: 15px;
+        padding: 15px 25px;
+        font-size: 20px;
+        margin-bottom: 40px;
+        line-height: 1.6;
+        font-weight: bold;
+        border: 2px solid #fff;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    button {
+        background: linear-gradient(180deg, #ff69b4, #ff1493);
+        color: white;
+        border: 5px solid #fff;
+        padding: 18px 50px;
+        font-size: 26px;
+        font-weight: 900;
+        border-radius: 40px;
+        cursor: pointer;
+        box-shadow: 0 8px 25px rgba(255, 20, 147, 0.6);
+        transition: all 0.1s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    button:active {
+        transform: scale(0.9) translateY(4px);
+        box-shadow: 0 2px 10px rgba(255, 20, 147, 0.6);
+    }
+    #controls-hint {
+        color: white;
+        text-align: center;
+        padding-bottom: 40px;
+        font-size: 18px;
+        font-weight: bold;
+        text-shadow: 2px 2px 0px #ff1493, -1px -1px 0px #ff1493;
+        letter-spacing: 1px;
+    }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-layer">
+        <div id="score-board">
+            <span id="scoreText">SCORE: 0</span>
+            <span id="gemsText">💎 0</span>
+        </div>
+        <div id="powerups-ui">
+            <div id="star-ui" class="powerup-icon hidden">⭐</div>
+            <div id="magnet-ui" class="powerup-icon hidden">🧲</div>
+        </div>
+        <div id="controls-hint">⬅️ SWIPE TO MOVE ➡️<br><br>⬆️ SWIPE UP TO JUMP</div>
+    </div>
+
+    <div id="startScreen" class="screen">
+        <h1>Dream<br>Runner</h1>
+        <p>Run through the magical pastel kingdom!<br>Collect pink gems and dodge the rolling logs.</p>
+        <button id="startBtn">PLAY NOW</button>
+    </div>
+
+    <div id="gameOverScreen" class="screen hidden">
+        <h1>Oops!</h1>
+        <p id="finalScoreText">You scored 0 points.</p>
+        <button id="restartBtn">RUN AGAIN</button>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/Ae7pfAW7AUYLQQqhcoZ159cH4vf1/sessions/ITbX2uN0fIu9H6f63n8R/games/UyEiUU3vD31Ufz2ZP1t2.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=M8gKh9zG1VMOKAJrXMIjEhphR5FpcwV45EyuUm7d48Z2kHXrBFM7EuwR6omN7DskoidbZ0OztZVor5tUdpEFNUl5Ekvt8uJrl1FWzdsq5Vhbz%2FQJX20KCHeQUCzruNSwJdcFBOq%2BrCOV9223Fjr4FEqKuOjw4YIsagVx9LVx2%2F%2BxMrs54VFUyo%2BDffHy1vjPHuhyI%2Fga%2BOPW%2FTtTEZ7CdVRf2DkIaixPGGgu5nMBVVd%2BhQOUuB9CQHzDt%2FF8atV%2FM0W86fOpbV%2BmhfOh7wLSBSS7oC%2FvXT6Q%2Ba3zoFNBOx%2FPD3ZAgX3vmRShiV7WV7cjQjfi8lHIkX5bCxnZEN4F2A%3D%3D"></script>
+</body>
+</html>
