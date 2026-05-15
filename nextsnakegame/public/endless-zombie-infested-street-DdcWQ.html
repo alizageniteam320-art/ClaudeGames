@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zombie Street Sweeper</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1a1e24;
+            overflow: hidden;
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        #uiLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            right: 0;
+        }
+
+        .hud-panel {
+            position: absolute;
+            top: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            font-size: 24px;
+            letter-spacing: 2px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        #statsLeft { left: 20px; }
+        #statsRight { right: 20px; text-align: right; }
+
+        .hud-title { font-size: 20px; color: #fff; }
+        .stat-value { color: #fff; font-size: 32px; }
+        
+        .health-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px 5px 5px;
+            border-radius: 20px;
+            border: 2px solid #fff;
+        }
+
+        .heart-icon {
+            width: 24px;
+            height: 24px;
+            background: #eb4d4b;
+            clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+        }
+
+        .hp-bar {
+            width: 100px;
+            height: 12px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .hp-fill {
+            width: 100%;
+            height: 100%;
+            background: #f1c40f;
+        }
+
+        /* Menus */
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 30, 36, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 10;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 64px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            text-shadow: 4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            letter-spacing: 4px;
+        }
+
+        .menu-box {
+            background: #2b323c;
+            border: 4px solid #fff;
+            border-radius: 12px;
+            padding: 40px 60px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 8px 8px 0 rgba(0,0,0,0.5);
+        }
+
+        p.instructions {
+            color: #ecf0f1;
+            font-size: 20px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .highlight { color: #eb4d4b; }
+
+        button {
+            background: #eb4d4b;
+            color: white;
+            border: 4px solid #fff;
+            padding: 15px 40px;
+            font-size: 28px;
+            font-family: 'Impact', sans-serif;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.1s;
+        }
+
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0 #000;
+        }
+
+        #gameOverScreen { display: none; }
+
+        /* Mobile Controls */
+        #mobileControls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            z-index: 5;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 4px solid rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.9);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            font-size: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        #btnShoot {
+            background: rgba(235, 77, 75, 0.3);
+            border-color: #eb4d4b;
+            color: #eb4d4b;
+        }
+
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        #btnShoot:active { background: rgba(235, 77, 75, 0.5); }
+
+        @media (max-width: 800px) {
+            #mobileControls { display: flex; }
+            h1 { font-size: 40px; }
+            .menu-box { padding: 20px; }
+            .hud-panel { font-size: 18px; }
+            .stat-value { font-size: 24px; }
+            .health-bar-container { padding: 3px 10px 3px 3px; }
+            .hp-bar { width: 60px; height: 8px; }
+            .heart-icon { width: 18px; height: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="uiLayer">
+        <div id="statsLeft" class="hud-panel">
+            <div class="hud-title">DISTANCE</div>
+            <div id="distDisplay" class="stat-value">0P</div>
+            <div class="health-bar-container">
+                <div class="heart-icon"></div>
+                <div class="hp-bar"><div class="hp-fill"></div></div>
+            </div>
+        </div>
+        <div id="statsRight" class="hud-panel">
+            <div class="hud-title">SCORE</div>
+            <div id="killDisplay" class="stat-value">0</div>
+        </div>
+
+        <!-- Start Menu -->
+        <div id="startScreen" class="menu-screen">
+            <div class="menu-box">
+                <h1>Street Sweeper</h1>
+                <p class="instructions">
+                    <span style="color:#f1c40f;">[UP ARROW] / [W]</span> - Jump Hurdles<br>
+                    <span style="color:#f1c40f;">[SPACE]</span> - Fire Shotgun<br><br>
+                    Survive the <span class="highlight">zombie horde</span>.<br>Clear the streets!
+                </p>
+                <button id="startBtn">START RUN</button>
+            </div>
+        </div>
+
+        <!-- Game Over Menu -->
+        <div id="gameOverScreen" class="menu-screen">
+            <div class="menu-box">
+                <h1>GAME OVER</h1>
+                <p class="instructions">
+                    Distance: <span id="finalDist" class="highlight">0</span> P<br>
+                    Zombies Cleared: <span id="finalKills" class="highlight">0</span>
+                </p>
+                <button id="restartBtn">TRY AGAIN</button>
+            </div>
+        </div>
+
+        <!-- Touch Controls -->
+        <div id="mobileControls">
+            <div class="control-btn" id="btnJump">↑</div>
+            <div class="control-btn" id="btnShoot">🔥</div>
+        </div>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/oXgu3AX8rbUHM4TiatwwHRCEUzo2/sessions/DWjwyUwqL1TLpprQaWlm/games/46sHeUfqWesSrUiteOT4.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=oBqvAdpwYLSi5KdtXWSK3EZD6EVxPS%2FVApceBJrXok9lx7xZBb8anwrB9BEijTnJ3ioIc2Tt6t7yJrtdl1hNdwOA%2F9vyFJIV%2FSOWpYtq05tGtMKd5rmNuNgSkXzM%2Boid%2BcLsO3ZedszjE2vQJrg41SdH0YomudLQ7vhyf0Mp7KG4TS0WUW60Jv4%2FW5QkLMvzU1NrnCN5YZceHjD8KYMmY4SBS7NvKGztKq%2FvtZH2H6EccI3DJF2nHnWvwtZydKImwaQELvBumXCtl7uB1raHDy3vXfWawdhxDZREzge1ByCEuOrWew9utEUeTlhGZqm2E84fNwCUwl1ExjmtWC4RRw%3D%3D"></script>
+</body>
+</html>
