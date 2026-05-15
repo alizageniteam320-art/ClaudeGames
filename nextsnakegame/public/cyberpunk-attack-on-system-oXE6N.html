@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyberpunk City: Night Run</title>
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff00ea;
+            --neon-orange: #ff7700;
+            --neon-green: #00ff66;
+            --dark-bg: #050510;
+            --ui-bg: rgba(5, 5, 16, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-bg);
+            color: var(--neon-cyan);
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+        }
+
+        /* Holographic UI */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ui-panel {
+            background: var(--ui-bg);
+            border: 1px solid var(--neon-cyan);
+            padding: 10px 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
+            text-shadow: 0 0 5px var(--neon-cyan);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .ui-panel.danger {
+            border-color: var(--neon-pink);
+            color: var(--neon-pink);
+            text-shadow: 0 0 5px var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 234, 0.3), inset 0 0 10px rgba(255, 0, 234, 0.1);
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .stat-label {
+            width: 60px;
+        }
+
+        .bar-container {
+            width: 100px;
+            height: 10px;
+            background: #111;
+            border: 1px solid #333;
+            margin-left: 10px;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.2s ease-out;
+        }
+
+        #hp-fill { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+        #xp-fill { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+        #wanted-fill { background: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            display: none;
+            z-index: 20;
+        }
+
+        .d-pad {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--neon-cyan);
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+
+        .btn:active {
+            background: rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+
+        #btn-up { top: 0; left: 52.5px; }
+        #btn-down { bottom: 0; left: 52.5px; }
+        #btn-left { top: 52.5px; left: 0; }
+        #btn-right { top: 52.5px; right: 0; }
+
+        @media (max-width: 768px) {
+            #mobile-controls { display: block; }
+            .bar-container { width: 60px; }
+            .ui-panel { font-size: 12px; padding: 5px 10px; }
+        }
+
+        /* Screen overlays */
+        #game-over, #level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid var(--neon-pink);
+            padding: 30px;
+            text-align: center;
+            display: none;
+            z-index: 30;
+            box-shadow: 0 0 30px rgba(255, 0, 234, 0.5);
+        }
+
+        #level-up {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 30px rgba(0, 255, 102, 0.5);
+            color: var(--neon-green);
+        }
+
+        h1 { margin-top: 0; }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+        .restart-btn:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="hud">
+        <div class="ui-panel">
+            <div class="stat-row">
+                <span class="stat-label">SYS_HP</span>
+                <div class="bar-container"><div id="hp-fill" style="width: 100%;"></div></div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">LVL <span id="level-text">1</span></span>
+                <div class="bar-container"><div id="xp-fill" style="width: 0%;"></div></div>
+            </div>
+        </div>
+        <div class="ui-panel danger">
+            <div class="stat-row">
+                <span class="stat-label">WANTED</span>
+                <div class="bar-container"><div id="wanted-fill" style="width: 0%;"></div></div>
+            </div>
+            <div style="text-align:right; font-size: 10px; margin-top:4px;" id="score-text">SCORE: 0</div>
+        </div>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="d-pad">
+            <div class="btn" id="btn-up">W</div>
+            <div class="btn" id="btn-down">S</div>
+            <div class="btn" id="btn-left">A</div>
+            <div class="btn" id="btn-right">D</div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1 style="color: #ff00ea; text-shadow: 0 0 10px #ff00ea;">SYSTEM FAILURE</h1>
+        <p>Your cybernetics have been shut down.</p>
+        <p>Final Score: <span id="final-score">0</span></p>
+        <button class="restart-btn" onclick="initGame()">Reboot System</button>
+    </div>
+    
+    <div id="level-up">
+        <h1 style="color: #00ff66; text-shadow: 0 0 10px #00ff66;">SYSTEM UPGRADE</h1>
+        <p>Level Increased. Speed and Resilience boosted.</p>
+    </div>
+</div>
+
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/oXgu3AX8rbUHM4TiatwwHRCEUzo2/sessions/isTIdFjZYWOFaBT8RweZ/games/fVngBQS00m1mu9rnAfyr.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=XGYHuxiCAmwsc1R%2F2D9RYiXouP3v4EMfVDrx8rsb8rtXUvBmFaAF03ISAAlNxna%2FjRWIyUvUoVmp0CKLb5OBi2ebyGsv2R8GH7zRdJT4l6kJGrNs9W9mv502uQoyDsDAKHulJ7%2FmpUHwTib6tzHl3Dnf7E89WaU5AXCzWWCVpIys8eFWtt%2BOvFWzLt9J8NMvq6ry5ON19psZD5MMQtDtwcwumMbU%2F1PSECFKHkol0fwXyUmf6rFRXXvPnbgzrHJX2AB%2B2ZFg9VSQ9bZMT5j4RowHgSBsRT%2FEJyNX1aEYb5KirVAEk71Z%2B7Tn50Iwfow8NNFs9Ej%2Bju0le4CwlWmrOQ%3D%3D"></script>
+</body>
+</html>
