@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cat Slider Puzzle</title>
+    <style>
+        :root {
+            --dark: #2d3436;
+            --bg-top: #ffecf1;
+            --bg-bottom: #ffd1dc;
+            --board-bg: #8c7ae6;
+            --btn-base: #fd79a8;
+            --btn-hover: #e84393;
+            --shadow-color: rgba(45, 52, 54, 0.3);
+            --text-light: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            touch-action: manipulation;
+            overflow: hidden;
+            color: var(--dark);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--dark);
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px white;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90vw;
+            max-width: 420px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 24px;
+            border-radius: 20px;
+            border: 4px solid var(--dark);
+            box-shadow: 0 6px 0 var(--shadow-color);
+            box-sizing: border-box;
+        }
+
+        #reference-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .reference-label {
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 6px;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #reference-img {
+            width: 75px;
+            height: 75px;
+            background-size: cover;
+            background-position: center;
+            border: 3px solid var(--dark);
+            border-radius: 12px;
+            box-shadow: 0 4px 0 var(--dark);
+            background-color: #ffb8b8;
+        }
+
+        #moves-counter {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--dark);
+            text-transform: uppercase;
+        }
+
+        #board-wrapper {
+            position: relative;
+            width: 90vw;
+            max-width: 420px;
+            aspect-ratio: 1 / 1;
+            background-color: var(--board-bg);
+            border: 6px solid var(--dark);
+            box-shadow: 
+                0 10px 0 var(--shadow-color),
+                inset 0 0 20px rgba(0,0,0,0.2);
+            border-radius: 16px;
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        #board {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .tile {
+            position: absolute;
+            width: 25%;
+            height: 25%;
+            background-size: 400% 400%;
+            cursor: pointer;
+            box-sizing: border-box;
+            border: 3px solid var(--board-bg);
+            border-radius: 14px;
+            transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.1s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: scale(0.94);
+            background-color: white;
+            z-index: 2;
+        }
+
+        .tile:hover {
+            filter: brightness(1.1);
+        }
+
+        .tile:active {
+            transform: scale(0.88);
+            z-index: 5;
+        }
+
+        .tile.no-transition {
+            transition: none !important;
+        }
+
+        .tile-number {
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 900;
+            text-shadow: 1px 1px 0 var(--dark), -1px -1px 0 var(--dark), 1px -1px 0 var(--dark), -1px 1px 0 var(--dark);
+            pointer-events: none;
+            font-family: inherit;
+        }
+
+        #start-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(140, 122, 230, 0.85);
+            z-index: 8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+        }
+
+        #start-overlay p {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--text-light);
+            text-transform: uppercase;
+            text-align: center;
+            padding: 16px 32px;
+            background: var(--btn-base);
+            border: 4px solid var(--dark);
+            border-radius: 16px;
+            box-shadow: 0 6px 0 var(--dark);
+            text-shadow: 2px 2px 0 var(--dark);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #controls {
+            margin-top: 35px;
+        }
+
+        button {
+            padding: 16px 48px;
+            font-family: inherit;
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--text-light);
+            background: var(--btn-base);
+            border: 4px solid var(--dark);
+            border-radius: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0 var(--dark);
+            box-shadow: 0 8px 0 var(--dark);
+            transition: all 0.1s;
+        }
+
+        button:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 var(--dark);
+            background: var(--btn-hover);
+        }
+
+        #win-modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--text-light);
+            padding: 30px;
+            border: 5px solid var(--dark);
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4), 0 8px 0 var(--dark);
+            width: 80%;
+            max-width: 300px;
+            box-sizing: border-box;
+            animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        #win-modal h2 {
+            font-size: 32px;
+            color: #ff9f43;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 0 var(--dark);
+        }
+
+        #win-modal p {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 15px;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="title">🐾 Cat Slider 🐾</h1>
+
+    <div class="header">
+        <div id="reference-wrapper">
+            <div class="reference-label">Target</div>
+            <div id="reference-img"></div>
+        </div>
+        <div id="ui-container">
+            <div id="moves-counter">Moves: 0</div>
+        </div>
+    </div>
+
+    <div id="board-wrapper">
+        <div id="start-overlay">
+            <p>Ready to Purr-lay?</p>
+        </div>
+        <div id="win-modal">
+            <h2>You Won!</h2>
+            <p>Purr-fect logic! 😻</p>
+            <p id="final-moves">Moves: 0</p>
+        </div>
+        <div id="board"></div>
+    </div>
+
+    <div id="controls">
+        <button id="play-btn">Shuffle</button>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/rYUWo2RnjcNrwxlw5Ld8TA8bp483/sessions/uQyNzGnpOP6n2EkRHZd4/games/LEeL5OrWKHkSjpfuIfsL.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=cLqqQ51chn5pS90gLDLZKy9s92xH2GYnWhwnzqFTYQdEglLYPDjNmAN3hwp8unV62nPA%2FfQeWIMwnpPVq%2B8hDPql7uRHyB3GYrLZqrhHHU8%2FrnAjrKAlufPBOhUr5qeHKz1%2B6qiLJIlFfslsHoYVBRTztj3lI8XcvEC5lpp%2FrKNc7Dbs3x8QOUrf3LaNXI1TSr2ByHOs5twqMClIRcBdFnwrHWTzhGI6thAo8WgSqAQqlcu3tQBCSLpZALyfjpZo0WWoY5fAm5N5Byd%2BKKQuLJDNLfyHTbe2jv88OIT2KeIdI3Bzt4ShrubkfaXiXnctT2CtrSV7FJQF5fI9vuTHoQ%3D%3D"></script>
+</body>
+</html>
