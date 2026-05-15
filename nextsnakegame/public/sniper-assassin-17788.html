@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Sniper: Rooftop Assassin</title>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --neon-pink: #ff007f;
+            --neon-blue: #00f3ff;
+            --text-color: #e0e0e0;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background-color: #1a1c29;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            /* Maintain 4:3 aspect ratio, scale to fit */
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: none; /* Hide default cursor to use custom crosshair */
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .panel {
+            background: rgba(11, 14, 20, 0.85);
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 15px var(--neon-blue), inset 0 0 10px var(--neon-blue);
+            padding: 30px;
+            text-align: center;
+            pointer-events: auto;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1, h2 {
+            margin: 0;
+            color: var(--neon-pink);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        p {
+            color: var(--text-color);
+            font-size: 16px;
+            margin: 0;
+        }
+
+        button {
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 10px 20px;
+            font-size: 18px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: var(--neon-blue);
+            color: var(--bg-color);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        /* Mobile specific controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: none;
+            pointer-events: auto;
+        }
+
+        #fire-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 0, 127, 0.2);
+            border: 3px solid var(--neon-pink);
+            color: var(--neon-pink);
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 15px var(--neon-pink);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        #fire-btn:active {
+            background: rgba(255, 0, 127, 0.6);
+            transform: scale(0.95);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Internal resolution fixed to 1024x768 for consistent gameplay -->
+    <canvas id="gameCanvas" width="1024" height="768"></canvas>
+    
+    <!-- UI Overlays -->
+    <div id="start-screen" class="ui-layer">
+        <div class="panel">
+            <h1>Neon Sniper</h1>
+            <p>Eliminate the marked targets.</p>
+            <p>Drag/Move Mouse to aim.</p>
+            <p>Click or Tap Fire to shoot.</p>
+            <button onclick="startGame()">Start Mission</button>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="ui-layer hidden">
+        <div class="panel">
+            <h1 style="color: red; text-shadow: 0 0 10px red;">Mission Failed</h1>
+            <p id="fail-reason">You ran out of ammo.</p>
+            <button onclick="resetGame()" style="border-color: red; color: red;">Retry</button>
+        </div>
+    </div>
+
+    <div id="level-complete-screen" class="ui-layer hidden">
+        <div class="panel">
+            <h2>Targets Eliminated</h2>
+            <p>Area secured. Proceeding to next zone.</p>
+            <button onclick="nextLevel()">Next Mission</button>
+        </div>
+    </div>
+
+    <div id="mobile-controls">
+        <div id="fire-btn">FIRE</div>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/CaByenfeI3Yy1su50lqZ5ZWNlTH3/sessions/UomlBPTdv559Fv1BvX5c/games/3Ilmq4HlZKwsKBEOdJ9n.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=jBmjmr6eXBis8n%2BGH2sz%2BSjRy4n%2FC37ytDcM2yuN9OFT3L8H0TmGbPMQ%2FEPO2Yv2vaY3GPx4DPM%2FhF%2FQvp6%2BsJAwSXoQ5TCkpLk0MGJsr2GofGm3XnjJAi%2BXngVIzBkX1zvVxARsy8QRlpg%2FkhU%2BBGI40cThoZdCQOnQFCgpmBAXwi4gT9UrPN7RgOBphMSRO6clngSIorvgn1xVkbEYbtlB5qHwkD8K4yhM97qYQnD0lj87W9dcEzvTgI1qHOBs2wUV5pY%2BxkS2PQ5HqB3pkoWw%2BWuPwq1ZEAxZYBrh3JEFiAeJxUsb3MON1eOpd1NsTuyYN9nT2V46l6c%2ByUBDAw%3D%3D"></script>
+</body>
+</html>
