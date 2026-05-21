@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interrogation: Uncover the Truth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e17;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #c8cdd5;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #game-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    position: relative;
+  }
+
+  /* LEFT SIDE - SCENE */
+  #scene-panel {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  #scene-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* RIGHT SIDE - CHAT */
+  #chat-panel {
+    width: 380px;
+    min-width: 320px;
+    background: linear-gradient(180deg, #141b2d 0%, #0d1220 100%);
+    display: flex;
+    flex-direction: column;
+    border-left: 2px solid #1e2a45;
+    z-index: 10;
+  }
+
+  #chat-header {
+    padding: 16px 20px;
+    background: linear-gradient(90deg, #1a2540, #0f1a30);
+    border-bottom: 2px solid #1e2a45;
+    text-align: center;
+  }
+
+  #chat-header h2 {
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: #5b9bd5;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  #questions-left {
+    font-size: 13px;
+    color: #7a8599;
+  }
+
+  #questions-left span {
+    color: #e8a44a;
+    font-weight: bold;
+  }
+
+  #suspect-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: #111827;
+    border-bottom: 1px solid #1e2a45;
+  }
+
+  #suspect-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2a3a5c, #1a2540);
+    border: 2px solid #3a5080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  #suspect-details h3 {
+    font-size: 15px;
+    color: #c8cdd5;
+    margin-bottom: 2px;
+  }
+
+  #suspect-details p {
+    font-size: 12px;
+    color: #5a6577;
+  }
+
+  #stress-bar-container {
+    padding: 8px 20px;
+    background: #0d1220;
+    border-bottom: 1px solid #1e2a45;
+  }
+
+  #stress-label {
+    font-size: 11px;
+    color: #7a8599;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  #stress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #1a2540;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  #stress-bar {
+    height: 100%;
+    width: 10%;
+    background: linear-gradient(90deg, #2ecc71, #e8a44a, #e74c3c);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* Chat messages area */
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+
+  #chat-messages::-webkit-scrollbar {
+    width: 4px;
+  }
+  #chat-messages::-webkit-scrollbar-track {
+    background: #0d1220;
+  }
+  #chat-messages::-webkit-scrollbar-thumb {
+    background: #2a3a5c;
+    border-radius: 2px;
+  }
+
+  .message {
+    max-width: 90%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+    word-wrap: break-word;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.detective {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #1a3a6a, #1a4a7a);
+    color: #d0e0f0;
+    border-bottom-right-radius: 4px;
+    border: 1px solid #2a5a9a;
+  }
+
+  .message.suspect {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #2a2a35, #1e1e28);
+    color: #c8cdd5;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #3a3a4a;
+  }
+
+  .message.system {
+    align-self: center;
+    background: rgba(232, 164, 74, 0.15);
+    color: #e8a44a;
+    border: 1px solid rgba(232, 164, 74, 0.3);
+    font-size: 12px;
+    text-align: center;
+    max-width: 100%;
+  }
+
+  .message .sender {
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .message.detective .sender { color: #5b9bd5; }
+  .message.suspect .sender { color: #e8a44a; }
+
+  .typing-indicator {
+    align-self: flex-start;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #2a2a35, #1e1e28);
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #3a3a4a;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .typing-dot {
+    width: 7px;
+    height: 7px;
+    background: #5a6577;
+    border-radius: 50%;
+    animation: typingBounce 1.2s infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* Input area */
+  #chat-input-area {
+    padding: 12px 16px;
+    background: #111827;
+    border-top: 2px solid #1e2a45;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #chat-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: #1a2540;
+    border: 1px solid #2a3a5c;
+    border-radius: 20px;
+    color: #c8cdd5;
+    font-size: 14px;
+    font-family: Arial, Helvetica, sans-serif;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  #chat-input:focus {
+    border-color: #5b9bd5;
+  }
+
+  #chat-input::placeholder {
+    color: #4a5568;
+  }
+
+  #send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2a5a9a, #1a3a6a);
+    border: none;
+    color: #d0e0f0;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #send-btn:hover {
+    background: linear-gradient(135deg, #3a6aaa, #2a4a7a);
+    transform: scale(1.05);
+  }
+
+  #send-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Accusation panel */
+  #accusation-panel {
+    display: none;
+    padding: 16px;
+    background: linear-gradient(180deg, #1a1020, #0d1220);
+    border-top: 2px solid #5a2a2a;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #accusation-panel h3 {
+    color: #e74c3c;
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .accusation-btn {
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #2a1a1a, #1a1020);
+    border: 1px solid #5a2a2a;
+    border-radius: 8px;
+    color: #c8cdd5;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: left;
+  }
+
+  .accusation-btn:hover {
+    background: linear-gradient(135deg, #3a2a2a, #2a1a30);
+    border-color: #e74c3c;
+    color: #fff;
+  }
+
+  /* Result overlay */
+  #result-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(5, 8, 15, 0.92);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    animation: fadeIn 0.5s ease;
+  }
+
+  #result-overlay h1 {
+    font-size: 36px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  #result-overlay.win h1 { color: #2ecc71; }
+  #result-overlay.lose h1 { color: #e74c3c; }
+
+  #result-text {
+    max-width: 500px;
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #8a90a0;
+  }
+
+  #restart-btn {
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #2a5a9a, #1a3a6a);
+    border: 2px solid #3a6aaa;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  #restart-btn:hover {
+    background: linear-gradient(135deg, #3a6aaa, #2a4a7a);
+    transform: scale(1.05);
+  }
+
+  /* Evidence notes */
+  #evidence-panel {
+    padding: 8px 16px;
+    background: #0d1220;
+    border-bottom: 1px solid #1e2a45;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+
+  #evidence-panel.open {
+    max-height: 120px;
+    padding: 12px 16px;
+  }
+
+  #evidence-toggle {
+    display: block;
+    width: 100%;
+    padding: 6px;
+    background: none;
+    border: none;
+    color: #5b9bd5;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: Arial, Helvetica, sans-serif;
+    border-bottom: 1px solid #1e2a45;
+  }
+
+  #evidence-toggle:hover {
+    color: #7ab5e8;
+  }
+
+  #evidence-list {
+    font-size: 11px;
+    color: #7a8599;
+    line-height: 1.6;
+  }
+
+  .clue-found {
+    color: #e8a44a;
+    font-weight: bold;
+  }
+
+  /* Rain canvas */
+  #rain-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    #game-container {
+      flex-direction: column;
+    }
+    #scene-panel {
+      height: 35vh;
+      flex: none;
+    }
+    #chat-panel {
+      width: 100%;
+      min-width: 0;
+      flex: 1;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <!-- LEFT: Scene illustration -->
+  <div id="scene-panel">
+    <canvas id="scene-canvas"></canvas>
+    <canvas id="rain-canvas"></canvas>
+  </div>
+
+  <!-- RIGHT: Chat panel -->
+  <div id="chat-panel">
+    <div id="chat-header">
+      <h2>Interrogation</h2>
+      <div id="questions-left">Questions remaining: <span id="q-count">10</span></div>
+    </div>
+
+    <div id="suspect-info">
+      <div id="suspect-avatar">🧔</div>
+      <div id="suspect-details">
+        <h3>Marcus Webb</h3>
+        <p>Suspect — Theft at Hargrove Manor</p>
+      </div>
+    </div>
+
+    <div id="stress-bar-container">
+      <div id="stress-label">
+        <span>Suspect Stress Level</span>
+        <span id="stress-pct">10%</span>
+      </div>
+      <div id="stress-bar-bg">
+        <div id="stress-bar"></div>
+      </div>
+    </div>
+
+    <button id="evidence-toggle">📋 Case Notes ▼</button>
+    <div id="evidence-panel">
+      <div id="evidence-list">
+        <div>• Priceless diamond necklace stolen from Hargrove Manor</div>
+        <div>• Occurred between 9 PM and midnight last Friday</div>
+        <div>• Marcus Webb was the private security guard on duty</div>
+        <div>• Alarm system was disabled from the inside</div>
+        <div>• No signs of forced entry</div>
+      </div>
+    </div>
+
+    <div id="chat-messages"></div>
+
+    <div id="accusation-panel">
+      <h3>Make Your Accusation</h3>
+      <button class="accusation-btn" onclick="makeAccusation(0)">Marcus stole the necklace himself and hid it</button>
+      <button class="accusation-btn" onclick="makeAccusation(1)">Marcus let an accomplice in — his brother Jake</button>
+      <button class="accusation-btn" onclick="makeAccusation(2)">Marcus is innocent — the maid Mrs. Chen did it</button>
+      <button class="accusation-btn" onclick="makeAccusation(3)">The owner Mr. Hargrove staged it for insurance</button>
+    </div>
+
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type your question..." maxlength="200" />
+      <button id="send-btn">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result overlay -->
+<div id="result-overlay">
+  <h1 id="result-title"></h1>
+  <p id="result-text"></p>
+  <button id="restart-btn" onclick="restartGame()">New Case</button>
+</div>
+
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/Ae7pfAW7AUYLQQqhcoZ159cH4vf1/sessions/XSi55oFjwKHclz8nCadb/games/kjRjT0fQM3hmZwJl9Lir.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=n23BJR30lxF6P2ZgnTkhYmVYU%2Bs%2FmeIAQCodE0VoN322jI9GP3SHUUuWhiIGYtgn%2BZmZUw0CviFQq7ZZGLBnPfSLslN7XhzV7qINv10LmILdwIiHGI8cBKNdWHIa2RmyVV1VxqV6Ams6DGNTGT2%2FxwLVQB4z4akzyYAOZR3qwcv%2F%2FVZA3FiUBZbXU4YUZLTYSyMd10%2FxUX01bpR25AjcsLqwLu642pDCuXqJhJQ%2F1BTRZ4tYS%2FkqQ6ZariQ67Eb9I1W35PznElpWbp7leVMUzrYmiJY0mf%2BDCAsNyEUTuJH7ZOTCbqDJNwWu2sElHvPrF3DgFDg5q0a%2Fk3TJl9WMzg%3D%3D"></script>
+</body>
+</html>
