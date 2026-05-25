@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Word Blitz</title>
+    <style>
+        :root {
+            --red: #ff3333;
+            --green: #39FF14;
+            --blue: #0FF0FC;
+            --yellow: #FFD700;
+            --dark: #1a1a1a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background: #0d0d1a;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 10px;
+        }
+
+        /* HUD */
+        #hud {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #hud .score { color: var(--yellow); }
+        #hud .lives { color: var(--red); }
+        #hud .timer { color: var(--blue); }
+        #hud .level { color: var(--green); }
+
+        /* Word display */
+        #word-display {
+            font-size: clamp(36px, 8vw, 72px);
+            font-weight: bold;
+            color: white;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px var(--blue), 0 0 40px var(--blue);
+            margin: 10px 0;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        /* Letter tiles */
+        #tiles-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            max-width: 700px;
+            width: 100%;
+            margin: 10px 0;
+            min-height: 120px;
+        }
+        .tile {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.1);
+            border: 3px solid rgba(255,255,255,0.4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.1s, transform 0.1s, border-color 0.1s;
+            touch-action: manipulation;
+        }
+        .tile:hover { background: rgba(255,255,255,0.25); transform: scale(1.08); }
+        .tile.selected {
+            background: rgba(15, 240, 252, 0.35);
+            border-color: var(--blue);
+            color: var(--blue);
+            transform: scale(1.12);
+            box-shadow: 0 0 12px var(--blue);
+        }
+        .tile.used {
+            opacity: 0.2;
+            pointer-events: none;
+            transform: scale(0.9);
+        }
+
+        /* Input row */
+        #input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            width: 100%;
+            max-width: 700px;
+            justify-content: center;
+        }
+        #current-word {
+            flex: 1;
+            max-width: 400px;
+            background: rgba(255,255,255,0.07);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--yellow);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            min-height: 54px;
+            font-family: inherit;
+        }
+        #current-word.correct {
+            border-color: var(--green);
+            color: var(--green);
+            box-shadow: 0 0 16px var(--green);
+        }
+        #current-word.wrong {
+            border-color: var(--red);
+            color: var(--red);
+            box-shadow: 0 0 16px var(--red);
+            animation: shake 0.3s;
+        }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)}
+            25%{transform:translateX(-8px)}
+            75%{transform:translateX(8px)}
+        }
+
+        .action-btn {
+            background: var(--red);
+            color: white;
+            border: 3px solid white;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-size: 18px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 3px 3px 0 #000;
+            transition: transform 0.1s;
+            touch-action: manipulation;
+        }
+        .action-btn:active { transform: translate(3px,3px); box-shadow: none; }
+        .action-btn.submit-btn { background: var(--green); color: #000; }
+        .action-btn.clear-btn { background: #555; }
+
+        /* Keyboard */
+        #keyboard {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+            align-items: center;
+        }
+        .kb-row {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+        .kb-key {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: inherit;
+            transition: background 0.1s;
+            touch-action: manipulation;
+        }
+        .kb-key:hover { background: rgba(255,255,255,0.28); }
+        .kb-key:active { background: rgba(255,255,255,0.5); }
+        .kb-key.correct-key { background: rgba(57,255,20,0.3); border-color: var(--green); color: var(--green); }
+        .kb-key.wrong-key { background: rgba(255,51,51,0.3); border-color: var(--red); color: var(--red); }
+        .kb-key.present-key { background: rgba(255,215,0,0.3); border-color: var(--yellow); color: var(--yellow); }
+        .kb-key.wide { width: 66px; font-size: 14px; }
+
+        /* Message */
+        #message {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--yellow);
+            min-height: 30px;
+            text-align: center;
+            text-shadow: 1px 1px 0 #000;
+            margin: 4px 0;
+        }
+
+        /* Mode tabs */
+        #mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .mode-tab {
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.07);
+            color: white;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+        }
+        .mode-tab.active {
+            background: var(--blue);
+            color: #000;
+            border-color: var(--blue);
+        }
+
+        /* Wordle grid */
+        #wordle-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .wordle-row {
+            display: flex;
+            gap: 6px;
+        }
+        .wordle-cell {
+            width: 58px;
+            height: 58px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.05);
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .wordle-cell.correct { background: rgba(57,255,20,0.5); border-color: var(--green); }
+        .wordle-cell.present { background: rgba(255,215,0,0.5); border-color: var(--yellow); }
+        .wordle-cell.absent  { background: rgba(80,80,80,0.6); border-color: #555; }
+        .wordle-cell.active-cell { border-color: var(--blue); }
+
+        /* Anagram area */
+        #anagram-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 700px;
+        }
+        #scrambled-word {
+            font-size: clamp(28px, 6vw, 52px);
+            font-weight: bold;
+            color: var(--blue);
+            letter-spacing: 10px;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px var(--blue);
+        }
+        #anagram-input {
+            background: rgba(255,255,255,0.07);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--yellow);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            font-family: inherit;
+            width: 100%;
+            max-width: 400px;
+            outline: none;
+        }
+        #anagram-input:focus { border-color: var(--blue); }
+
+        /* Found words */
+        #found-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        .found-word-chip {
+            background: rgba(57,255,20,0.2);
+            border: 2px solid var(--green);
+            border-radius: 6px;
+            padding: 3px 10px;
+            color: var(--green);
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Menu overlay */
+        #menus {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            padding: 20px;
+        }
+        .hidden { display: none !important; }
+        h1 {
+            font-size: clamp(32px, 8vw, 56px);
+            color: var(--blue);
+            text-shadow: 4px 4px 0 var(--red);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .menu-desc {
+            font-size: 16px;
+            max-width: 560px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            color: #ccc;
+        }
+        .menu-btn {
+            background: var(--blue);
+            color: #000;
+            border: 4px solid white;
+            padding: 14px 40px;
+            font-size: 22px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0 #000;
+            transition: transform 0.1s;
+            border-radius: 8px;
+            margin: 6px;
+        }
+        .menu-btn:active { transform: translate(4px,4px); box-shadow: none; }
+        .menu-btn.red-btn { background: var(--red); color: white; }
+        #final-score { font-size: 32px; color: var(--yellow); margin: 10px 0; }
+        #high-score-display { font-size: 20px; color: var(--green); margin-bottom: 20px; }
+        .mode-select-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .mode-card {
+            background: rgba(255,255,255,0.07);
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 16px 24px;
+            cursor: pointer;
+            text-align: center;
+            transition: border-color 0.15s, background 0.15s;
+            min-width: 140px;
+        }
+        .mode-card:hover { border-color: var(--blue); background: rgba(15,240,252,0.1); }
+        .mode-card.selected-mode { border-color: var(--blue); background: rgba(15,240,252,0.2); }
+        .mode-card .mode-icon { font-size: 36px; margin-bottom: 6px; }
+        .mode-card .mode-name { font-size: 18px; font-weight: bold; color: white; }
+        .mode-card .mode-info { font-size: 13px; color: #aaa; margin-top: 4px; }
+
+        /* Progress bar for timer */
+        #timer-bar-wrap {
+            width: 100%;
+            max-width: 700px;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+        #timer-bar {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 4px;
+            transition: width 0.5s linear, background 0.5s;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+
+    <div id="hud" class="hidden">
+        <span class="score">⭐ <span id="scoreVal">0</span></span>
+        <span class="level">LVL <span id="levelVal">1</span></span>
+        <span class="timer">⏱ <span id="timerVal">60</span>s</span>
+        <span class="lives">❤️ <span id="livesVal">3</span></span>
+    </div>
+    <div id="timer-bar-wrap" class="hidden"><div id="timer-bar"></div></div>
+
+    <div id="message"></div>
+
+    <!-- WORDLE MODE -->
+    <div id="wordle-section" class="hidden">
+        <div id="wordle-grid"></div>
+        <div id="keyboard"></div>
+    </div>
+
+    <!-- ANAGRAM MODE -->
+    <div id="anagram-section" class="hidden">
+        <div id="anagram-area">
+            <div style="color:#aaa;font-size:15px;margin-bottom:4px;">UNSCRAMBLE THE WORD</div>
+            <div id="scrambled-word"></div>
+            <div id="anagram-hint" style="color:#888;font-size:14px;min-height:20px;"></div>
+            <input id="anagram-input" type="text" maxlength="12" placeholder="TYPE YOUR ANSWER" autocomplete="off" autocorrect="off" spellcheck="false"/>
+            <div style="display:flex;gap:10px;margin-top:6px;">
+                <button class="action-btn submit-btn" id="anagram-submit">✓ SUBMIT</button>
+                <button class="action-btn clear-btn" id="anagram-hint-btn">💡 HINT</button>
+                <button class="action-btn" id="anagram-skip" style="background:#888;">⏭ SKIP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORD HUNT MODE -->
+    <div id="wordhunt-section" class="hidden">
+        <div style="color:#aaa;font-size:14px;text-align:center;margin-bottom:4px;">FIND AS MANY WORDS AS POSSIBLE!</div>
+        <div id="tiles-area"></div>
+        <div id="input-row">
+            <div id="current-word"></div>
+            <button class="action-btn submit-btn" id="wh-submit">✓</button>
+            <button class="action-btn clear-btn" id="wh-clear">✗</button>
+        </div>
+        <div id="found-words"></div>
+    </div>
+
+    <!-- MENU -->
+    <div id="menus">
+        <div id="main-menu">
+            <h1>🔤 WORD BLITZ</h1>
+            <p class="menu-desc">Choose your word game mode and challenge your vocabulary!</p>
+            <div class="mode-select-grid">
+                <div class="mode-card selected-mode" data-mode="wordle">
+                    <div class="mode-icon">🟩</div>
+                    <div class="mode-name">WORDLE</div>
+                    <div class="mode-info">Guess the 5-letter word in 6 tries</div>
+                </div>
+                <div class="mode-card" data-mode="anagram">
+                    <div class="mode-icon">🔀</div>
+                    <div class="mode-name">ANAGRAM</div>
+                    <div class="mode-info">Unscramble words against the clock</div>
+                </div>
+                <div class="mode-card" data-mode="wordhunt">
+                    <div class="mode-icon">🔍</div>
+                    <div class="mode-name">WORD HUNT</div>
+                    <div class="mode-info">Find all words from the letters</div>
+                </div>
+            </div>
+            <button class="menu-btn" id="start-btn">▶ PLAY</button>
+        </div>
+        <div id="gameover-menu" class="hidden">
+            <h1>GAME OVER</h1>
+            <div id="final-score"></div>
+            <div id="high-score-display"></div>
+            <button class="menu-btn" id="restart-btn">🔄 PLAY AGAIN</button>
+            <button class="menu-btn red-btn" id="menu-btn">🏠 MENU</button>
+        </div>
+        <div id="win-menu" class="hidden">
+            <h1>🎉 YOU WIN!</h1>
+            <div id="win-score"></div>
+            <button class="menu-btn" id="win-next-btn">▶ NEXT LEVEL</button>
+            <button class="menu-btn red-btn" id="win-menu-btn">🏠 MENU</button>
+        </div>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/kZFJWSyXt2dvOZUeSEVOVdrJ46z1/sessions/comm-1779564123900/games/n9vV0m3mzD8ePAbmAdye.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=jEWG734dMBP6%2BnG6n%2Bh4NAFyPd6X5d6Ko9O2xDLedtFoBREbRAJ86Jz09yWgJJuphWi23TndloFJ1qGP%2BC2pk3Wz9YxwkW36OdHZUS2TX2h76%2FC%2BsWz0GiU95whyGZBwDhZ1WOGS%2F4oXc02dgcf%2BM2rOK%2Fs69McXPGt3bCuxYPqZDMH7Rxj97NhltkXQRDHYWbBAKDrlZz8%2BxEdfE8h50NBwsX4ELKRHfXdVmK3xIdvwFdpxOo49YOUhPwQZINxA%2B3jRiitkNVjXb8V2tHca097NHp6LHFtqKijgAUqV7uetknKrpLxZmWBq94rWdiEE7z85s8mf0zPHTDD3yT9%2Ffg%3D%3D"></script>
+</body>
+</html>
