@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoxelCraft - 3D Survival</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+canvas { display: block; }
+
+#mainMenu {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(180deg, #87CEEB 0%, #4a90d9 40%, #2d5a27 40.5%, #1a3a15 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+#mainMenu .title {
+  font-size: 72px; font-weight: bold; color: #555;
+  text-shadow: 4px 4px 0px #333, -2px -2px 0px #777;
+  letter-spacing: 4px; margin-bottom: 10px;
+  font-family: monospace;
+}
+#mainMenu .subtitle {
+  font-size: 18px; color: #aaa; margin-bottom: 50px;
+  text-shadow: 1px 1px 2px #000;
+}
+.menu-btn {
+  width: 320px; padding: 14px 0; margin: 8px;
+  background: linear-gradient(180deg, #7a7a7a 0%, #555 100%);
+  border: 3px solid #333; color: #fff; font-size: 20px;
+  cursor: pointer; text-align: center; font-family: monospace;
+  text-shadow: 2px 2px 0px #222;
+  transition: all 0.15s;
+}
+.menu-btn:hover {
+  background: linear-gradient(180deg, #5a8a5a 0%, #3a6a3a 100%);
+  border-color: #2a5a2a;
+}
+.menu-btn:active { transform: scale(0.97); }
+
+#pauseMenu {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 900;
+}
+#pauseMenu .pause-title {
+  font-size: 48px; color: #fff; margin-bottom: 30px;
+  font-family: monospace; text-shadow: 2px 2px 4px #000;
+}
+
+#inventoryScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 850;
+}
+#inventoryScreen .inv-title {
+  font-size: 36px; color: #fff; margin-bottom: 20px;
+  font-family: monospace; text-shadow: 2px 2px 4px #000;
+}
+.inv-grid {
+  display: grid; grid-template-columns: repeat(9, 60px);
+  gap: 4px; background: #555; padding: 10px; border: 3px solid #333;
+  border-radius: 4px;
+}
+.inv-slot {
+  width: 60px; height: 60px; background: #8b8b8b;
+  border: 2px solid #666; display: flex; align-items: center;
+  justify-content: center; position: relative; cursor: pointer;
+}
+.inv-slot:hover { border-color: #fff; }
+.inv-slot .count {
+  position: absolute; bottom: 2px; right: 4px;
+  color: #fff; font-size: 12px; font-weight: bold;
+  text-shadow: 1px 1px 1px #000;
+}
+.inv-slot .block-icon {
+  width: 40px; height: 40px; border-radius: 2px;
+}
+
+#deathScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(200,0,0,0.5);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 950;
+}
+#deathScreen .death-title {
+  font-size: 64px; color: #fff; margin-bottom: 30px;
+  font-family: monospace; text-shadow: 3px 3px 6px #000;
+}
+
+#gameUI {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; display: none; z-index: 100;
+}
+#gameUI * { pointer-events: none; }
+
+#crosshair {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px; height: 24px;
+}
+#crosshair::before, #crosshair::after {
+  content: ''; position: absolute; background: #fff;
+  mix-blend-mode: difference;
+}
+#crosshair::before {
+  width: 2px; height: 24px; left: 11px; top: 0;
+}
+#crosshair::after {
+  width: 24px; height: 2px; top: 11px; left: 0;
+}
+
+#hotbar {
+  position: absolute; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 2px;
+  background: rgba(0,0,0,0.6); padding: 4px;
+  border: 2px solid #444; border-radius: 2px;
+}
+.hotbar-slot {
+  width: 50px; height: 50px; background: rgba(100,100,100,0.7);
+  border: 2px solid #555; display: flex; align-items: center;
+  justify-content: center; position: relative;
+  pointer-events: auto; cursor: pointer;
+}
+.hotbar-slot.selected { border-color: #fff; border-width: 3px; }
+.hotbar-slot .hb-icon { width: 34px; height: 34px; border-radius: 2px; }
+.hotbar-slot .hb-count {
+  position: absolute; bottom: 1px; right: 3px;
+  color: #fff; font-size: 11px; font-weight: bold;
+  text-shadow: 1px 1px 1px #000;
+}
+.hotbar-slot .hb-num {
+  position: absolute; top: 1px; left: 3px;
+  color: #aaa; font-size: 9px;
+}
+
+#healthBar, #hungerBar, #expBar {
+  position: absolute; left: 50%; height: 12px;
+}
+#healthBar {
+  bottom: 82px; transform: translateX(calc(-50% - 100px));
+  width: 200px;
+}
+#hungerBar {
+  bottom: 82px; transform: translateX(calc(-50% + 100px));
+  width: 200px;
+}
+
+.stat-bar {
+  display: flex; gap: 1px; align-items: center; justify-content: flex-start;
+}
+.heart, .hunger-icon {
+  width: 11px; height: 11px; font-size: 11px; line-height: 11px;
+}
+
+#dayCounter {
+  position: absolute; top: 10px; left: 50%;
+  transform: translateX(-50%);
+  color: #fff; font-size: 16px; font-family: monospace;
+  text-shadow: 1px 1px 2px #000;
+  background: rgba(0,0,0,0.4); padding: 4px 12px;
+  border-radius: 3px;
+}
+
+#blockBreakIndicator {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, 30px);
+  color: #fff; font-size: 14px; font-family: monospace;
+  text-shadow: 1px 1px 2px #000;
+  display: none;
+}
+
+#mobileControls {
+  position: absolute; bottom: 90px; left: 20px;
+  display: none; pointer-events: auto;
+}
+.mobile-btn {
+  width: 50px; height: 50px; background: rgba(255,255,255,0.3);
+  border: 2px solid rgba(255,255,255,0.5); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 20px; pointer-events: auto;
+  user-select: none; -webkit-user-select: none;
+}
+#mobileActions {
+  position: absolute; bottom: 90px; right: 20px;
+  display: none; pointer-events: auto; gap: 8px;
+}
+
+#instructions {
+  position: absolute; top: 50px; left: 50%;
+  transform: translateX(-50%);
+  color: #fff; font-size: 13px; font-family: monospace;
+  text-shadow: 1px 1px 2px #000;
+  background: rgba(0,0,0,0.5); padding: 8px 16px;
+  border-radius: 4px; text-align: center;
+  opacity: 1; transition: opacity 2s;
+}
+
+.world-seed-input {
+  width: 280px; padding: 10px; margin: 10px;
+  background: #333; border: 2px solid #555; color: #fff;
+  font-size: 16px; font-family: monospace; text-align: center;
+}
+.world-seed-input::placeholder { color: #888; }
+</style>
+</head>
+<body>
+
+<div id="mainMenu">
+  <div class="title">VOXELCRAFT</div>
+  <div class="subtitle">A Blocky Survival Adventure</div>
+  <input type="text" class="world-seed-input" id="seedInput" placeholder="World Seed (optional)">
+  <div class="menu-btn" id="createWorldBtn">Create World</div>
+  <div class="menu-btn" id="howToPlayBtn">How to Play</div>
+  <div style="margin-top:30px;color:#777;font-size:12px;font-family:monospace;">v1.0 — Click to play</div>
+</div>
+
+<div id="pauseMenu">
+  <div class="pause-title">Game Paused</div>
+  <div class="menu-btn" id="resumeBtn">Resume Game</div>
+  <div class="menu-btn" id="optionsBtn">Options</div>
+  <div class="menu-btn" id="quitBtn">Quit to Menu</div>
+</div>
+
+<div id="inventoryScreen">
+  <div class="inv-title">Inventory</div>
+  <div class="inv-grid" id="invGrid"></div>
+  <div style="color:#aaa;margin-top:15px;font-family:monospace;font-size:13px;">Press E to close</div>
+</div>
+
+<div id="deathScreen">
+  <div class="death-title">You Died!</div>
+  <div style="color:#fff;font-size:20px;margin-bottom:20px;font-family:monospace;" id="deathScore">Score: 0</div>
+  <div class="menu-btn" id="respawnBtn">Respawn</div>
+  <div class="menu-btn" id="deathQuitBtn">Quit to Menu</div>
+</div>
+
+<div id="gameUI">
+  <div id="crosshair"></div>
+  <div id="hotbar"></div>
+  <div id="healthBar"><div class="stat-bar" id="hearts"></div></div>
+  <div id="hungerBar"><div class="stat-bar" id="hungerIcons"></div></div>
+  <div id="dayCounter">Day 1</div>
+  <div id="blockBreakIndicator"></div>
+  <div id="instructions">WASD: Move | Mouse: Look | Left Click: Break | Right Click: Place | E: Inventory | M: Pause | 1-9: Hotbar</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/htVSMOd7sjdmSU7kyUSzaRQbW4h1/sessions/ZY9VnNwECl872YwfM2uK/games/P983uTqd0MSP3U4IyNdK.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=oG15n8fv6lzaMqYMI7S2imRcur06ZDF8SFI9wwT6nOqg7O6hA%2FqHCyXCQ3OV6JuEGG9ojy18%2BtlXxQpAUQ8BTR5%2FMl5PORxDBbuxzQ63HW5scfOrY6pq4XbsVLDBtaqMrrEntO01hB5yt6r9scmftyAULguou4bn1O9BDdAYENexNYruO8B5ymyyfrey02s8k9laR9t7KKOHl9aWSBxHnJsntkhw64Zv%2FZNbjvGcm0R6zRfMKRuk1XfMNUjAa0j5%2FeaQKEmgTHYy8KQ%2BiaF2zV2lhLfr7IKQaSKnf7peXhaveIY4RzLwZEusfLMRoR8xZqh%2BwUOmbQnaFreJ0oJwCg%3D%3D"></script>
+</body>
+</html>
