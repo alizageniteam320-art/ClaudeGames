@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e6f2ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cell.x {
+            color: #000;
+        }
+        .cell.o {
+            color: #c0392b;
+        }
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .message {
+            margin-top: 15px;
+            font-size: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+    <div class="status" id="status">Player X's turn</div>
+    <div class="grid" id="grid">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+    <div class="message" id="message"></div>
+    <button id="restart">Restart Game</button>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/913YWdqethfUDeB7BOyfIBHVD1K3/sessions/VrY4HJGYv3z0KMA41pLK/games/zLXTIZQYWRzzRSuw3ara.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=dNZtZXfbi8rhJtkTzGrt%2BHZvekVRE3dS523m2zAqikHh%2B9N%2BBTluRQiVwXg6DbEefZGgLjs1ntpeGIz%2BCwLYNtabLgqPHfHYEfNQxPiJ6zx9j07ZVZYjIQOhitdiIEm14YpS13lETWncfmV6k5g3VRYBMOHJMgVeMtgb9MrDKC6%2FLpST7Pcx4WJDKrRPJbL9V1rFbNKDaTidf4Sl1Fmmaiz%2BstifWemNhZd4Vafnza9rEhYgDzaRXgEce2Gwgm2RJJGAJLBQGyCTae2veW2WimQtXtvhi5mOG0bpWSdjxfZ2IbvafsFZZP5maciHlSvIhhbuQ5fjPJz%2BlXXrubT7KQ%3D%3D"></script>
+</body>
+</html>
