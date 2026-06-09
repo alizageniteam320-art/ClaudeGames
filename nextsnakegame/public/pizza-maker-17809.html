@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Maker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #fff8e7;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none;
+        }
+        h1 {
+            color: #c0392b;
+            margin: 5px 0;
+            font-size: 28px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 10px;
+        }
+        .score, .timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        #canvas {
+            border: 4px solid #8e44ad;
+            background: #f5f5f5;
+            border-radius: 10px;
+            touch-action: none;
+        }
+        .order {
+            margin: 10px 0;
+            font-size: 18px;
+            color: #2c3e50;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+            max-width: 420px;
+        }
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            min-width: 90px;
+        }
+        button:hover {
+            background: #c0392b;
+        }
+        .topping-btn {
+            background: #27ae60;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+        .topping-btn:hover {
+            background: #1e8449;
+        }
+        .status {
+            margin: 8px 0;
+            font-size: 16px;
+            color: #333;
+            min-height: 24px;
+            text-align: center;
+        }
+        .instructions {
+            font-size: 14px;
+            color: #555;
+            max-width: 420px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pizza Maker</h1>
+    
+    <div class="header">
+        <div class="score">Score: <span id="score">0</span></div>
+        <div class="timer">Time: <span id="timer">60</span></div>
+    </div>
+
+    <canvas id="canvas" width="400" height="400"></canvas>
+
+    <div class="instructions">
+        Add the correct toppings to match the order. Click Serve when ready!
+    </div>
+
+    <div class="order">
+        Current Order: <span id="order-display">None</span>
+    </div>
+
+    <div class="controls">
+        <button class="topping-btn" onclick="addTopping('Pepperoni')">Pepperoni</button>
+        <button class="topping-btn" onclick="addTopping('Mushroom')">Mushroom</button>
+        <button class="topping-btn" onclick="addTopping('Cheese')">Cheese</button>
+        <button class="topping-btn" onclick="addTopping('Olive')">Olive</button>
+        <button class="topping-btn" onclick="addTopping('Bell Pepper')">Bell Pepper</button>
+    </div>
+
+    <div class="controls">
+        <button onclick="servePizza()">Serve Pizza</button>
+        <button onclick="clearPizza()">Clear</button>
+        <button id="startBtn" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/Ae7pfAW7AUYLQQqhcoZ159cH4vf1/sessions/Jaq6R0Gb1j1pTeLnizOr/games/2koeNAwIRpAoOuqlAAmA.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=txkZvNP%2FlV%2BwCFDc%2FkcinZOLcdOPcJPQdgwf9V1hADIzLme%2BMl582dEq00uEy5l1tMCzzOfm2vRKWBAesVTYvDo0t1MZBAHE8MHTdxo%2FCENhrNOGgXoP8UHgH5dhypEA60%2BEzkMWCau1VGmjdsjPJkl%2FNBtPpRe7eFhWKszr0hL923Vho0R6l%2FzTRcdBdu6u6Me%2BVxVUJb0VyzDmHkJkQSnXIUsbWnKFW%2BUhlnWfi9bs8ewxBzJHNl3fw%2BoM%2B0iFVJ%2FuHDxZ3k1yq0vOL%2FQ149QeG8kjECcoGEJwo3blhmexv4i3WDh83q8dt9HsCSDyJ%2FujEJEhNT%2Bv%2BixSrVq8CQ%3D%3D"></script>
+</body>
+</html>
