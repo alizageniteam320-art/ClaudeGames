@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Last Stand: Zombie Outbreak</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #111;
+            --primary: #d32f2f;
+            --text: #eee;
+            --hud-bg: rgba(0, 0, 0, 0.7);
+        }
+        * { box-sizing: border-box; user-select: none; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg); color: var(--text);
+            font-family: 'Jura', sans-serif; overflow: hidden;
+            touch-action: none;
+        }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        
+        /* UI Overlays */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, 0.85); pointer-events: auto; z-index: 100;
+        }
+        .hidden { display: none !important; }
+        
+        h1 { font-size: 4rem; color: var(--primary); text-transform: uppercase; text-shadow: 0 0 10px red; margin-bottom: 10px; text-align: center;}
+        h2 { font-size: 2rem; margin: 10px 0; }
+        p { font-size: 1.2rem; max-width: 600px; text-align: center; margin-bottom: 20px; color: #aaa; }
+        
+        button {
+            padding: 15px 40px; font-size: 1.5rem; font-family: inherit; font-weight: bold;
+            background: var(--primary); color: white; border: none; border-radius: 5px;
+            cursor: pointer; transition: 0.2s; box-shadow: 0 4px 0 #9a0007; margin-top: 20px;
+        }
+        button:hover { background: #f44336; transform: translateY(2px); box-shadow: 0 2px 0 #9a0007; }
+        button:active { transform: translateY(4px); box-shadow: none; }
+        
+        /* HUD */
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .hud-panel { background: var(--hud-bg); padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        
+        .stat-bar-container { width: 250px; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 5px 0; border: 2px solid #222;}
+        #health-fill { height: 100%; background: #4caf50; width: 100%; transition: width 0.1s; }
+        #stamina-fill { height: 100%; background: #2196f3; width: 100%; }
+        
+        .weapon-info { font-size: 1.5rem; color: #ffeb3b; font-weight: bold; text-align: right;}
+        .ammo-info { font-size: 2rem; }
+        .reload-warn { color: #f44336; font-size: 1rem; animation: blink 1s infinite; display: none; }
+        
+        .wave-info { text-align: center; font-size: 2rem; color: white; text-shadow: 0 0 5px #fff; }
+        
+        .controls-hint { font-size: 0.9rem; color: #888; text-align: right; margin-top: 10px; line-height: 1.4;}
+        
+        #audio-toggle {
+            position: absolute; bottom: 20px; right: 20px; pointer-events: auto;
+            background: #333; padding: 10px; border-radius: 50%; width: 50px; height: 50px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; border: none;
+        }
+        
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        
+        .damage-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 100px rgba(255,0,0,0); transition: box-shadow 0.1s;
+        }
+        .hurt .damage-overlay { box-shadow: inset 0 0 150px rgba(255,0,0,0.8); }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-layer">
+        <div class="damage-overlay" id="damageOverlay"></div>
+        
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="hud-top">
+                <div class="hud-panel">
+                    <div>HP <span id="hp-text">100</span>/100</div>
+                    <div class="stat-bar-container"><div id="health-fill"></div></div>
+                    <div style="margin-top:5px;">STA</div>
+                    <div class="stat-bar-container"><div id="stamina-fill"></div></div>
+                    <div style="margin-top:10px; font-size: 1.2rem;">Score: <span id="score-val">0</span></div>
+                </div>
+                
+                <div class="wave-info hud-panel">
+                    WAVE <span id="wave-val">1</span>
+                    <div style="font-size: 1rem; color: #aaa;">Zombies: <span id="zombie-count">0</span></div>
+                </div>
+                
+                <div class="hud-panel weapon-info">
+                    <div id="weapon-name">Pistol</div>
+                    <div class="ammo-info"><span id="ammo-clip">12</span> / <span id="ammo-reserve">∞</span></div>
+                    <div class="reload-warn" id="reload-warn">PRESS R TO RELOAD</div>
+                    <div class="controls-hint">
+                        WASD: Move | Shift: Sprint<br>
+                        Click: Shoot | 1-4: Switch Wpn
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1>Last Stand:<br>Zombie Outbreak</h1>
+            <p>Survive the endless horde in the ruined arena.<br>Gather crates for health, ammo, and new weapons.</p>
+            <button id="start-btn">START SURVIVAL</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <h1>YOU DIED</h1>
+            <h2>Survived to Wave <span id="end-wave">1</span></h2>
+            <h2>Final Score: <span id="end-score">0</span></h2>
+            <p>High Score: <span id="best-score">0</span></p>
+            <button id="restart-btn">TRY AGAIN</button>
+        </div>
+        
+        <button id="audio-toggle">🔊</button>
+    </div>
+
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/5U3UHU9BfjfzXbZ2KkDGtGJnzZM2/sessions/SEa6zN4RsOs3LKdRzsN8/games/SIfthGO0dvVSnctnErs7.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=dknEtkN3r3InJXyvH2ZycqwnItWoY7WKJ4cjSFtnx3dPeGEL213CGWfGAgYjcRT%2BslNChnh7rVV7ckpw4tVN%2FKlddRLkuH%2BloIp6SugLoCuFrFmty4vl9dtu86BI5TaIuIplKCg%2B4nCUTQy8HP65QX633Lf5hV2dqe4JzNvWJxmeqvzSKkF%2B5bR%2FiugnSIFpZp3PYekY5ILmtB%2BGUpIDp7BpWj9NhIzHh%2BInnlJFwq7KLL1DhUuFvrapZ5AbrFVSM08x4yZMCOptgeqXNl%2B3nwCcYNKmgnfJerDogLW4sgJ48bgnwXR7DNfH%2BK8C581MUaYvVU7iWT6Yvzu24QK0pw%3D%3D"></script>
+</body>
+</html>
