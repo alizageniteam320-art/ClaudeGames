@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Step Sprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#2b2d42;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
+#game{position:absolute;left:0;top:0;width:720px;height:540px;transform-origin:0 0;overflow:hidden;border-radius:6px;}
+#c{position:absolute;left:0;top:0;width:720px;height:540px;display:block;touch-action:none;}
+#mute{position:absolute;right:12px;top:52px;width:44px;height:44px;border-radius:50%;border:3px solid #2b2d42;background:#ffd23f;font-size:20px;cursor:pointer;box-shadow:0 4px 0 #2b2d42;z-index:20;padding:0;}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(43,45,66,.55);backdrop-filter:blur(2px);z-index:10;font-family:'Fredoka','Trebuchet MS',sans-serif;color:#fff;text-align:center;transition:opacity .35s ease;}
+.ov.hidden{opacity:0;pointer-events:none;}
+.card{background:linear-gradient(#fff8e7,#ffe6b0);border:5px solid #2b2d42;border-radius:24px;padding:22px 30px;box-shadow:0 10px 0 #2b2d42,0 20px 40px rgba(0,0,0,.35);color:#2b2d42;max-width:560px;transform:scale(1);animation:pop .45s cubic-bezier(.2,1.6,.4,1);}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+h1{font-family:'Lilita One','Impact',sans-serif;font-size:68px;margin:0;color:#ff5a5f;letter-spacing:2px;-webkit-text-stroke:3px #2b2d42;text-shadow:0 6px 0 #2b2d42;line-height:1;}
+h2{font-family:'Lilita One','Impact',sans-serif;font-size:52px;margin:0 0 8px;-webkit-text-stroke:2px #2b2d42;text-shadow:0 5px 0 #2b2d42;}
+p{margin:8px 0;font-size:18px;font-weight:600;}
+.big{font-size:22px;}
+#levels{display:grid;grid-template-columns:repeat(5,64px);gap:10px;justify-content:center;margin-top:14px;}
+.lv,.btn{font-family:'Lilita One','Impact',sans-serif;border:4px solid #2b2d42;border-radius:14px;cursor:pointer;box-shadow:0 5px 0 #2b2d42;transition:transform .1s;}
+.lv{width:64px;height:56px;font-size:26px;background:#5cc95c;color:#fff;-webkit-text-stroke:1px #2b2d42;position:relative;}
+.lv small{position:absolute;bottom:2px;left:0;right:0;font-size:10px;font-family:'Fredoka',sans-serif;-webkit-text-stroke:0;color:#fff;}
+.lv.locked{background:#9aa0b5;cursor:not-allowed;}
+.lv:active,.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #2b2d42;}
+.btn{font-size:26px;padding:10px 26px;margin:8px;background:#ff5a5f;color:#fff;-webkit-text-stroke:1px #2b2d42;}
+.btn.alt{background:#4ea8de;}
+.stats{font-size:20px;font-weight:700;margin:6px 0;}
+.hint{font-size:14px;opacity:.75;}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="c"></canvas>
+  <button id="mute" title="Mute">🔊</button>
+  <div id="title" class="ov">
+    <div class="card">
+      <h1>STEP SPRINT</h1>
+      <p class="big">Tap / press SPACE to step — every step = <b style="color:#ff5a5f">+1 SPEED</b></p>
+      <p>Signs show the speed you need. Stop tapping and you slow down!<br>Dodge crushers & spike walls by timing your speed.</p>
+      <div id="levels"></div>
+      <p class="hint">Press ENTER to play the newest level</p>
+    </div>
+  </div>
+  <div id="result" class="ov hidden">
+    <div class="card">
+      <h2 id="rTitle">CLEAR!</h2>
+      <div id="rBody"></div>
+      <div><button class="btn" id="rPrimary">NEXT</button><button class="btn alt" id="rMenu">MENU</button></div>
+      <p class="hint">SPACE / ENTER = <span id="rKey">Next</span></p>
+    </div>
+  </div>
+</div>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/4h1ETeqwBpWp8nAdUi9wwRpWHtI3/sessions/95BcvSw1COo1i9fMJ3rz/games/d0Fsan26RALGKidP83H0.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=L5LCGxOoi8bl5ev5CxZEllIWEBLIZGDRmjDHxiSBTn%2FFIsjiWwxD2B6M69gFzTwxeufsbPGDJ2lkiq%2F9e57qI5bgDj8r2FSj0LlNnZvn5lApc9VOD%2FCx8PtUNHRuZLaidI2WDwESwElvRR3mkmvrc3ilzwJ6OKv0s1z%2Bj96PjwOJ1NCGc4C6aYHwjJkm%2BSu9h8mTPaC%2Fn%2BWg2B8FugQD7oPx2DR8be0WAv5%2F6J1tCcHFBcvuZlmKdgd9CFbwJFeTApppM0GmoXMM12CtGz3HK1Yp2efKlJm0TjuAr61JODce9OrZSU41%2BVT3%2BLb%2BPFlbcJvM%2F1Eqfexio87P72mQdQ%3D%3D"></script>
+</body>
+</html>
