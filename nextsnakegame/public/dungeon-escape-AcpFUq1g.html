@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dungeon Escape</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07070b;
+  --ui-bg:rgba(28,24,32,0.88);
+  --ui-border:#8b6d3b;
+  --gold:#ffcf4a;
+  --text:#f1ebd9;
+  --accent:#ffaa00;
+  --danger:#ff4a3d;
+}
+*{box-sizing:border-box;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'VT323','Courier New',monospace;}
+#game{position:fixed;inset:0;overflow:hidden;background:#000;}
+canvas#gameCanvas{position:absolute;left:0;top:0;display:block;}
+.ui-panel{background:var(--ui-bg);border:2px solid var(--ui-border);border-radius:6px;
+  box-shadow:inset 0 0 10px rgba(0,0,0,.6),0 3px 0 rgba(0,0,0,.6);text-shadow:2px 2px 0 #000;}
+#top-hud{position:absolute;top:clamp(4px,1.2vmin,10px);left:clamp(4px,1.2vmin,10px);right:clamp(4px,1.2vmin,10px);
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;
+  padding:clamp(3px,1vmin,8px) clamp(6px,1.4vmin,12px);z-index:10;font-size:clamp(15px,3vmin,24px);line-height:1;}
+.hud-section{display:flex;align-items:center;gap:clamp(8px,2vmin,18px);flex-wrap:wrap;}
+.stat{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.lbl{color:#c9b48a;}
+#hearts{color:var(--danger);letter-spacing:2px;}
+#keys-display{color:var(--gold);}
+#runes-display span{display:inline-block;margin:0 1px;}
+#timer{color:var(--accent);font-size:1.15em;}
+#timer.low{color:var(--danger);animation:pulse .5s infinite alternate;}
+@keyframes pulse{from{opacity:1}to{opacity:.45}}
+#score{color:#fff;}
+#mute-btn{font-family:'VT323',monospace;font-size:clamp(14px,2.8vmin,22px);padding:2px 8px;border-radius:4px;
+  background:linear-gradient(#5c4428,#3a2a18);border:2px solid var(--ui-border);color:#fff;cursor:pointer;box-shadow:none;}
+#minimap-container{position:absolute;bottom:clamp(6px,1.5vmin,12px);right:clamp(6px,1.5vmin,12px);
+  width:clamp(80px,20vmin,160px);height:clamp(80px,20vmin,160px);background:rgba(10,10,15,.88);
+  border:2px solid var(--ui-border);border-radius:4px;z-index:10;padding:3px;}
+#minimap{width:100%;height:100%;display:block;image-rendering:pixelated;}
+#hint-overlay{position:absolute;top:22%;left:50%;transform:translate(-50%,-10px);max-width:88%;
+  font-size:clamp(16px,3.4vmin,28px);color:#fff;text-shadow:2px 2px 0 #000,0 0 10px var(--accent);
+  background:rgba(0,0,0,.7);padding:8px 16px;border-radius:8px;border:1px solid var(--ui-border);
+  opacity:0;transition:opacity .3s ease,transform .3s ease;pointer-events:none;z-index:20;text-align:center;}
+#hint-overlay.show{opacity:1;transform:translate(-50%,0);}
+#message-screen{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(40,22,8,.82),rgba(0,0,0,.95));
+  display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:50;padding:12px;text-align:center;
+  transition:opacity .35s ease;}
+#message-screen.hidden{opacity:0;pointer-events:none;}
+#msg-title{font-family:'Press Start 2P','Courier New',monospace;font-size:clamp(18px,5.5vmin,48px);margin:0 0 clamp(8px,2vmin,18px);
+  color:var(--accent);text-shadow:0 4px 0 #5c3a21,0 0 18px rgba(255,150,0,.5);line-height:1.3;}
+#message-screen p{font-size:clamp(16px,3.2vmin,26px);margin:0 0 clamp(8px,2vmin,16px);max-width:min(90%,640px);line-height:1.15;}
+#msg-best{color:var(--gold);}
+.big-torch{font-size:clamp(28px,8vmin,64px);animation:flick 0.15s infinite alternate;margin-bottom:6px;}
+@keyframes flick{from{transform:scale(1) rotate(-2deg)}to{transform:scale(1.06) rotate(2deg)}}
+button.main-btn{background:linear-gradient(to bottom,#a8823f,#5c3a21);border:2px solid #ffd700;color:#fff;
+  font-family:'Press Start 2P','Courier New',monospace;font-size:clamp(11px,2.4vmin,18px);padding:clamp(10px,2vmin,14px) clamp(16px,3vmin,30px);
+  border-radius:4px;cursor:pointer;box-shadow:0 4px 0 #2c1a0e;transition:transform .1s,box-shadow .1s;text-shadow:2px 2px 0 #000;}
+button.main-btn:active{transform:translateY(4px);box-shadow:0 0 0 #2c1a0e;}
+button.main-btn:disabled{opacity:.6;}
+#mobile-controls{display:none;position:absolute;bottom:clamp(6px,2vmin,14px);left:clamp(6px,2vmin,14px);z-index:30;}
+#mobile-controls.on{display:block;}
+.dpad{position:relative;width:clamp(110px,32vmin,170px);height:clamp(110px,32vmin,170px);}
+.d-btn{position:absolute;width:33.3%;height:33.3%;background:rgba(255,220,160,.16);border:2px solid rgba(255,220,160,.4);
+  border-radius:10px;display:flex;justify-content:center;align-items:center;font-size:clamp(18px,4vmin,28px);color:#fff;}
+.d-btn.act{background:rgba(255,190,90,.45);}
+.btn-up{top:0;left:33.3%}.btn-down{bottom:0;left:33.3%}.btn-left{top:33.3%;left:0}.btn-right{top:33.3%;right:0}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="top-hud" class="ui-panel">
+    <div class="hud-section">
+      <div class="stat">🔥<span id="hearts">♥♥♥</span></div>
+      <div class="stat"><span class="lbl">KEYS</span><span id="keys-display">0/1</span></div>
+      <div class="stat"><span class="lbl">RUNES</span><span id="runes-display">? ? ?</span></div>
+    </div>
+    <div class="hud-section">
+      <div class="stat"><span class="lbl">FL</span><span id="floor">1</span></div>
+      <div class="stat"><span class="lbl">SCORE</span><span id="score">0</span></div>
+      <div class="stat"><span class="lbl">TORCH</span><span id="timer">01:40</span></div>
+      <button id="mute-btn" title="Mute (M)">🔊</button>
+    </div>
+  </div>
+
+  <div id="minimap-container"><canvas id="minimap" width="150" height="150"></canvas></div>
+  <div id="hint-overlay">Hint</div>
+
+  <div id="mobile-controls">
+    <div class="dpad">
+      <div class="d-btn btn-up" data-dir="up">▲</div>
+      <div class="d-btn btn-down" data-dir="down">▼</div>
+      <div class="d-btn btn-left" data-dir="left">◀</div>
+      <div class="d-btn btn-right" data-dir="right">▶</div>
+    </div>
+  </div>
+
+  <div id="message-screen">
+    <div class="big-torch">🔥</div>
+    <h1 id="msg-title">DUNGEON ESCAPE</h1>
+    <p id="msg-desc">The dungeon is pitch black. Only your torch lights the way.<br>Read the stone plaque, step on the runes in the right order, grab the keys and escape before your torch dies!</p>
+    <p id="msg-extra">WASD / Arrows / D-pad / hold screen to move · Bump objects to interact</p>
+    <p id="msg-best">BEST: 0</p>
+    <button id="start-btn" class="main-btn" disabled>LOADING...</button>
+  </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/4xeZpdOCASZWg1k98hsHosEBUfF2/sessions/SIWMDVW2k4g8fjkBiKLW/games/AcpFUq1gyuk9x7JoBG4X.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=ns1sP%2FjuPyuWKmvmjfTV3SkcTJ3yxpWNmPRVBLHV7imxtIw0vvR7%2BT3yUIxa%2Flub9j39pgbx5RRdR1gBtJrtLlAWYtR9Ddp99S61skyPuJ4A7FnbHcXJ2agSVamycfyElaHpAdAHmXJuBlDRJwDvyWVW4RgWkoiyW94SlEW%2BzxErQw4CAJBL7VuVYIG1YiiE51v%2B3Yhc4LFQwx8NeFmeb68H%2FQjHQ6iU2BJ5auPSYcr8yQiieVmL5FNwVu45I0PVj3mtQGLh%2FMznVLUmEfhThQWyFni9%2BqG3%2F3jIWmBGuXlJTUoSq5rLcgd2xGA0QQBvlTpazyCumCDxSlz4mSGCfA%3D%3D"></script>
+</body>
+</html>
