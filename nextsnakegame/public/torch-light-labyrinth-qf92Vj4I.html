@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Torchlight Labyrinth</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #050408; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  canvas { display: block; position: absolute; left: 0; top: 0; touch-action: none; }
+  #btns { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+  .ib {
+    width: clamp(36px, 7vmin, 52px); height: clamp(36px, 7vmin, 52px);
+    border-radius: 8px; border: 2px solid #8b6d3b; background: rgba(26,20,30,0.85);
+    color: #f1ebd9; font-size: clamp(16px, 3.4vmin, 24px); cursor: pointer;
+    box-shadow: 0 3px 0 #2c1a0e, inset 0 0 8px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .ib:active { transform: translateY(2px); box-shadow: 0 1px 0 #2c1a0e; }
+  #screen {
+    position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 45%, rgba(40,22,10,0.55), rgba(0,0,0,0.88) 70%);
+    opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+  }
+  #screen.show { opacity: 1; pointer-events: auto; }
+  .card {
+    width: min(92vw, 540px); max-height: 94vh; overflow: hidden; text-align: center;
+    background: linear-gradient(#231c28, #15101a); border: 3px solid #8b6d3b; border-radius: 10px;
+    padding: clamp(12px, 3vmin, 26px); box-shadow: 0 0 40px rgba(255,140,40,0.25), inset 0 0 20px rgba(0,0,0,0.7);
+    transform: translateY(20px) scale(0.96); transition: transform 0.45s cubic-bezier(.2,1.4,.4,1);
+  }
+  #screen.show .card { transform: none; }
+  #sTitle {
+    font-family: 'Press Start 2P', 'Courier New', monospace; color: #ffb43a; margin: 0 0 clamp(8px,2vmin,16px);
+    font-size: clamp(15px, 4.6vmin, 30px); line-height: 1.3;
+    text-shadow: 0 3px 0 #5c3a21, 0 0 18px rgba(255,150,40,0.7);
+  }
+  #sBody { font-family: 'VT323', 'Courier New', monospace; color: #f1ebd9; font-size: clamp(16px, 3.6vmin, 24px); line-height: 1.15; margin-bottom: clamp(10px,2.4vmin,18px); text-shadow: 2px 2px 0 #000; }
+  #sBody .hl { color: #ffd34d; }
+  #sBody .cy { color: #5ff0ff; }
+  #sBtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  #sBtns button {
+    font-family: 'Press Start 2P', 'Courier New', monospace; font-size: clamp(10px, 2.6vmin, 15px);
+    padding: clamp(10px,2vmin,14px) clamp(14px,3vmin,24px); color: #fff; cursor: pointer;
+    background: linear-gradient(#b0853f, #6b4322); border: 2px solid #ffd34d; border-radius: 6px;
+    box-shadow: 0 4px 0 #2c1a0e, 0 0 14px rgba(255,180,60,0.35); text-shadow: 2px 2px 0 #3a210e;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  #sBtns button.alt { background: linear-gradient(#4a4458, #2a2434); border-color: #8b6d3b; animation: none; }
+  #sBtns button:active { transform: translateY(3px); box-shadow: 0 1px 0 #2c1a0e; }
+  @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="btns">
+  <button class="ib" id="bMute" title="Mute">🔊</button>
+  <button class="ib" id="bHint" title="Hint (H)">💡</button>
+  <button class="ib" id="bMap" title="Map (M)">🗺</button>
+</div>
+<div id="screen"><div class="card"><h1 id="sTitle"></h1><div id="sBody"></div><div id="sBtns"></div></div></div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/4xeZpdOCASZWg1k98hsHosEBUfF2/sessions/SIWMDVW2k4g8fjkBiKLW/games/qf92Vj4I7dITdWCvhbmt.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=BOuUhv7%2FHg1SKMwD6GpBVP2MJDDK2sV%2FY6XJnKW6Ka74wWkC6C8UnVlt9uA2uAacL2BlJYjr8TfnADMyPhpJ7vUq2XUO6WAVFJIYB3eRHW%2BQ4fKWI0wg3hqC%2Bp%2FyPTPo8bQ7ceotopPWQbxNRszx4gCQGA65KhR%2B9Xaj1nx32ztErfeZ%2Fzuc6ykNuwmtXc4epf3R3fpDFCw23%2Bji0XhVU4husmap64RLLB3AJnIm0CKmYkXqudo2%2BjoTPOYwQGciNCK6xAIaHP%2FBT8HAdhBPcv%2BpawGdZWrRmittimu5NJWR%2FbJm1zWvxtW8v4YQK18uczTl4RE0%2BUkb3v%2BWsHqOgw%3D%3D"></script>
+</body>
+</html>
