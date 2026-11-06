@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Chalk Strike: Cursed Sketch</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#152a20;}
+body{display:flex;align-items:center;justify-content:center;font-family:'Fredoka','Trebuchet MS',sans-serif;color:#f2efe6;user-select:none;-webkit-user-select:none;}
+canvas{display:block;touch-action:none;}
+canvas.play{cursor:none;}
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(20,40,30,.55),rgba(8,18,13,.88));z-index:5;}
+.overlay.show{display:flex;animation:fadeIn .35s ease-out;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.card{box-sizing:border-box;width:min(92vw,560px);max-height:94vh;padding:clamp(10px,2.6vmin,24px) clamp(12px,3vmin,28px);background:linear-gradient(160deg,#25473a,#1a3328);border:3px solid rgba(242,239,230,.75);border-radius:18px;box-shadow:0 0 0 6px rgba(242,239,230,.08),0 16px 40px rgba(0,0,0,.5);text-align:center;animation:pop .45s cubic-bezier(.2,1.4,.4,1);overflow:hidden;}
+h1{font-family:'Permanent Marker','Comic Sans MS',cursive;font-weight:400;margin:0;font-size:clamp(28px,8.5vmin,62px);line-height:1;color:#f2efe6;text-shadow:3px 3px 0 #ff8fb1,6px 6px 0 rgba(0,0,0,.35);letter-spacing:1px;}
+h2{font-family:'Permanent Marker','Comic Sans MS',cursive;font-weight:400;margin:clamp(2px,1vmin,8px) 0;font-size:clamp(13px,3.2vmin,20px);color:#ffe27a;}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:clamp(3px,.9vmin,8px);margin:clamp(6px,1.6vmin,14px) 0;font-size:clamp(11px,2.5vmin,15px);}
+.stat{background:rgba(0,0,0,.22);border:1px dashed rgba(242,239,230,.35);border-radius:8px;padding:clamp(3px,.8vmin,7px);}
+.stat b{display:block;color:#8fd3ff;font-weight:600;font-size:.85em;}
+.stat span{color:#f2efe6;font-weight:700;}
+p{margin:clamp(3px,.9vmin,8px) 0;font-size:clamp(11px,2.5vmin,15px);line-height:1.35;color:#e6e2d6;}
+.hint{color:#ff8fb1;}
+.btn{font-family:'Permanent Marker','Comic Sans MS',cursive;font-size:clamp(16px,4.2vmin,26px);padding:clamp(6px,1.6vmin,12px) clamp(16px,4vmin,34px);margin-top:clamp(4px,1.4vmin,12px);border:3px solid #f2efe6;border-radius:40px;background:linear-gradient(180deg,#ff9fbd,#e8638f);color:#fff;text-shadow:2px 2px 0 rgba(0,0,0,.3);cursor:pointer;box-shadow:0 5px 0 #a53a5e,0 8px 18px rgba(0,0,0,.4);transition:transform .12s ease-out;}
+.btn:hover{transform:translateY(-2px) scale(1.04);}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #a53a5e;}
+.big{font-size:clamp(20px,5vmin,34px);font-weight:700;color:#ffe27a;margin:4px 0;}
+#mute{position:fixed;top:8px;right:8px;z-index:10;width:clamp(34px,6vmin,46px);height:clamp(34px,6vmin,46px);border-radius:50%;border:2px solid rgba(242,239,230,.8);background:rgba(15,30,22,.7);color:#f2efe6;font-size:clamp(16px,3vmin,22px);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="mute" title="Mute (M)">🔊</button>
+
+<div id="title" class="overlay show">
+  <div class="card">
+    <h1>CHALK STRIKE</h1>
+    <h2 id="wname">Cursed-Sketch-101</h2>
+    <div class="stats" id="stats"></div>
+    <p>Erase every scribble on the board, then reach the <b style="color:#8fd3ff">EXIT</b>. Each reload burns chalk — run dry and you're finished.</p>
+    <p class="hint" id="ctrlHint">WASD move · Mouse aim &amp; shoot · Right-click / E grapple · Hold SPACE scope · R reload</p>
+    <button class="btn" id="startBtn">TAP / PRESS TO START</button>
+    <p id="bestTitle" style="margin-top:8px;color:#ffe27a"></p>
+  </div>
+</div>
+
+<div id="over" class="overlay">
+  <div class="card">
+    <h1 id="overTitle">ERASED!</h1>
+    <h2 id="overSub"></h2>
+    <div class="big" id="overScore">0</div>
+    <p id="overBest"></p>
+    <p id="overStats"></p>
+    <button class="btn" id="againBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/f7dYiPsY5MUnc9qq24iH6Wu1cJl2/sessions/VH8tMwV0bjyX9HMMYb8m/games/gdbXXgI43TjcDwHVWyNX.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=sIcOwRhF1DH8i%2BE7yIzWiIlqNaV38tuX1fcMWULuEBjyto2zKpseY97gHFIhkSho0N88S5RNg4Y15%2F3MHoyMUjNB8V%2F%2FDBh%2FvkScqpapNVp%2FxPmdcc1Nl8cDnKfv8tisyJTUoKHKV2NDnawSW58rR4DezEi8r4B5clSphZpQh647Q93hH%2BHEcyXhjaJ8BkQl9aS5FuCfZwdFDO05MstJ0wi48uilnUK%2FrooOkOWHOYJ1AuS8x5iozOb%2BYjwQl8hEsiIxMKdaM0wIHCEatR4TDOBMmwpyAirWgkEacFD07ZNSbg0csnpgLItOr8l1DT%2Fp4BC1twSDdbGnt%2Fvtyaawaw%3D%3D"></script>
+</body>
+</html>
