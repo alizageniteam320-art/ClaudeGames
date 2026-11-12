@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Urban Warfare: Last Stand</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1b1e22;color:#fff;font-family:'Rajdhani','Trebuchet MS',sans-serif;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+#game{position:fixed;inset:0}
+#game canvas{display:block;width:100%;height:100%}
+.hud{position:fixed;inset:0;pointer-events:none;z-index:5;display:none}
+body.playing .hud{display:block}
+.lbl{font-size:clamp(10px,1.8vmin,14px);letter-spacing:2px;color:#c8a96a;font-weight:700}
+.big{font-family:'Russo One','Arial Black',sans-serif}
+#radar{position:absolute;left:12px;top:12px;width:clamp(76px,17vmin,140px);height:clamp(76px,17vmin,140px);border-radius:50%;border:2px solid rgba(200,169,106,.7);box-shadow:0 0 12px rgba(0,0,0,.6)}
+#scoreBox{position:absolute;left:12px;top:calc(clamp(76px,17vmin,140px) + 20px);font-family:'Russo One',sans-serif;font-size:clamp(13px,2.6vmin,20px);text-shadow:0 2px 0 #000,0 0 6px #000;line-height:1.35}
+#scoreBox span:not(.lbl){color:#fff}
+#waveBox{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center;text-shadow:0 2px 0 #000,0 0 8px #000}
+#waveTxt{font-family:'Russo One',sans-serif;font-size:clamp(16px,3.6vmin,28px);color:#ff8c2a;letter-spacing:2px}
+#hostTxt{font-size:clamp(11px,2vmin,15px);font-weight:700;letter-spacing:2px;color:#e8dcc0}
+#muteBtn{position:absolute;right:10px;top:10px;width:clamp(34px,6vmin,44px);height:clamp(34px,6vmin,44px);border-radius:8px;border:2px solid rgba(200,169,106,.8);background:rgba(20,22,24,.7);color:#e8dcc0;font-size:clamp(16px,3vmin,22px);pointer-events:auto;cursor:pointer;z-index:20;display:flex;align-items:center;justify-content:center}
+#killfeed{position:absolute;right:12px;top:calc(clamp(34px,6vmin,44px) + 18px);text-align:right;font-weight:700;font-size:clamp(11px,2vmin,15px)}
+#killfeed div{background:linear-gradient(90deg,transparent,rgba(0,0,0,.6));padding:2px 8px;margin-bottom:3px;animation:kf .3s ease-out;letter-spacing:1px}
+#killfeed div b{color:#ff8c2a}
+@keyframes kf{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+#healthBox{position:absolute;left:14px;bottom:14px;width:clamp(120px,30vmin,240px)}
+#hpBar{height:clamp(8px,1.6vmin,12px);background:rgba(0,0,0,.6);border:2px solid rgba(232,220,192,.6);border-radius:3px;overflow:hidden;margin-top:3px}
+#hpFill{height:100%;width:100%;background:linear-gradient(180deg,#9fd36a,#4f8a2a);transition:width .15s}
+#ammoBox{position:absolute;right:16px;bottom:12px;text-align:right;text-shadow:0 2px 0 #000,0 0 8px #000}
+#wpn{font-size:clamp(10px,1.8vmin,14px);letter-spacing:2px;color:#c8a96a;font-weight:700}
+#ammo{font-family:'Russo One',sans-serif;font-size:clamp(26px,6.5vmin,52px)}
+#reserve{font-family:'Russo One',sans-serif;font-size:clamp(13px,2.6vmin,20px);color:#aaa;margin-left:6px}
+#reloadBar{height:4px;background:rgba(0,0,0,.5);margin-top:2px;opacity:0}
+#reloadFill{height:100%;width:0;background:#ff8c2a}
+#crosshair{position:absolute;left:50%;top:50%;--g:8px}
+#crosshair i{position:absolute;background:#fff;box-shadow:0 0 2px #000,0 0 1px #000}
+#crosshair .t,#crosshair .b{width:2px;height:10px;left:-1px}
+#crosshair .t{top:calc(-1 * var(--g) - 10px)}#crosshair .b{top:var(--g)}
+#crosshair .l,#crosshair .r{height:2px;width:10px;top:-1px}
+#crosshair .l{left:calc(-1 * var(--g) - 10px)}#crosshair .r{left:var(--g)}
+#crosshair b{position:absolute;width:2px;height:2px;left:-1px;top:-1px;background:#ff8c2a}
+#hitmarker{position:absolute;left:50%;top:50%;opacity:0}
+#hitmarker i{position:absolute;left:-1px;top:-5px;width:2px;height:10px;background:#fff;box-shadow:0 0 2px #000}
+#hitmarker i:nth-child(1){transform:rotate(45deg) translateY(-13px)}
+#hitmarker i:nth-child(2){transform:rotate(135deg) translateY(-13px)}
+#hitmarker i:nth-child(3){transform:rotate(225deg) translateY(-13px)}
+#hitmarker i:nth-child(4){transform:rotate(315deg) translateY(-13px)}
+#hitmarker.kill i{background:#ff3a2a}
+#dmgWrap{position:absolute;left:50%;top:50%;width:0;height:0}
+.dmg{position:absolute;left:0;top:0;width:0;height:0}
+.dmg i{position:absolute;left:-50px;top:calc(-1 * clamp(80px,22vmin,180px));width:100px;height:22px;border-radius:50% 50% 0 0;background:radial-gradient(ellipse at 50% 100%,rgba(255,40,25,.95),rgba(255,40,25,0) 70%)}
+#vignette,#lowhp{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0}
+#vignette{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(160,0,0,.75) 100%)}
+#lowhp{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 30%,rgba(110,0,0,.85) 100%)}
+#banner{position:absolute;top:24%;left:50%;transform:translate(-50%,-14px) scale(.85);opacity:0;text-align:center;transition:all .5s cubic-bezier(.2,1.4,.4,1);white-space:nowrap}
+#banner.show{opacity:1;transform:translate(-50%,0) scale(1)}
+#bannerT{font-family:'Russo One',sans-serif;font-size:clamp(24px,7vmin,60px);color:#fff;text-shadow:0 3px 0 #000,0 0 18px rgba(255,140,42,.8);letter-spacing:3px}
+#bannerS{font-weight:700;font-size:clamp(13px,2.6vmin,20px);color:#ffcf8a;letter-spacing:3px;text-shadow:0 2px 0 #000}
+#hint{position:absolute;left:50%;top:58%;transform:translateX(-50%);font-weight:700;letter-spacing:2px;font-size:clamp(12px,2.2vmin,17px);color:#ffcf8a;text-shadow:0 2px 0 #000;white-space:nowrap}
+.pop{position:absolute;left:50%;top:44%;transform:translateX(-50%);font-family:'Russo One',sans-serif;font-size:clamp(14px,3vmin,24px);color:#ffd166;text-shadow:0 2px 0 #000;animation:popUp .9s cubic-bezier(.2,.8,.3,1) forwards;white-space:nowrap}
+.pop.hs{color:#ff6a3a}
+@keyframes popUp{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}100%{opacity:0;transform:translate(-50%,-50px) scale(1)}}
+.screen{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at center,rgba(30,28,22,.35),rgba(10,10,10,.85));padding:16px;box-sizing:border-box}
+.screen.hidden{display:none}
+.title{font-family:'Russo One','Arial Black',sans-serif;font-size:clamp(28px,8.5vmin,80px);line-height:1;letter-spacing:2px;color:#fff;text-shadow:0 4px 0 #000,0 0 30px rgba(255,140,42,.6)}
+.title span{color:#ff8c2a;display:block;font-size:.55em;letter-spacing:6px;margin-top:6px}
+.sub{font-weight:700;letter-spacing:2px;font-size:clamp(12px,2.4vmin,18px);color:#e8dcc0;margin:10px 0;text-shadow:0 2px 0 #000;max-width:620px}
+.ctrl{display:grid;grid-template-columns:auto auto;gap:4px 14px;font-size:clamp(11px,2.2vmin,16px);font-weight:700;margin:8px 0 14px;text-align:left;background:rgba(0,0,0,.45);border:1px solid rgba(200,169,106,.4);padding:10px 16px;border-radius:6px}
+.ctrl b{color:#ff8c2a;font-family:'Russo One',sans-serif;font-weight:400}
+.btn{font-family:'Russo One',sans-serif;font-size:clamp(16px,3.6vmin,26px);letter-spacing:3px;color:#1b1e22;background:linear-gradient(180deg,#ffb35a,#ff8c2a 60%,#d9661a);border:none;border-radius:6px;padding:12px 34px;cursor:pointer;box-shadow:0 5px 0 #8a3f0e,0 8px 20px rgba(0,0,0,.6);animation:pulse 1.6s ease-in-out infinite;pointer-events:auto}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #8a3f0e}
+@keyframes pulse{50%{transform:scale(1.05)}}
+.stats{font-family:'Russo One',sans-serif;font-size:clamp(14px,3vmin,22px);margin:12px 0 18px;line-height:1.6;text-shadow:0 2px 0 #000}
+.stats em{font-style:normal;color:#ff8c2a}
+#touch{display:none;position:fixed;inset:0;z-index:6;pointer-events:none}
+body.touch.playing #touch{display:block}
+.tbtn{position:absolute;border-radius:50%;border:2px solid rgba(232,220,192,.6);background:radial-gradient(circle at 40% 35%,rgba(255,255,255,.25),rgba(30,30,30,.45));color:#fff;font-family:'Russo One',sans-serif;display:flex;align-items:center;justify-content:center;pointer-events:auto;font-size:clamp(11px,2.6vmin,16px);text-shadow:0 1px 0 #000}
+#btnFire{right:4vmin;bottom:7vmin;width:clamp(70px,21vmin,130px);height:clamp(70px,21vmin,130px);background:radial-gradient(circle at 40% 35%,rgba(255,170,90,.6),rgba(180,60,20,.55));font-size:clamp(14px,3.4vmin,22px)}
+#btnReload{right:calc(4vmin + clamp(70px,21vmin,130px) + 3vmin);bottom:5vmin;width:clamp(48px,12vmin,76px);height:clamp(48px,12vmin,76px)}
+#btnJump{right:calc(4vmin + 2vmin);bottom:calc(7vmin + clamp(70px,21vmin,130px) + 3vmin);width:clamp(48px,12vmin,76px);height:clamp(48px,12vmin,76px)}
+#joyBase{position:absolute;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(232,220,192,.5);background:rgba(0,0,0,.25);display:none}
+#joyKnob{position:absolute;left:30px;top:30px;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#ffcf8a,#c8a96a);box-shadow:0 2px 6px #000}
+#joyHint{position:absolute;left:6vmin;bottom:8vmin;font-weight:700;letter-spacing:2px;color:rgba(232,220,192,.55);font-size:clamp(11px,2.2vmin,15px)}
+body.touch #healthBox{left:50%;transform:translateX(-50%);bottom:auto;top:calc(clamp(16px,3.6vmin,28px) + clamp(11px,2vmin,15px) + 24px);width:clamp(110px,28vmin,200px)}
+body.touch #ammoBox{bottom:auto;top:calc(clamp(34px,6vmin,44px) + 16px)}
+body.touch #killfeed{top:calc(clamp(34px,6vmin,44px) + clamp(26px,6.5vmin,52px) + 60px)}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="vignette"></div><div id="lowhp"></div>
+<div id="hud" class="hud">
+  <canvas id="radar" width="160" height="160"></canvas>
+  <div id="scoreBox"><div><span class="lbl">SCORE</span> <span id="score">0</span></div><div><span class="lbl">KILLS</span> <span id="kills">0</span></div></div>
+  <div id="waveBox"><div id="waveTxt">WAVE 1</div><div id="hostTxt">HOSTILES 0</div></div>
+  <div id="killfeed"></div>
+  <div id="healthBox"><div class="lbl">HEALTH</div><div id="hpBar"><div id="hpFill"></div></div></div>
+  <div id="ammoBox"><div id="wpn">M4 CARBINE</div><div><span id="ammo">30</span><span id="reserve">/ ∞</span></div><div id="reloadBar"><div id="reloadFill"></div></div></div>
+  <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><b></b></div>
+  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+  <div id="dmgWrap"></div>
+  <div id="hint"></div>
+  <div id="banner"><div id="bannerT"></div><div id="bannerS"></div></div>
+</div>
+<button id="muteBtn" title="Mute (M)">🔊</button>
+<div id="touch">
+  <div id="joyHint">◀ DRAG TO MOVE</div>
+  <div id="joyBase"><div id="joyKnob"></div></div>
+  <div id="btnFire" class="tbtn">FIRE</div>
+  <div id="btnReload" class="tbtn">R</div>
+  <div id="btnJump" class="tbtn">JUMP</div>
+</div>
+<div id="titleScreen" class="screen">
+  <div class="title">URBAN WARFARE<span>LAST STAND</span></div>
+  <div class="sub">Hold the district. Survive endless waves of hostiles. Watch for red laser sights — they're about to fire.</div>
+  <div class="ctrl">
+    <b>WASD</b><span>Move &nbsp;·&nbsp; <b>SHIFT</b> Sprint</span>
+    <b>MOUSE</b><span>Aim &nbsp;·&nbsp; <b>CLICK</b> Fire</span>
+    <b>R</b><span>Reload &nbsp;·&nbsp; <b>SPACE</b> Jump</span>
+    <b>TOUCH</b><span>Left: move · Right: look · FIRE btn</span>
+  </div>
+  <button class="btn" id="startBtn">DEPLOY</button>
+  <div class="sub" id="bestTitle" style="margin-top:14px">BEST: 0</div>
+</div>
+<div id="pauseScreen" class="screen hidden">
+  <div class="title" style="font-size:clamp(26px,7vmin,60px)">PAUSED</div>
+  <div class="sub">Click to resume</div>
+  <button class="btn" id="resumeBtn">RESUME</button>
+</div>
+<div id="overScreen" class="screen hidden">
+  <div class="title" style="color:#ff5a3a">K.I.A.<span>MISSION FAILED</span></div>
+  <div class="stats" id="overStats"></div>
+  <button class="btn" id="againBtn">REDEPLOY</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/b5cmpZh3PQa4JkCpGnvORUI4K293/sessions/eNPZxttlaLRTq08U2USL/games/F4Zo1cSoo6igX5tsdXvS.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=TyQtAn5jUc%2BDien78lHz%2BmBKOxV08Dup2jq9Ac6GOXIdvS8NnfzIEASg0HQGgY8fRtD0ccxqkioU1OpuwYd6cCSCC%2FEVwGHHpTe%2BEWDAngUp3huNbsoGrEfTSSBQQ5ZH7ZeFLgeE%2BAaOuNHV30Jn2zy9TlOayVxV%2B6QxalrLFgqFtxkeHMBE508C0ixHExbeK6JVA1gZDNFz18b4lG6%2BdhtEbHc9%2BLTzQedMGEfn1eUT95%2FQ7M0vxXVbRU62BZT1kfy6nwgNf%2FOF86vryXEg1zF9bFGbO%2BSLa7PY63R6HQHDp1fX5YRhB27QxLraIBvpBVjli0l69F9mB8k%2F3zUE%2FA%3D%3D"></script>
+</body>
+</html>
