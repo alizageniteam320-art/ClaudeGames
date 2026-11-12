@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ColorPop! – Color by Number</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#ff6b9a; --purple:#6c5ce7; --teal:#00c2a8; --yellow:#ffc93c; --cream:#fff7ee; --ink:#3b2b55;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:'Fredoka','Trebuchet MS',sans-serif;color:var(--ink);
+    background:linear-gradient(160deg,#ffe0ee 0%,#e8e2ff 55%,#d4f6ef 100%);user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+  button{font-family:inherit;cursor:pointer;border:none;color:inherit;}
+  .hidden{display:none !important;}
+
+  /* decorative parallax blobs */
+  #bgDeco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+  #bgDeco span{position:absolute;border-radius:50%;opacity:.35;filter:blur(2px);animation:floaty 14s ease-in-out infinite;}
+  @keyframes floaty{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-30px) scale(1.08)}}
+  #bgDeco i{position:absolute;width:14px;height:14px;border-radius:3px;opacity:.25;animation:spin 10s linear infinite;}
+  @keyframes spin{from{transform:rotate(0) translateY(0)}to{transform:rotate(360deg) translateY(-10px)}}
+
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;z-index:1;}
+
+  /* ---------- Title ---------- */
+  #title{align-items:center;padding:clamp(8px,2vh,20px) 12px 10px;}
+  .tHead{width:100%;max-width:720px;display:flex;align-items:center;justify-content:center;position:relative;}
+  h1{margin:0;font-size:clamp(34px,9vmin,68px);font-weight:700;letter-spacing:1px;color:#fff;
+     text-shadow:0 3px 0 var(--purple),0 6px 0 rgba(60,30,110,.35),0 0 18px rgba(255,255,255,.5);
+     -webkit-text-stroke:2px var(--purple);animation:titleBob 3s ease-in-out infinite;}
+  h1 span{color:var(--yellow);}
+  @keyframes titleBob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-4px) rotate(1deg)}}
+  .tHead .iconBtn{position:absolute;right:0;top:50%;transform:translateY(-50%);}
+  .sub{margin:4px 0 6px;font-size:clamp(13px,3.2vmin,18px);text-align:center;opacity:.85;}
+  .invRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px;}
+  .invChip{background:rgba(255,255,255,.75);border-radius:20px;padding:3px 10px;font-size:13px;font-weight:600;box-shadow:0 2px 0 rgba(108,92,231,.25);}
+  #gallery{flex:1;min-height:0;width:100%;max-width:760px;overflow-y:auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(clamp(110px,28vmin,170px),1fr));gap:clamp(8px,2vmin,16px);padding:6px 4px 12px;align-content:start;}
+  .card{background:#fff;border-radius:18px;padding:8px;box-shadow:0 5px 0 rgba(108,92,231,.25),0 10px 20px rgba(60,30,110,.12);
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1);position:relative;text-align:center;}
+  .card:hover{transform:translateY(-4px) rotate(-1deg);}
+  .card:active{transform:scale(.96);}
+  .card canvas{width:100%;aspect-ratio:1;image-rendering:pixelated;border-radius:12px;display:block;background:#eee;}
+  .card .nm{font-weight:700;margin-top:5px;font-size:clamp(13px,3vmin,17px);}
+  .card .meta{font-size:12px;opacity:.7;}
+  .card .pb{height:6px;background:#eee;border-radius:4px;overflow:hidden;margin-top:4px;}
+  .card .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));}
+  .card .done{position:absolute;top:4px;right:4px;background:var(--teal);color:#fff;border-radius:50%;width:26px;height:26px;
+    display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.2);}
+  .startHint{font-size:13px;opacity:.7;animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:.95}}
+
+  /* ---------- Game ---------- */
+  .topbar{display:flex;align-items:center;gap:6px;padding:6px 8px;height:clamp(44px,8vh,60px);flex-shrink:0;}
+  .iconBtn{width:clamp(34px,6.5vh,44px);height:clamp(34px,6.5vh,44px);border-radius:12px;background:#fff;font-size:clamp(16px,3vh,20px);font-weight:700;
+    box-shadow:0 3px 0 rgba(108,92,231,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s;}
+  .iconBtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(108,92,231,.35);}
+  .tinfo{flex:1;min-width:0;}
+  #gName{font-weight:700;font-size:clamp(14px,2.6vh,19px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pbar{height:8px;background:rgba(255,255,255,.8);border-radius:5px;overflow:hidden;margin-top:2px;}
+  #gProg{height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--purple));transition:width .3s ease-out;}
+  .pill{background:var(--purple);color:#fff;font-weight:700;border-radius:20px;padding:4px 12px;font-size:clamp(14px,2.6vh,18px);
+    box-shadow:0 3px 0 #4b3db8;min-width:56px;text-align:center;flex-shrink:0;}
+  .pill.bump{animation:bump .3s ease-out;}
+  @keyframes bump{40%{transform:scale(1.2)}}
+
+  #boardArea{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:4px;}
+  #boardWrap{position:relative;}
+  #board{display:block;border-radius:14px;background:#fff;box-shadow:0 6px 0 rgba(108,92,231,.3),0 14px 28px rgba(60,30,110,.18);touch-action:none;cursor:crosshair;}
+  #board.bucket{cursor:copy;}
+
+  #powers{display:flex;gap:6px;padding:4px 8px;justify-content:center;flex-shrink:0;}
+  .pw{position:relative;flex:1;max-width:110px;height:clamp(48px,9vh,66px);border-radius:14px;background:linear-gradient(180deg,#fff,#f1edff);
+    box-shadow:0 4px 0 rgba(108,92,231,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:transform .15s;}
+  .pw:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(108,92,231,.35);}
+  .pw svg{width:clamp(20px,3.8vh,28px);height:clamp(20px,3.8vh,28px);}
+  .pw .lbl{font-size:clamp(10px,1.8vh,13px);font-weight:600;}
+  .pw .badge{position:absolute;top:-6px;right:-4px;background:var(--pink);color:#fff;border-radius:12px;min-width:22px;height:22px;font-size:12px;
+    font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;box-shadow:0 2px 0 #c43c6b;}
+  .pw.empty{opacity:.55;}
+  .pw.active{background:linear-gradient(180deg,var(--yellow),#ffb020);box-shadow:0 4px 0 #c98400;animation:wob .8s ease-in-out infinite;}
+  @keyframes wob{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+  #pwHint svg{color:#f5a300;} #pwBucket svg{color:var(--teal);} #pwFill svg{color:var(--pink);} #pwRand svg{color:var(--purple);}
+  #pwRand{background:linear-gradient(180deg,#fff,#e9e1ff);}
+  .meter{position:absolute;bottom:4px;left:12%;right:12%;height:4px;border-radius:3px;background:#e2dcff;overflow:hidden;}
+  .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--purple));transition:width .3s;}
+  .adBtn{flex:0 0 auto;width:clamp(44px,9vh,60px);height:clamp(48px,9vh,66px);border-radius:14px;background:linear-gradient(180deg,#3ee0b0,#00a88f);
+    color:#fff;font-weight:700;font-size:clamp(10px,1.8vh,13px);box-shadow:0 4px 0 #007a68;line-height:1.1;}
+  .adBtn b{font-size:clamp(14px,2.6vh,18px);display:block;}
+
+  #palette{display:flex;gap:8px;padding:6px 10px clamp(8px,1.5vh,14px);overflow-x:auto;flex-shrink:0;justify-content:safe center;}
+  .sw{position:relative;flex:0 0 auto;width:clamp(40px,7.5vh,56px);height:clamp(40px,7.5vh,56px);border-radius:50%;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),inset 0 4px 6px rgba(255,255,255,.45),0 3px 0 rgba(60,30,110,.25);
+    font-weight:700;font-size:clamp(15px,2.8vh,20px);display:flex;align-items:center;justify-content:center;
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1);border:3px solid #fff;}
+  .sw.sel{transform:translateY(-5px) scale(1.12);border-color:var(--ink);}
+  .sw .cnt{position:absolute;bottom:-4px;right:-6px;background:#fff;color:var(--ink);font-size:10px;border-radius:9px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .sw.done{opacity:.55;}
+  .sw.done .cnt{background:var(--teal);color:#fff;}
+
+  #fx{position:fixed;inset:0;pointer-events:none;z-index:30;}
+
+  #modal{position:fixed;inset:0;z-index:20;background:rgba(40,25,70,.5);display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(3px);}
+  #modalCard{background:var(--cream);border-radius:22px;padding:clamp(14px,3vh,24px);width:min(92vw,380px);max-height:94vh;overflow:auto;text-align:center;
+    box-shadow:0 8px 0 rgba(108,92,231,.4),0 20px 40px rgba(0,0,0,.25);animation:popIn .45s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes popIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  #modalCard h2{margin:0 0 6px;font-size:clamp(24px,5vh,34px);color:var(--purple);text-shadow:0 2px 0 #fff;}
+  .btn{display:inline-block;margin:6px 4px 0;padding:10px 18px;border-radius:14px;font-weight:700;font-size:16px;color:#fff;
+    background:linear-gradient(180deg,#8b7cff,var(--purple));box-shadow:0 4px 0 #4b3db8;transition:transform .15s;}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #4b3db8;}
+  .btn.pink{background:linear-gradient(180deg,#ff8db3,var(--pink));box-shadow:0 4px 0 #c43c6b;}
+  .btn.teal{background:linear-gradient(180deg,#3ee0c4,var(--teal));box-shadow:0 4px 0 #008a77;}
+  .btn:disabled{filter:grayscale(1);opacity:.6;}
+  .stars{font-size:clamp(30px,6vh,42px);letter-spacing:4px;margin:4px 0;}
+  .stars .off{filter:grayscale(1);opacity:.3;}
+  .stats{display:flex;justify-content:center;gap:10px;margin:8px 0;}
+  .stats div{background:#fff;border-radius:12px;padding:6px 12px;box-shadow:0 2px 0 rgba(108,92,231,.2);}
+  .stats b{display:block;font-size:20px;color:var(--purple);}
+  .winImg{width:clamp(90px,22vh,150px);aspect-ratio:1;image-rendering:pixelated;border-radius:12px;box-shadow:0 4px 0 rgba(108,92,231,.3);}
+  .adBox{height:clamp(110px,24vh,170px);border-radius:16px;margin:8px 0;position:relative;overflow:hidden;color:#fff;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:linear-gradient(120deg,#ff6b9a,#ffc93c,#00c2a8,#6c5ce7,#ff6b9a);background-size:400% 400%;animation:adGrad 4s linear infinite;}
+  @keyframes adGrad{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+  .adBox .big{font-size:clamp(22px,4.5vh,30px);font-weight:700;text-shadow:0 3px 0 rgba(0,0,0,.25);}
+  .adBox .crayons{font-size:30px;animation:titleBob 1.2s ease-in-out infinite;}
+  .adTag{position:absolute;top:6px;left:8px;font-size:11px;background:rgba(0,0,0,.35);padding:2px 6px;border-radius:6px;}
+  .adBar{height:8px;background:#e6e0ff;border-radius:5px;overflow:hidden;}
+  .adBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--purple));}
+
+  #toast{position:fixed;left:50%;top:clamp(56px,10vh,80px);transform:translate(-50%,-20px);opacity:0;z-index:25;background:var(--ink);color:#fff;
+    padding:8px 16px;border-radius:20px;font-weight:600;font-size:15px;pointer-events:none;transition:all .35s cubic-bezier(.34,1.56,.64,1);max-width:90vw;text-align:center;}
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+<div id="bgDeco"></div>
+
+<!-- TITLE / GALLERY -->
+<div id="title" class="screen">
+  <div class="tHead"><h1>Color<span>Pop!</span></h1><button id="muteT" class="iconBtn" aria-label="Mute">🔊</button></div>
+  <p class="sub">Pick a color, tap its numbers — drag to paint fast!</p>
+  <div id="inv" class="invRow"></div>
+  <div class="startHint">Tap a picture to start · Press Enter to continue</div>
+  <div id="gallery"></div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen hidden">
+  <div class="topbar">
+    <button id="backBtn" class="iconBtn" aria-label="Back">◀</button>
+    <div class="tinfo"><div id="gName">Picture</div><div class="pbar"><div id="gProg"></div></div></div>
+    <div id="gScore" class="pill">0</div>
+    <button id="restartBtn" class="iconBtn" aria-label="Restart">↺</button>
+    <button id="muteG" class="iconBtn" aria-label="Mute">🔊</button>
+  </div>
+  <div id="boardArea"><div id="boardWrap"><canvas id="board"></canvas></div></div>
+  <div id="powers">
+    <button class="pw" id="pwHint" title="Hint (H)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 21.5h6v-1.5H9zM12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/><path d="M10 7.5a2.5 2.5 0 0 1 2-1.4" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+      <span class="lbl">Hint</span><span class="badge" id="bHint">0</span></button>
+    <button class="pw" id="pwBucket" title="Bucket (B)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 9.5l7-7 8 8-7 7a2 2 0 0 1-2.8 0L4.5 12.3a2 2 0 0 1 0-2.8z"/><path d="M20 14.5s-2 2.6-2 4a2 2 0 0 0 4 0c0-1.4-2-4-2-4z"/><path d="M7 10.5h10" stroke="#fff" stroke-width="1.4"/></svg>
+      <span class="lbl">Bucket</span><span class="badge" id="bBucket">0</span></button>
+    <button class="pw" id="pwFill" title="Fill (F)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 19.5l11-11 2 2-11 11z"/><path d="M15 2l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1zM20 8.5l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7zM19 1.5l.5 1 1 .5-1 .5-.5 1-.5-1-1-.5 1-.5z"/></svg>
+      <span class="lbl">Fill</span><span class="badge" id="bFill">0</span></button>
+    <button class="pw" id="pwRand" title="Random Fill (R)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4.5" fill="currentColor"/><circle cx="8" cy="8" r="1.7" fill="#fff"/><circle cx="16" cy="8" r="1.7" fill="#fff"/><circle cx="12" cy="12" r="1.7" fill="#fff"/><circle cx="8" cy="16" r="1.7" fill="#fff"/><circle cx="16" cy="16" r="1.7" fill="#fff"/></svg>
+      <span class="lbl">Random</span><span class="badge" id="bRand">0</span><div class="meter"><i id="meterFill"></i></div></button>
+    <button class="adBtn" id="adBtn" title="Watch an ad for a Random Fill"><b>▶</b>AD +1</button>
+  </div>
+  <div id="palette"></div>
+</div>
+
+<canvas id="fx"></canvas>
+<div id="modal" class="hidden"><div id="modalCard"></div></div>
+<div id="toast"></div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/jwggs1weG2dxWzUZ20dT2bhbgeM2/sessions/5ytjS3dKwJlPKbdGyUON/games/LyrG0fK9nPx8eIk65Epk.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=hRIFPlY9JAaZ4qH%2FlzZJP4yoUR8gD2hiwQq0W%2FbfMrxZYBnASjQvCvTmdI3soNJOC1ldbhpJkFtujCFRGe9DU2sIkM0deQS%2FcxbOL5dV3Bu%2BWmaDwQWcrne494OW8vhPuABKsNX%2BxmB7Qf68wUEa1d2lCia3mW4N1AWtcFcww28XFT6KV6D%2B91TWVQbFyvwyBhOVdKBpKG2tfvlNSwGX5Dx3bxe3ejyNOyFQ9kdsL9G92WYZ7LbVbeeu3lIcgVzHHm6%2FvlOVXytOdoWi295v9uq2HaUR3wYqRG2mvwR3wT1WovYg%2BA3%2BkTjzotktouFwRrr9%2Fwe1g4ckODsHUjB5MA%3D%3D"></script>
+</body>
+</html>
