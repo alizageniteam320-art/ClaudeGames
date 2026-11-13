@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Alan Becker: Animator's Sandbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2c3e50;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1200px;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* First Person Monitor Bezel */
+        #game-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 10px solid #1a1a1a;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #toolbar {
+            background: #ecf0f1;
+            padding: 10px 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 2px solid #bdc3c7;
+            z-index: 10;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-size: 14px;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn.active {
+            background: #2ecc71;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.2);
+        }
+        .btn.danger { background: #e74c3c; }
+        .btn.special { background: #9b59b6; }
+        
+        #color-picker {
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 0;
+        }
+        
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            background: white;
+            cursor: crosshair;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        #timeline {
+            background: #ecf0f1;
+            height: 60px;
+            border-top: 2px solid #bdc3c7;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 5px;
+            overflow-x: auto;
+            z-index: 10;
+        }
+        .frame-thumb {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 2px solid #95a5a6;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .frame-thumb.active {
+            border-color: #e74c3c;
+            background: #fadbd8;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 200;
+        }
+        #overlay h1 { font-size: 3em; margin-bottom: 10px; color: #3498db; }
+        #overlay p { font-size: 1.2em; text-align: center; max-width: 600px; margin-bottom: 20px; }
+        
+        #hud {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            pointer-events: none;
+            text-align: right;
+            z-index: 50;
+        }
+        .hud-text {
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 2px solid #333;
+            margin-bottom: 5px;
+            font-weight: 800;
+            font-size: 16px;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 50;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <button class="btn active" id="btn-draw">✏️ Draw Lines</button>
+        <button class="btn" id="btn-spawn">🧍 Spawn Stickman</button>
+        <input type="color" id="color-picker" value="#000000" title="Stickman Color">
+        <div style="width: 2px; height: 30px; background: #bdc3c7; margin: 0 5px;"></div>
+        <button class="btn special" id="btn-add-frame">➕ Make Frame</button>
+        <button class="btn danger" id="btn-play">▶️ Play & Physics!</button>
+        <button class="btn" id="btn-clear">🗑️ Clear</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-text">Score: <span id="score">0</span></div>
+        <div class="hud-text">Best: <span id="best-score">0</span></div>
+    </div>
+    
+    <div id="instructions">Draw something or spawn NPCs!</div>
+
+    <!-- Canvas -->
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Timeline -->
+    <div id="timeline">
+        <div class="frame-thumb active" data-index="0">1</div>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="overlay">
+        <h1>Animator's OS</h1>
+        <p><strong>First-Person Sandbox View:</strong><br>
+        1. Draw lines (terrain/objects).<br>
+        2. Spawn Stickmen NPCs with colored circle heads.<br>
+        3. Press <strong>+ Make Frame</strong> to animate frame-by-frame.<br>
+        4. Press <strong>Play & Physics!</strong> to watch your animation run, then break into real-time physics!<br>
+        5. <strong>Possess NPC:</strong> During physics, CLICK a Stickman to become it (Use WASD/Arrows to move!).</p>
+        <button class="btn" style="font-size: 20px; padding: 15px 30px;" id="btn-start">Boot OS</button>
+    </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/7PSPA2yH8yQpfN5J8FKJERwWdQ53/sessions/DjMeXnRggtFJPeaToI3d/games/wPs259Huq9wnrPvqaRTK.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=Zimbqu%2F6uCLqwbfVI%2Fec79rQLGB6rSOk5yCCRpSB6xUD5bM2RQT2gy05IaUYtp019e7%2BLWE41AXFhiLqA8QI6Feb0mH%2BsmSn3d93tzsXFjSumaV1EDDWGx7OJ0dGLJZ%2F9%2FcyLKepgpgIhD4%2BEJqOt57o%2Bzea%2Fik7RBsIwQ4cdqsUT09T3rMUHKCEvJ0Ex1gHN1K8ELGwiFeUf%2BfkMLJFOxpTqz2%2Fo8U82CKXlhRqERqvlFGx9f2TCBk9FJVO8uplPozFc1%2FvJWeDr10TjtuiZgOzNiqB%2B2%2FEUI9ZycTtur4oI06j90dIfbhZqIf1%2BLpe2vQWlRi8FRTAooc9IXqiYQ%3D%3D"></script>
+</body>
+</html>
