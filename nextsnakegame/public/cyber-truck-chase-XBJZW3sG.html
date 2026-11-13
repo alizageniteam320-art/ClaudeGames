@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER TRUCK CHASE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Orbitron', 'Trebuchet MS', sans-serif;
+            text-transform: uppercase;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050510;
+            overflow: hidden;
+            color: #00FFCC;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(5, 5, 16, 0.85);
+            padding: 30px;
+            border: 2px solid #00FFCC;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00FFCC;
+            pointer-events: auto;
+            text-align: center;
+        }
+        .screen.active {
+            display: flex;
+        }
+        h1 {
+            font-size: 32px;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 0px #FF0055;
+            letter-spacing: 2px;
+        }
+        p {
+            font-size: 16px;
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+        .highlight { color: #FF0055; }
+        button {
+            background: transparent;
+            color: #00FFCC;
+            border: 2px solid #00FFCC;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+            text-shadow: 0 0 5px #00FFCC;
+            box-shadow: inset 0 0 10px rgba(0,255,204,0.2);
+        }
+        button:hover, button:active {
+            background: #00FFCC;
+            color: #050510;
+        }
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 1px 1px 2px #000;
+        }
+        .bar-container {
+            width: 150px;
+            height: 15px;
+            background: #222;
+            border: 1px solid #00FFCC;
+            margin-top: 5px;
+        }
+        .bar-fill {
+            height: 100%;
+            background: #00FFCC;
+            width: 100%;
+            transition: width 0.1s;
+        }
+        #health-fill { background: #FF0055; }
+        #energy-fill { background: #0088FF; }
+        
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .ctrl-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(0, 255, 204, 0.2);
+            border: 2px solid #00FFCC;
+            border-radius: 50%;
+            color: #00FFCC;
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        .ctrl-btn:active {
+            background: rgba(0, 255, 204, 0.6);
+        }
+        #fly-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 10px;
+            border-color: #0088FF;
+            color: #0088FF;
+            background: rgba(0, 136, 255, 0.2);
+        }
+        #fly-btn:active {
+            background: rgba(0, 136, 255, 0.6);
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls { display: flex; }
+            h1 { font-size: 24px; }
+            .bar-container { width: 100px; }
+            #hud { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="hud" style="display: none;">
+        <div>
+            <div>DISTANCE: <span id="dist-val">5000</span>M</div>
+        </div>
+        <div style="text-align: right;">
+            <div>HEALTH</div>
+            <div class="bar-container"><div id="health-fill" class="bar-fill"></div></div>
+            <div style="margin-top:10px;">FLIGHT ENERGY</div>
+            <div class="bar-container"><div id="energy-fill" class="bar-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="ctrl-btn" id="btn-left">LEFT</div>
+        <div class="ctrl-btn" id="fly-btn">FLY</div>
+        <div class="ctrl-btn" id="btn-right">RIGHT</div>
+    </div>
+
+    <div id="ui-layer">
+        <!-- START SCREEN -->
+        <div id="screen-start" class="screen active">
+            <h1>CYBER TRUCK CHASE</h1>
+            <p>THE <span class="highlight">ROADSTER</span> IS ESCAPING!</p>
+            <p>USE <span class="highlight">LEFT/RIGHT ARROWS</span> TO STEER.</p>
+            <p>HOLD <span class="highlight">SPACE</span> TO FLY OVER TRAFFIC!</p>
+            <button id="start-btn">ENGAGE PURSUIT</button>
+        </div>
+
+        <!-- GAME OVER SCREEN -->
+        <div id="screen-over" class="screen">
+            <h1 class="highlight">MISSION FAILED</h1>
+            <p id="fail-reason">VEHICLE DESTROYED</p>
+            <p>REMAINING DISTANCE: <span id="end-dist">0</span>M</p>
+            <button id="restart-btn">RETRY PURSUIT</button>
+        </div>
+
+        <!-- WIN SCREEN -->
+        <div id="screen-win" class="screen">
+            <h1 style="color: #00FFCC; text-shadow: 2px 2px 0px #0088FF;">TARGET SECURED!</h1>
+            <p>YOU CAUGHT THE ROADSTER.</p>
+            <p>CYBER TRUCK SUPREMACY CONFIRMED.</p>
+            <button id="win-restart-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/yn3fNUvw42bLOnxMv898dcoBky03/sessions/vCuPcjX61DYCglXefzsb/games/XBJZW3sGoONfjiRvBve7.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=wDTNqUi0wi%2BP9RNivyfvkpG9tx5GuT5t%2Fz9egYA%2Fo%2FSzVvncZoub68NxF9QQmFYLU2B%2B%2FhJEwtUTzRV0uzRhbp7JH%2Bb028O0%2B%2Bq3M7qJbf6yGkAYqrEP9wDUo4TiBS8GzuVMEHHokfAgucZb7CY6xFo7GOMH225%2F8x%2BAAtydz%2FH7qorRRyzIGRjoyFhv%2BXS6qBvRHfDAPeT2d06jSBZ4QxGV5vZ4GKIzOLQ%2F4%2FqvbmcFnlt8d5MqGlQ4HwyU94bpXsEgBOAc20GUrluo35azM2ChIDDEwCEr0p8GvI351zGWwsx%2FDK%2BvW0etfuaerD0Ys0VwfCdpJrvTbNmki4PcHg%3D%3D"></script>
+</body>
+</html>
