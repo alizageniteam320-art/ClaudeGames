@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pirate's Passage</title>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Fredoka:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0b2545; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #game { position: absolute; left: 0; top: 0; width: 480px; height: 800px; transform-origin: 0 0; overflow: hidden; }
+  canvas { position: absolute; left: 0; top: 0; width: 480px; height: 800px; display: block; touch-action: none; }
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: #fff; font-family: 'Fredoka', 'Trebuchet MS', sans-serif;
+    background: radial-gradient(ellipse at center, rgba(11,37,69,0.35) 0%, rgba(11,37,69,0.82) 75%);
+    transition: opacity 0.45s ease; opacity: 1; z-index: 5;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .overlay .inner { transform: translateY(0) scale(1); transition: transform 0.5s cubic-bezier(.2,1.4,.4,1); }
+  .overlay.hidden .inner { transform: translateY(30px) scale(0.92); }
+  h1 {
+    font-family: 'Pirata One', 'Georgia', serif; font-weight: 400; font-size: 82px; line-height: 0.9; margin: 0 0 10px;
+    color: #f4c542; text-shadow: 0 4px 0 #7a4a12, 0 0 3px #3b1f0e, 3px 3px 0 #3b1f0e, -3px -3px 0 #3b1f0e, 3px -3px 0 #3b1f0e, -3px 3px 0 #3b1f0e, 0 10px 24px rgba(0,0,0,0.6);
+    animation: float 3s ease-in-out infinite;
+  }
+  h2 {
+    font-family: 'Pirata One', 'Georgia', serif; font-weight: 400; font-size: 68px; margin: 0 0 8px; color: #ff6b5b;
+    text-shadow: 3px 3px 0 #3b1f0e, -3px -3px 0 #3b1f0e, 3px -3px 0 #3b1f0e, -3px 3px 0 #3b1f0e, 0 8px 20px rgba(0,0,0,0.6);
+  }
+  @keyframes float { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+  .sub { font-size: 20px; margin: 0 0 22px; color: #e8f6ff; text-shadow: 0 2px 4px rgba(0,0,0,0.7); }
+  .panel {
+    background: linear-gradient(#f3e3bd, #dcc08a); color: #4a2a10; border: 4px solid #7a4a12; border-radius: 16px;
+    padding: 14px 20px; margin: 0 30px 24px; font-size: 18px; line-height: 1.5; box-shadow: 0 8px 0 #4a2a10, 0 14px 30px rgba(0,0,0,0.5);
+  }
+  .panel b { color: #a0331f; }
+  .btn {
+    font-family: 'Pirata One', 'Georgia', serif; font-size: 40px; color: #fff; background: linear-gradient(#e0473a, #a82a1f);
+    border: 4px solid #3b1f0e; border-radius: 18px; padding: 6px 38px 10px; cursor: pointer;
+    box-shadow: 0 7px 0 #3b1f0e, 0 12px 24px rgba(0,0,0,0.5); text-shadow: 2px 2px 0 #3b1f0e;
+    transition: transform 0.12s ease, box-shadow 0.12s ease; animation: pulse 1.6s ease-in-out infinite;
+  }
+  .btn:active { transform: translateY(5px); box-shadow: 0 2px 0 #3b1f0e; }
+  @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.15); } }
+  .hint { margin-top: 16px; font-size: 16px; color: #cfe8f5; opacity: 0.9; }
+  .stat { font-size: 26px; margin: 4px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.7); }
+  .big { font-size: 58px; font-weight: 700; color: #f4c542; text-shadow: 3px 3px 0 #3b1f0e, -2px -2px 0 #3b1f0e, 0 6px 14px rgba(0,0,0,0.6); }
+  #newBest { display: inline-block; background: #f4c542; color: #3b1f0e; font-weight: 700; padding: 4px 14px; border-radius: 20px; border: 3px solid #3b1f0e; margin: 6px 0 14px; font-size: 20px; animation: float 1.2s ease-in-out infinite; }
+  #mute {
+    position: absolute; top: 12px; right: 12px; width: 46px; height: 46px; border-radius: 50%; z-index: 10;
+    background: rgba(11,37,69,0.7); border: 3px solid #f4c542; color: #fff; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="c"></canvas>
+  <button id="mute" aria-label="Mute">🔊</button>
+  <div id="title" class="overlay">
+    <div class="inner">
+      <h1>Pirate's<br>Passage</h1>
+      <p class="sub">Steer yer ship through treacherous waters!</p>
+      <div class="panel">
+        <b>Steer:</b> ← → Arrow keys or A / D<br>
+        <b>Touch:</b> Hold &amp; drag where ye want to sail<br>
+        Grab <b>gold doubloons</b>, dodge rocks,<br>coral reefs &amp; enemy ships!
+      </div>
+      <button class="btn" id="startBtn">⚓ Set Sail!</button>
+      <div class="hint">Tap or press Space to start</div>
+    </div>
+  </div>
+  <div id="over" class="overlay hidden">
+    <div class="inner">
+      <h2>Shipwrecked!</h2>
+      <div class="stat">Score</div>
+      <div class="big" id="finalScore">0</div>
+      <div id="newBest">★ New Best! ★</div>
+      <div class="stat" id="bestTxt">Best: 0</div>
+      <div class="stat" id="statsTxt" style="font-size:20px;color:#cfe8f5;margin-bottom:22px">0 m · 0 doubloons</div>
+      <button class="btn" id="againBtn">Sail Again</button>
+      <div class="hint">or press Space</div>
+    </div>
+  </div>
+</div>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/c5vDuNDxD4W44vR6LShQfFxhL8m1/sessions/t2mdKhdcwWVcDExKmUB2/games/UWjsexKPU98S9WQ2cP9S.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=UD5odspzhSvpDsiod6JmVTpZn8qAl%2BIsBf0yd2ChA%2BqCxH9Tmg1%2FdMd%2B3AX1gKXZ9%2FYnbuhRVdJpw6cx7xunhIkYmlKpcOmADcA5JIkA7LgKDrjSpu2OGvCDkwKBvDmDGDIcfUk8L8cIRm9t5IaiX5Jf2HaQvlglO%2FsZxKuu4kpvgvVZtXF%2F0KAvgoFsXilFx0YgN1Uxxc7WhUy4KehTagWJSyh9PeevnzrlmFS6ZsdaJmL80P7eso0wO%2FceVwoy4WRNLeakDM%2FoUdXcD0e68goJn1D3vRxCnXaN6TFKNqQ1S4%2BpBUK88dsMmkd0%2BCQS5QQOeDYg%2FVhEf486VluLGw%3D%3D"></script>
+</body>
+</html>
