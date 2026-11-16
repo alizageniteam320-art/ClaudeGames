@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Meme Run</title>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0705;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Fredoka','Trebuchet MS',sans-serif;}
+canvas#c{position:absolute;left:0;top:0;display:block}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,3,2,.72);z-index:10;opacity:0;pointer-events:none;transition:opacity .35s ease}
+.overlay.show{opacity:1;pointer-events:auto}
+.panel{box-sizing:border-box;max-width:min(92vw,620px);max-height:92vh;overflow:auto;text-align:center;color:#f3e6c8;padding:clamp(12px,3vmin,28px);border-radius:18px;background:linear-gradient(#2e1f15,#170e08);border:3px solid #c99a3b;box-shadow:0 10px 40px rgba(0,0,0,.7),inset 0 0 30px rgba(255,170,60,.08);transform:scale(.88) translateY(10px);transition:transform .4s cubic-bezier(.2,1.4,.4,1)}
+.overlay.show .panel{transform:scale(1) translateY(0)}
+h1{font-family:'Creepster','Impact',sans-serif;font-weight:400;font-size:clamp(44px,13vmin,104px);color:#ffde59;text-shadow:0 4px 0 #6b1d1d,0 0 24px rgba(255,80,40,.6);margin:0;letter-spacing:2px;line-height:1}
+h2{font-family:'Creepster','Impact',sans-serif;font-weight:400;font-size:clamp(30px,8vmin,60px);margin:0 0 .2em;color:#ff5b4a;text-shadow:0 3px 0 #2a0505,0 0 18px rgba(255,40,40,.5);letter-spacing:1px}
+p{margin:.45em 0;font-size:clamp(13px,3.2vmin,18px);line-height:1.35}
+.sub{color:#ffcf7a;font-weight:600}
+.small{font-size:clamp(11px,2.7vmin,15px);opacity:.85}
+.btn{font-family:'Fredoka','Trebuchet MS',sans-serif;font-weight:700;font-size:clamp(16px,4vmin,24px);padding:.45em 1.4em;border-radius:999px;border:3px solid #3b1a0a;background:linear-gradient(#ffd25a,#e08a1e);color:#3b1a0a;cursor:pointer;box-shadow:0 5px 0 #6b3a10;margin:.4em;transition:transform .1s}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #6b3a10}
+.btn.alt{background:linear-gradient(#c9b79a,#8f7a5c)}
+#topbtns{position:fixed;top:8px;right:8px;z-index:6;display:flex;gap:8px}
+.ibtn{width:clamp(38px,9vmin,54px);height:clamp(38px,9vmin,54px);border-radius:12px;background:rgba(30,20,12,.85);border:2px solid #c99a3b;color:#ffde59;font-size:clamp(18px,4.5vmin,26px);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+#touch{position:fixed;left:0;right:0;bottom:0;z-index:5;display:none;pointer-events:none;justify-content:space-between;align-items:flex-end;padding:clamp(8px,2vmin,16px);box-sizing:border-box}
+#touch .grp{display:flex;gap:clamp(8px,2vmin,16px)}
+.tbtn{pointer-events:auto;width:clamp(56px,15vmin,92px);height:clamp(56px,15vmin,92px);border-radius:50%;background:rgba(255,220,140,.16);border:2px solid rgba(255,220,140,.55);color:#ffe9b0;font-size:clamp(22px,6vmin,38px);display:flex;align-items:center;justify-content:center;touch-action:none}
+.tbtn.on{background:rgba(255,220,140,.45)}
+.book{background:linear-gradient(#f5e6c4,#d8bd88);color:#3a2412;border-color:#7a4b1c;text-align:left}
+.book h2{text-align:center;color:#7a1f12;text-shadow:0 2px 0 #f5e6c4}
+.entry{display:flex;gap:clamp(8px,2vmin,16px);align-items:center;background:rgba(122,75,28,.12);border:2px dashed rgba(122,75,28,.45);border-radius:12px;padding:clamp(6px,1.5vmin,12px);margin:.5em 0}
+.entry canvas{width:clamp(60px,16vmin,110px);height:clamp(60px,16vmin,110px);flex-shrink:0;border-radius:10px;background:radial-gradient(#5a3a22,#1e120a)}
+.entry h3{margin:0;font-size:clamp(16px,4vmin,24px);color:#7a1f12}
+.entry p{margin:.2em 0;font-size:clamp(12px,2.9vmin,16px)}
+.entry b{color:#9b2a12}
+.center{text-align:center}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="topbtns">
+  <button class="ibtn" id="bookBtn" title="Guide Book (B)" style="display:none">📖</button>
+  <button class="ibtn" id="muteBtn" title="Mute (M)">🔊</button>
+</div>
+
+<div id="touch">
+  <div class="grp">
+    <div class="tbtn" id="tL">◀</div>
+    <div class="tbtn" id="tR">▶</div>
+  </div>
+  <div class="grp">
+    <div class="tbtn" id="tA">✋</div>
+  </div>
+</div>
+
+<div id="titleOv" class="overlay show"><div class="panel">
+  <h1>MEME RUN</h1>
+  <p class="sub">Survive 150 rooms. Don't get memed.</p>
+  <p class="small">← → / A D to walk · E / Space to hide &amp; interact · B for the guide book</p>
+  <p class="small">Mobile: use the on-screen buttons</p>
+  <p class="small" id="bestTitle"></p>
+  <button class="btn" id="startBtn">Tap to Start</button>
+</div></div>
+
+<div id="bookOv" class="overlay"><div class="panel book">
+  <h2>Monster Guide</h2>
+  <div class="entry"><canvas id="pTroll" width="120" height="120"></canvas><div><h3>Trollface</h3>
+    <p>Rushes through the room out of nowhere. <b>No flickering lights</b> warn you — only a <b>distant laugh</b> and a rumble.</p>
+    <p><b>Survive:</b> the moment you hear him, <b>hide in a closet</b>.</p></div></div>
+  <div class="entry"><canvas id="pKitty" width="120" height="120"></canvas><div><h3>Happy Kitty</h3>
+    <p>Super fast! A cheerful <b>"happy happy happy"</b> tune plays before he arrives. He sweeps the room twice.</p>
+    <p><b>Survive:</b> <b>STOP MOVING</b>. Closets don't work — he drags you out!</p></div></div>
+  <div class="entry"><canvas id="pKing" width="120" height="120"></canvas><div><h3>King</h3>
+    <p>Waits in the <b>next room</b>. Pounding on the door means he's there. <b>5 seconds</b> later the door <b>BLASTS</b> open, killing anyone in its sight (red glow on the floor), then he charges through.</p>
+    <p><b>Survive:</b> <b>hide in a closet</b> before the door blows.</p></div></div>
+  <div class="center"><button class="btn" id="closeBook">Close</button></div>
+</div></div>
+
+<div id="deadOv" class="overlay"><div class="panel">
+  <h2 id="deadTitle">CAUGHT!</h2>
+  <p class="sub" id="deadMsg"></p>
+  <p id="deadTip"></p>
+  <p class="small" id="deadInfo"></p>
+  <div id="deadBtns"></div>
+</div></div>
+
+<div id="winOv" class="overlay"><div class="panel">
+  <h1 style="font-size:clamp(36px,10vmin,80px)">YOU ESCAPED!</h1>
+  <p class="sub">All 150 rooms survived. Problem, monsters?</p>
+  <p id="winInfo"></p>
+  <button class="btn" id="winBtn">Play Again</button>
+</div></div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/aSUFubtb4vMZJW5kkXmS0DSADwK2/sessions/mIJP4z3wNmOuQNJmOKGc/games/XqvV5xs90ai4FWse6ld9.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=ttPSjGrjGeyxIPauFybz8fJ5MgPLdueKc7P2veWY1%2F7MkgXHaKnrv9wkjr5uqFe9HqjoaBR3xYHXPKlc2P3GZSrB0mCaSblOKBsjrDytM8rKIimeTFOS1SJTZ87wN85uw1X2A79jcIbYyPdbpupeb299s2%2FejbApqOvStGcTizxlbHS009%2BqiZfiFp0cjG%2F90W6Zthy8vacaRTlcsogMn%2BLAtXJmBhuQZTDOoN3Opbjd%2FUwH93MD2OESJXFTtd2dFkaOgMoqPr%2BibLs9NfVn6X7TcLoNmqDLcY8TWxszEXuuiAh8SD3Om2EsuvdrObjRHyZp4ni75uDlMuDslrarTw%3D%3D"></script>
+</body>
+</html>
