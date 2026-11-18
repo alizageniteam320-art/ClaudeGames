@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stellar Surge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050510;
+            overflow: hidden;
+            font-family: 'Press Start 2P', 'Trebuchet MS', sans-serif;
+            color: #fff;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(5, 5, 16, 0.85);
+            pointer-events: auto;
+            transition: opacity 0.3s;
+        }
+        .hidden {
+            opacity: 0;
+            pointer-events: none !important;
+        }
+        h1 {
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #0088ff;
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            font-size: clamp(20px, 4vw, 36px);
+        }
+        .btn {
+            background: transparent;
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5) inset, 0 0 10px rgba(0, 255, 255, 0.5);
+            transition: all 0.2s;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+        .btn:hover, .btn:active {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 20px #00ffff inset, 0 0 20px #00ffff;
+        }
+        #hud {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .hud-text {
+            font-size: 14px;
+            text-shadow: 2px 2px 0px #000;
+        }
+        .health-bar-container {
+            width: 150px;
+            height: 15px;
+            border: 2px solid #fff;
+            margin-top: 5px;
+            background: #222;
+        }
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background: #00ff00;
+            transition: width 0.2s, background-color 0.2s;
+        }
+        .controls-info {
+            font-size: 10px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 30px;
+            line-height: 1.8;
+            max-width: 400px;
+        }
+        #mute-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 255, 255, 0.2);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 100;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-layer">
+        <div id="hud" class="hidden">
+            <div>
+                <div class="hud-text">SCORE: <span id="score-display">0</span></div>
+                <div class="hud-text" style="margin-top:5px; color:#aaa; font-size:10px;">WEAPON LVL: <span id="weapon-display">1</span></div>
+            </div>
+            <div>
+                <div class="hud-text" style="text-align:right;">HULL</div>
+                <div class="health-bar-container">
+                    <div id="health-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="start-screen" class="screen">
+            <h1>STELLAR<br>SURGE</h1>
+            <button class="btn" id="start-btn">ENGAGE</button>
+            <div class="controls-info">
+                DESKTOP: Arrows/WASD to move, Space to shoot<br>
+                MOBILE: Touch & drag to move/auto-fire<br><br>
+                Collect [U] to upgrade weapons!<br>
+                Collect [+] to repair hull!
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="screen hidden">
+            <h1 style="color:#ff0055; text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0000;">HULL BREACH</h1>
+            <div class="hud-text" style="font-size:20px; margin-bottom:10px;">SCORE: <span id="final-score">0</span></div>
+            <div class="hud-text" style="font-size:16px; color:#ffdd00; margin-bottom:20px;">BEST: <span id="best-score">0</span></div>
+            <button class="btn" id="restart-btn" style="border-color:#ff0055; color:#ff0055; box-shadow: 0 0 10px rgba(255,0,85,0.5) inset, 0 0 10px rgba(255,0,85,0.5);">RETRY</button>
+        </div>
+    </div>
+    
+    <div id="mute-btn">🔊</div>
+
+    
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/M4ll33e1DhWXuLpl8sF1PeeykB12/sessions/oRvvpMxiYqpJoseCvngu/games/ubRjGKKMRczjIM9YoX5Y.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=WXaANX3P7gRlSjFhiL380jmB13Z5GWJd3TwvFpbJbLxlCGQEaG55SkAOeBgN%2FRCQKw0MkH0I0hIQZ0G6xeHUMmZWbUrnbgqL%2FjRLWfzKMd7TloQUcKnBAfAHQCfW62Vazgpjq01n9IxIRq57HwwOyTNfrLH1365QOaqrrGawhdwBMnxf7s5Df1rbZIR2Yvsfp3tCAvxcVTcKx8dmzfxbn7JabCSQ%2FGF9ZJdW1r4o%2BV9EuQpF71yIqfKNO8J0LPPJgZuKtcVAoyhSgU5scE3ufuDGHPltBFfL4iUYZq%2FDh1HZKkJ0o9ktYRcPKtUEmU0MhxexWL2EzphPV0%2BS8O6kbg%3D%3D"></script>
+</body>
+</html>
