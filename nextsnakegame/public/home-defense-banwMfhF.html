@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Home Defense</title>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#2f5f27;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-family:'Fredoka','Trebuchet MS',sans-serif}
+canvas{position:absolute;left:0;top:0;display:block;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,16,36,.55);z-index:5;padding:10px;box-sizing:border-box}
+.hidden{display:none!important}
+.card{background:linear-gradient(#3a2f55,#1d1b2e);border:4px solid #ff8a3d;border-radius:22px;padding:clamp(12px,3.5vmin,28px);text-align:center;color:#fff1d6;max-width:min(88vw,440px);max-height:94vh;overflow:hidden;box-sizing:border-box;box-shadow:0 10px 0 rgba(0,0,0,.35),0 0 40px rgba(255,138,61,.35);animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+h1,h2{font-family:'Bungee',Impact,sans-serif;margin:0 0 6px;color:#ffd23f;text-shadow:0 4px 0 #b4471c,0 6px 12px rgba(0,0,0,.5);line-height:1.05}
+h1{font-size:clamp(26px,8vmin,52px)}
+h2{font-size:clamp(22px,7vmin,42px)}
+.sub{font-size:clamp(13px,3.6vmin,19px);margin:4px 0 10px;opacity:.95}
+.hint{font-size:clamp(11px,3vmin,15px);background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px;margin:8px 0 12px;line-height:1.5}
+.hint b{color:#ffd23f}
+.stats{font-size:clamp(15px,4.2vmin,22px);margin:8px 0 12px;line-height:1.5}
+.stats span{color:#ffd23f;font-weight:700}
+button.big{font-family:'Bungee',Impact,sans-serif;font-size:clamp(17px,5vmin,26px);padding:.45em 1.3em;border:none;border-radius:14px;background:linear-gradient(#ffc061,#ff7a2d);color:#1d1b2e;box-shadow:0 6px 0 #b4471c;cursor:pointer;animation:pulse 1.4s ease-in-out infinite}
+button.big:active{transform:translateY(4px);box-shadow:0 2px 0 #b4471c}
+.best{font-size:clamp(12px,3.2vmin,16px);margin-top:10px;opacity:.85}
+#mute{position:absolute;z-index:6;border:3px solid #1d1b2e;border-radius:50%;background:linear-gradient(#ffc061,#ff7a2d);color:#1d1b2e;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="mute" aria-label="mute">🔊</button>
+<div id="title" class="overlay">
+  <div class="card">
+    <h1>HOME<br>DEFENSE</h1>
+    <div class="sub">Burglars are breaking in. Hold the house!</div>
+    <div class="hint">
+      <b>Drag</b> to move &nbsp;•&nbsp; <b>Tap / hold</b> to shoot<br>
+      Stand by broken doors &amp; windows to <b>repair</b><br>
+      Grab dropped <b>guns</b> &amp; <b>medkits</b><br>
+      Survive <b>10 waves</b> — don't let 10 intruders in!<br>
+      <span style="opacity:.7">Desktop: WASD + mouse</span>
+    </div>
+    <button class="big" id="playBtn">TAP TO START</button>
+    <div class="best" id="bestTitle">Best: 0</div>
+  </div>
+</div>
+<div id="over" class="overlay hidden">
+  <div class="card">
+    <h2 id="overTitle">GAME OVER</h2>
+    <div class="sub" id="overReason">You were knocked out!</div>
+    <div class="stats">Score: <span id="overScore">0</span><br>Wave: <span id="overWave">1</span><br>Best: <span id="overBest">0</span></div>
+    <button class="big" id="againBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/x7qaRbWAsbfdny6SYEzVV4iysrY2/sessions/VaQsoEgVn8ElRMrmZu1e/games/banwMfhFSsgR32M84Ft3.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=IaflMyRTKvJyMVc8HyyJZAE57vwWIBgatYrrDmhFLFAI0CZy1DxWMYDlbInXuTuBZLvei4N4Go5zbez%2FYI6K0te54fLONpVSim6f4cvNYihsWWThhfd6AdD1Lm%2FP8qcKCdn%2BO3zahHrCHPX8xtmJmhLB1rV4%2FprXjFMkTB2lsSwCV3gvaFtUptEaUY%2BAu7tMwA5H0h3ZdvmUXoKrtTvgsvRgWDlRL397DgFg%2BssnqTLkmCMSKzTqIxTQKxWHJleO5yTZgWZ8OH%2B3XSpn%2BOhRiNFPDa24NqsSKmyXwR3mGOUnWInSgtiXgUvmTXUmL21d81%2BNHsrfeGqB%2B49oQNsfYA%3D%3D"></script>
+</body>
+</html>
