@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Hop</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        #start-screen {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 400px;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            color: #333;
+        }
+        .avatar-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: 2px solid #333;
+            background: white;
+            border-radius: 5px;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        button:hover {
+            background: #f5f5f5;
+        }
+        #game {
+            border: 2px solid #333;
+            background: #70c5ce;
+            display: none;
+        }
+        p {
+            margin: 10px 0;
+            color: #555;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen">
+        <h1>Flappy Hop</h1>
+        <p>Choose your avatar:</p>
+        <div class="avatar-buttons">
+            <button onclick="selectAvatar('cookie')">🍪 Cookie Guy</button>
+            <button onclick="selectAvatar('bolt')">⚡ Blue Bolt</button>
+        </div>
+        <p>Use SPACEBAR or TAP/CLICK to hop through the pipes!</p>
+    </div>
+    
+    <canvas id="game" width="400" height="600"></canvas>
+    
+    
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/gstKsgQBoDdxlquhXckJwNR4Afu2/sessions/XkbRoP1MqqTVsVN31ST7/games/GLM8cH44E47fBcNshkTd.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=NXDLMC4q4B%2FdnY9xUuiobbVY9NOXgCVp22og5UWEEGRBKGWWs5c7BwWaqSOHzpfT%2Bl5ROkYYYL8vdOCXnWy2kQ3Qce0UelqYqSg6pz20aK7GvJ00wRGWjOQrF2RAB%2FWldiMPSXAPNw07yU07kFlkHhkPpPS9orIPHC5CTWRh6oo96aqeCQdrGkvw92EHcouzoCgWpVJ5C3llFRteitlmFIlg3pvf1fBZiixRSKwZGmHI3mhRJivyzMSDOTcbQwR1knO%2BsI6Gi7p3cI2hGmZH8TUpGCSUqsedSzT1uOYmmfOSioKLAeU%2BVDmpwv2jnUlC6JxwU1aRbIPkgfqoAjSnuA%3D%3D"></script>
+</body>
+</html>
