@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Polyfill for localStorage and sessionStorage to prevent SecurityError in data: iframes
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        // Storage access is blocked, implement in-memory polyfill
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+             console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+
+<script>
+(function() {
+    try {
+        window.localStorage;
+        window.sessionStorage;
+    } catch (e) {
+        const createStorage = () => {
+            let store = {};
+            return {
+                getItem: (key) => store[key] || null,
+                setItem: (key, value) => { store[key] = String(value); },
+                removeItem: (key) => { delete store[key]; },
+                clear: () => { store = {}; },
+                key: (index) => Object.keys(store)[index] || null,
+                get length() { return Object.keys(store).length; }
+            };
+        };
+        try {
+            Object.defineProperty(window, 'localStorage', { value: createStorage() });
+            Object.defineProperty(window, 'sessionStorage', { value: createStorage() });
+        } catch (defineError) {
+             console.warn('Unable to define global storage properties:', defineError);
+        }
+    }
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Forest Road Dodge</title>
+    <style>
+        :root {
+            --green: #39FF14;
+            --dark: #1a2a1a;
+        }
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background: #0a1a0a;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        .hud {
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+        }
+        #menus {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            pointer-events: auto;
+            overflow-y: auto;
+        }
+        .hidden { display: none !important; }
+        h1 {
+            font-size: 46px;
+            color: #39FF14;
+            text-shadow: 4px 4px 0 #1a5c00;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        p {
+            font-size: 17px;
+            max-width: 560px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 28px;
+            color: #ccc;
+        }
+        button {
+            background: #2d7a00;
+            color: white;
+            border: 4px solid #39FF14;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0 #000;
+            transition: transform 0.1s;
+            margin: 6px;
+        }
+        button:active { transform: translate(4px,4px); box-shadow: none; }
+
+        #leaderboard-panel {
+            width: 340px;
+            max-width: 90vw;
+            background: rgba(0,30,0,0.85);
+            border: 3px solid #39FF14;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 22px;
+            box-shadow: 0 0 18px rgba(57,255,20,0.25);
+        }
+        #leaderboard-panel h2 {
+            color: #39FF14;
+            font-size: 20px;
+            margin: 0 0 12px 0;
+            text-align: center;
+            text-shadow: 2px 2px 0 #1a5c00;
+            letter-spacing: 2px;
+        }
+        #leaderboard-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        #leaderboard-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 4px;
+            border-bottom: 1px solid rgba(57,255,20,0.15);
+            font-size: 15px;
+            color: #ddd;
+        }
+        #leaderboard-list li:last-child { border-bottom: none; }
+        #leaderboard-list li .lb-rank {
+            width: 28px;
+            color: #39FF14;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        #leaderboard-list li .lb-name {
+            flex: 1;
+            padding: 0 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        #leaderboard-list li .lb-score {
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 60px;
+            text-align: right;
+        }
+        #leaderboard-list li.lb-highlight {
+            color: #39FF14;
+            background: rgba(57,255,20,0.08);
+            border-radius: 4px;
+        }
+        #leaderboard-list li.lb-highlight .lb-name,
+        #leaderboard-list li.lb-highlight .lb-score { color: #39FF14; }
+        .lb-empty {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            padding: 8px 0;
+        }
+        #lb-clear-btn {
+            background: #3a0000;
+            border-color: #ff4444;
+            font-size: 13px;
+            padding: 6px 16px;
+            margin-top: 10px;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #name-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            pointer-events: auto;
+        }
+        #name-overlay h2 {
+            color: #39FF14;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #1a5c00;
+        }
+        #name-overlay p {
+            font-size: 15px;
+            margin-bottom: 18px;
+        }
+        #name-input {
+            background: #0a1f0a;
+            border: 3px solid #39FF14;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 22px;
+            padding: 10px 18px;
+            width: 260px;
+            text-align: center;
+            outline: none;
+            box-shadow: 0 0 12px rgba(57,255,20,0.3);
+            margin-bottom: 18px;
+            border-radius: 4px;
+        }
+        #name-input::placeholder { color: #444; }
+        #name-submit-btn {
+            font-size: 20px;
+            padding: 12px 36px;
+        }
+
+        /* Warning flash overlay */
+        #warning-flash {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0;
+            background: rgba(255,0,0,0.18);
+            transition: opacity 0.1s;
+        }
+
+        /* Speed indicator */
+        #speed-indicator {
+            position: absolute;
+            bottom: 80px;
+            right: 30px;
+            color: #39FF14;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+        }
+
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px; left: 0;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .dpad {
+            display: grid;
+            grid-template-columns: 70px 70px;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .mbtn {
+            background: rgba(255,255,255,0.18);
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 12px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .mbtn:active { background: rgba(255,255,255,0.45); }
+        @media (min-width: 768px) { #mobile-controls { display: none; } }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <div id="ui-layer">
+        <div class="hud">
+            <div>Score: <span id="scoreVal">0</span></div>
+            <div>Lives: <span id="livesVal">3</span></div>
+            <div>Best: <span id="bestVal">0</span></div>
+        </div>
+    </div>
+    <div id="warning-flash"></div>
+    <div id="speed-indicator">SPEED: 1x</div>
+    <div id="mobile-controls">
+        <div class="dpad">
+            <div class="mbtn" id="btn-left">◀</div>
+            <div class="mbtn" id="btn-right">▶</div>
+        </div>
+    </div>
+
+    <div id="name-overlay" class="hidden">
+        <h2>🏆 NEW HIGH SCORE!</h2>
+        <p id="name-score-display">You scored <b style="color:#39FF14">0</b> points!</p>
+        <input id="name-input" type="text" maxlength="16" placeholder="Enter your name" autocomplete="off" spellcheck="false" />
+        <button id="name-submit-btn">SAVE SCORE</button>
+    </div>
+
+    <div id="menus">
+        <h1 id="menu-title">🌲 FOREST ROAD 🌲</h1>
+        <p id="menu-desc">Drive your car through the forest and dodge the falling rocks!<br><br>
+        <b>Controls:</b> ← → Arrow Keys or A/D to steer<br>
+        Rocks fall faster as your score increases. Watch out for <b style="color:#ff8800">boulder storms</b> and <b style="color:#ff4444">speeding trucks</b>!<br><br>
+        Collect the green power-ups to restore a life!</p>
+
+        <div id="leaderboard-panel">
+            <h2>🏆 LEADERBOARD</h2>
+            <ul id="leaderboard-list">
+                <li><span class="lb-empty">No scores yet. Start driving!</span></li>
+            </ul>
+            <button id="lb-clear-btn">CLEAR SCORES</button>
+        </div>
+
+        <button id="start-btn">START DRIVING</button>
+    </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+const LB_KEY = 'forestRoadLeaderboard';
+const LB_MAX = 10;
+
+function loadLeaderboard() {
+    try {
+        const raw = localStorage.getItem(LB_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+    } catch(e) { return []; }
+}
+
+function saveLeaderboard(lb) {
+    try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch(e) {}
+}
+
+function addLeaderboardEntry(name, score) {
+    const lb = loadLeaderboard();
+    lb.push({ name: name.trim() || 'Anonymous', score: score });
+    lb.sort((a, b) => b.score - a.score);
+    const trimmed = lb.slice(0, LB_MAX);
+    saveLeaderboard(trimmed);
+    return trimmed;
+}
+
+function isLeaderboardQualifying(score) {
+    if (score <= 0) return false;
+    const lb = loadLeaderboard();
+    if (lb.length < LB_MAX) return true;
+    return score > lb[lb.length - 1].score;
+}
+
+function renderLeaderboard(highlightScore) {
+    const lb = loadLeaderboard();
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '';
+    if (lb.length === 0) {
+        const li = document.createElement('li');
+        li.innerHTML = '<span class="lb-empty">No scores yet. Start driving!</span>';
+        list.appendChild(li);
+        return;
+    }
+    lb.forEach((entry, i) => {
+        const li = document.createElement('li');
+        const isHighlight = (highlightScore !== undefined && entry.score === highlightScore && i === lb.findIndex(e => e.score === highlightScore));
+        if (isHighlight) li.classList.add('lb-highlight');
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+        li.innerHTML = `<span class="lb-rank">${medal}</span><span class="lb-name">${escapeHtml(entry.name)}</span><span class="lb-score">${entry.score}</span>`;
+        list.appendChild(li);
+    });
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// ── Game state ──────────────────────────────────────────────────────────────
+let score = 0;
+let lives = 3;
+let best = 0;
+let gameRunning = false;
+let animId = null;
+let lastTime = 0;
+let difficultyTimer = 0;
+let difficultyLevel = 0;
+
+// ── Road config ──────────────────────────────────────────────────────────────
+const ROAD_LEFT  = 180;
+const ROAD_RIGHT = 780;
+const ROAD_W     = ROAD_RIGHT - ROAD_LEFT;
+const NUM_LANES  = 3;
+const LANE_W     = ROAD_W / NUM_LANES;
+
+function laneCenter(lane) {
+    return ROAD_LEFT + LANE_W * lane + LANE_W / 2;
+}
+
+// ── Player car ───────────────────────────────────────────────────────────────
+const player = {
+    x: W / 2,
+    y: H - 100,
+    w: 52,
+    h: 90,
+    speed: 320,
+    lane: 1,
+    targetX: W / 2,
+    invincible: false,
+    invTimer: 0,
+    bodyColor: '#cc2020',
+    roofColor: '#b01818',
+};
+
+// ── Input ────────────────────────────────────────────────────────────────────
+let leftHeld = false, rightHeld = false;
+
+function onKeyDown(e) {
+    if (!gameRunning) return;
+    if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && !leftHeld) {
+        leftHeld = true;
+        movePlayer(-1);
+    }
+    if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && !rightHeld) {
+        rightHeld = true;
+        movePlayer(1);
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+    }
+}
+
+function onKeyUp(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftHeld = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightHeld = false;
+}
+
+document.addEventListener('keydown', onKeyDown);
+document.addEventListener('keyup', onKeyUp);
+
+function movePlayer(dir) {
+    const newLane = player.lane + dir;
+    if (newLane < 0 || newLane >= NUM_LANES) return;
+    player.lane = newLane;
+    player.targetX = laneCenter(player.lane);
+}
+
+const btnLeft  = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+btnLeft.addEventListener('touchstart',  e => { e.preventDefault(); if (gameRunning) movePlayer(-1); }, {passive:false});
+btnRight.addEventListener('touchstart', e => { e.preventDefault(); if (gameRunning) movePlayer(1);  }, {passive:false});
+btnLeft.addEventListener('click',  () => { if (gameRunning) movePlayer(-1); });
+btnRight.addEventListener('click', () => { if (gameRunning) movePlayer(1); });
+
+// ── Rocks ────────────────────────────────────────────────────────────────────
+let rocks = [];
+let rockSpawnTimer = 0;
+let rockSpawnInterval = 1.4;
+let rockSpeed = 280;
+
+function spawnRock() {
+    const lane = Math.floor(Math.random() * NUM_LANES);
+    const size = 28 + Math.random() * 22;
+    rocks.push({
+        x: laneCenter(lane),
+        y: -size,
+        size: size,
+        lane: lane,
+        speed: rockSpeed + Math.random() * 60,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 3,
+        color: pickRockColor(),
+        hit: false,
+        type: 'rock',
+    });
+}
+
+// ── Boulder Storm (new mechanic) ─────────────────────────────────────────────
+// Spawns a rapid burst of rocks across all lanes
+let boulderStormTimer = 0;
+let boulderStormInterval = 25;
+let boulderStormActive = false;
+let boulderStormCount = 0;
+let boulderStormBurstTimer = 0;
+let warningFlashTimer = 0;
+
+function triggerBoulderStorm() {
+    boulderStormActive = true;
+    boulderStormCount = 6 + difficultyLevel * 2;
+    boulderStormBurstTimer = 0;
+    warningFlashTimer = 0.6;
+    // Flash warning
+    const wf = document.getElementById('warning-flash');
+    wf.style.opacity = '1';
+    wf.style.background = 'rgba(255,100,0,0.25)';
+    setTimeout(() => { wf.style.opacity = '0'; }, 600);
+}
+
+// ── Trucks (new obstacle) ────────────────────────────────────────────────────
+let trucks = [];
+let truckSpawnTimer = 0;
+let truckSpawnInterval = 18;
+
+function spawnTruck() {
+    const lane = Math.floor(Math.random() * NUM_LANES);
+    trucks.push({
+        x: laneCenter(lane),
+        y: -120,
+        w: 58,
+        h: 120,
+        lane: lane,
+        speed: 320 + difficultyLevel * 30 + Math.random() * 80,
+        hit: false,
+        color: '#cc6600',
+        roofColor: '#994400',
+        flashTimer: 0,
+    });
+}
+
+// ── Oil Slick (new hazard) ───────────────────────────────────────────────────
+let oilSlicks = [];
+let oilSpawnTimer = 0;
+let oilSpawnInterval = 20;
+
+function spawnOilSlick() {
+    const lane = Math.floor(Math.random() * NUM_LANES);
+    oilSlicks.push({
+        x: laneCenter(lane),
+        y: -20,
+        w: LANE_W * 0.75,
+        h: 38,
+        lane: lane,
+        speed: 140,
+        hit: false,
+        alpha: 0.85,
+        slipTimer: 0,
+    });
+}
+
+// ── Player slip state ────────────────────────────────────────────────────────
+let playerSlipping = false;
+let playerSlipTimer = 0;
+let playerSlipDir = 0;
+
+function pickRockColor() {
+    const colors = ['#888','#777','#999','#6a6a6a','#aaa','#5c4a3a'];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// ── Power-ups (life restore) ─────────────────────────────────────────────────
+let powerups = [];
+let puSpawnTimer = 0;
+let puSpawnInterval = 14;
+
+function spawnPowerup() {
+    const lane = Math.floor(Math.random() * NUM_LANES);
+    powerups.push({
+        x: laneCenter(lane),
+        y: -30,
+        size: 22,
+        speed: 160,
+        pulse: 0,
+    });
+}
+
+// ── Shield power-up ──────────────────────────────────────────────────────────
+let shields = [];
+let shieldSpawnTimer = 0;
+let shieldSpawnInterval = 30;
+let playerShielded = false;
+let playerShieldTimer = 0;
+
+function spawnShield() {
+    const lane = Math.floor(Math.random() * NUM_LANES);
+    shields.push({
+        x: laneCenter(lane),
+        y: -30,
+        size: 22,
+        speed: 160,
+        pulse: 0,
+    });
+}
+
+// ── Trees (scenery) ──────────────────────────────────────────────────────────
+let trees = [];
+let treeTimer = 0;
+
+function spawnTree() {
+    const side = Math.random() < 0.5 ? 'left' : 'right';
+    const x = side === 'left'
+        ? 20 + Math.random() * (ROAD_LEFT - 60)
+        : ROAD_RIGHT + 20 + Math.random() * (W - ROAD_RIGHT - 60);
+    trees.push({
+        x: x,
+        y: -60,
+        size: 30 + Math.random() * 30,
+        speed: 200 + Math.random() * 60,
+        variant: Math.floor(Math.random() * 3),
+    });
+}
+
+// ── Road markings ────────────────────────────────────────────────────────────
+let dashOffset = 0;
+
+// ── Particles ────────────────────────────────────────────────────────────────
+let particles = [];
+
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 60 + Math.random() * 140;
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            decay: 0.8 + Math.random() * 0.8,
+            size: 4 + Math.random() * 8,
+            color,
+        });
+    }
+}
+
+// ── Background forest scroll ─────────────────────────────────────────────────
+let bgOffset = 0;
+
+// ── Warning text ─────────────────────────────────────────────────────────────
+let warningText = '';
+let warningTextTimer = 0;
+
+function showWarning(text) {
+    warningText = text;
+    warningTextTimer = 1.5;
+}
+
+// ── Draw functions ────────────────────────────────────────────────────────────
+
+function drawForestBackground(dt) {
+    bgOffset = (bgOffset + 80 * dt) % H;
+
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0a1f0a');
+    sky.addColorStop(1, '#1a3a1a');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = '#0d2b0d';
+    ctx.fillRect(0, 0, ROAD_LEFT, H);
+    ctx.fillStyle = '#0d2b0d';
+    ctx.fillRect(ROAD_RIGHT, 0, W - ROAD_RIGHT, H);
+
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = '#39FF14';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 20; i++) {
+        const y = ((i * 37 + bgOffset * 0.4) % H);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(ROAD_LEFT - 10, y + 20);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(W, y + 10);
+        ctx.lineTo(ROAD_RIGHT + 10, y + 30);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawRoad(dt) {
+    dashOffset = (dashOffset + 300 * dt) % 80;
+
+    const roadGrad = ctx.createLinearGradient(ROAD_LEFT, 0, ROAD_RIGHT, 0);
+    roadGrad.addColorStop(0,   '#2a2a2a');
+    roadGrad.addColorStop(0.5, '#3a3a3a');
+    roadGrad.addColorStop(1,   '#2a2a2a');
+    ctx.fillStyle = roadGrad;
+    ctx.fillRect(ROAD_LEFT, 0, ROAD_W, H);
+
+    ctx.fillStyle = '#4a3a1a';
+    ctx.fillRect(ROAD_LEFT - 12, 0, 12, H);
+    ctx.fillRect(ROAD_RIGHT, 0, 12, H);
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(ROAD_LEFT, 0); ctx.lineTo(ROAD_LEFT, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ROAD_RIGHT, 0); ctx.lineTo(ROAD_RIGHT, H); ctx.stroke();
+
+    ctx.strokeStyle = '#ffff88';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([40, 40]);
+    ctx.lineDashOffset = -dashOffset;
+    for (let l = 1; l < NUM_LANES; l++) {
+        const lx = ROAD_LEFT + LANE_W * l;
+        ctx.beginPath();
+        ctx.moveTo(lx, 0);
+        ctx.lineTo(lx, H);
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+function drawTree(tree) {
+    const x = tree.x, y = tree.y, s = tree.size;
+    ctx.fillStyle = '#5c3a1a';
+    ctx.fillRect(x - s * 0.15, y + s * 0.6, s * 0.3, s * 0.8);
+
+    const greens = ['#1a5c00','#226600','#2d7a00'];
+    const g = greens[tree.variant % greens.length];
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y + s * 0.8);
+    ctx.lineTo(x + s, y + s * 0.8);
+    ctx.lineTo(x, y + s * 0.1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#2d8a00';
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.75, y + s * 0.45);
+    ctx.lineTo(x + s * 0.75, y + s * 0.45);
+    ctx.lineTo(x, y - s * 0.1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#39a000';
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.5, y + s * 0.15);
+    ctx.lineTo(x + s * 0.5, y + s * 0.15);
+    ctx.lineTo(x, y - s * 0.5);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawRock(rock) {
+    ctx.save();
+    ctx.translate(rock.x, rock.y);
+    ctx.rotate(rock.rotation);
+    const s = rock.size;
+
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(3, 4, s * 0.9, s * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = rock.color;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.6, -s * 0.3);
+    ctx.lineTo(-s * 0.2, -s * 0.7);
+    ctx.lineTo(s * 0.3, -s * 0.65);
+    ctx.lineTo(s * 0.7, -s * 0.2);
+    ctx.lineTo(s * 0.65, s * 0.3);
+    ctx.lineTo(s * 0.1, s * 0.6);
+    ctx.lineTo(-s * 0.5, s * 0.5);
+    ctx.lineTo(-s * 0.75, s * 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.3, -s * 0.55);
+    ctx.lineTo(s * 0.1, -s * 0.6);
+    ctx.lineTo(s * 0.3, -s * 0.2);
+    ctx.lineTo(-s * 0.1, -s * 0.1);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.1, -s * 0.3);
+    ctx.lineTo(s * 0.2, s * 0.1);
+    ctx.lineTo(s * 0.05, s * 0.35);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawTruck(truck) {
+    ctx.save();
+    const x = truck.x, y = truck.y;
+    const w = truck.w, h = truck.h;
+
+    // Shadow
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x + 4, y + h * 0.45, w * 0.55, h * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Truck body
+    ctx.fillStyle = truck.color;
+    ctx.beginPath();
+    ctx.roundRect(x - w/2, y - h/2, w, h, 6);
+    ctx.fill();
+
+    // Cab
+    ctx.fillStyle = truck.roofColor;
+    ctx.beginPath();
+    ctx.roundRect(x - w * 0.45, y - h * 0.5, w * 0.9, h * 0.3, 5);
+    ctx.fill();
+
+    // Windshield
+    ctx.fillStyle = 'rgba(150,220,255,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(x - w * 0.35, y - h * 0.47, w * 0.7, h * 0.16, 3);
+    ctx.fill();
+
+    // Cargo stripes
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+        const sy = y - h * 0.1 + i * h * 0.14;
+        ctx.beginPath();
+        ctx.moveTo(x - w * 0.42, sy);
+        ctx.lineTo(x + w * 0.42, sy);
+        ctx.stroke();
+    }
+
+    // Headlights
+    ctx.fillStyle = '#ffffaa';
+    ctx.shadowColor = '#ffff88';
+    ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.ellipse(x - w * 0.32, y - h * 0.48, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.32, y - h * 0.48, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Taillights
+    ctx.fillStyle = '#ff2200';
+    ctx.shadowColor = '#ff2200';
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.ellipse(x - w * 0.32, y + h * 0.47, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.32, y + h * 0.47, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Wheels
+    const wheelW = 13, wheelH = 22;
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.roundRect(x - w/2 - wheelW/2, y - h * 0.38, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + w/2 - wheelW/2, y - h * 0.38, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - w/2 - wheelW/2, y + h * 0.18, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + w/2 - wheelW/2, y + h * 0.18, wheelW, wheelH, 3); ctx.fill();
+
+    // DANGER label
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚠ TRUCK', x, y + h * 0.05);
+
+    ctx.restore();
+}
+
+function drawOilSlick(oil) {
+    ctx.save();
+    ctx.globalAlpha = oil.alpha * 0.75;
+    const grad = ctx.createRadialGradient(oil.x, oil.y, 2, oil.x, oil.y, oil.w * 0.55);
+    grad.addColorStop(0, '#220044');
+    grad.addColorStop(0.4, '#440088cc');
+    grad.addColorStop(1, 'rgba(80,0,120,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(oil.x, oil.y, oil.w * 0.55, oil.h * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rainbow sheen
+    ctx.globalAlpha = oil.alpha * 0.35;
+    const rainbow = ctx.createLinearGradient(oil.x - oil.w/2, oil.y, oil.x + oil.w/2, oil.y);
+    rainbow.addColorStop(0, '#ff0000');
+    rainbow.addColorStop(0.2, '#ffff00');
+    rainbow.addColorStop(0.4, '#00ff00');
+    rainbow.addColorStop(0.6, '#00ffff');
+    rainbow.addColorStop(0.8, '#0000ff');
+    rainbow.addColorStop(1, '#ff00ff');
+    ctx.fillStyle = rainbow;
+    ctx.beginPath();
+    ctx.ellipse(oil.x, oil.y, oil.w * 0.5, oil.h * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawPlayerCar() {
+    const x = player.x, y = player.y;
+    const w = player.w, h = player.h;
+
+    if (player.invincible && Math.floor(Date.now() / 100) % 2 === 0) return;
+
+    ctx.save();
+
+    // Shield glow
+    if (playerShielded) {
+        ctx.shadowColor = '#00aaff';
+        ctx.shadowBlur = 22;
+        ctx.strokeStyle = 'rgba(0,170,255,0.7)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(x, y, w * 0.85, h * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    // Slip tilt
+    if (playerSlipping) {
+        ctx.translate(x, y);
+        ctx.rotate(playerSlipDir * 0.18 * Math.sin(playerSlipTimer * 12));
+        ctx.translate(-x, -y);
+    }
+
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x + 3, y + h * 0.45, w * 0.55, h * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = player.bodyColor;
+    ctx.beginPath();
+    ctx.roundRect(x - w/2, y - h/2, w, h, 8);
+    ctx.fill();
+
+    ctx.fillStyle = player.roofColor;
+    ctx.beginPath();
+    ctx.roundRect(x - w * 0.38, y - h * 0.42, w * 0.76, h * 0.42, 6);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(150,220,255,0.7)';
+    ctx.beginPath();
+    ctx.roundRect(x - w * 0.32, y - h * 0.38, w * 0.64, h * 0.2, 4);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(150,220,255,0.5)';
+    ctx.beginPath();
+    ctx.roundRect(x - w * 0.28, y - h * 0.05, w * 0.56, h * 0.14, 3);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffaa';
+    ctx.shadowColor = '#ffff88';
+    ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.ellipse(x - w * 0.3, y - h * 0.47, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.3, y - h * 0.47, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#ff2200';
+    ctx.shadowColor = '#ff2200';
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.ellipse(x - w * 0.3, y + h * 0.46, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w * 0.3, y + h * 0.46, 7, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const wheelW = 12, wheelH = 20;
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.roundRect(x - w/2 - wheelW/2, y - h * 0.35, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + w/2 - wheelW/2, y - h * 0.35, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - w/2 - wheelW/2, y + h * 0.15, wheelW, wheelH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + w/2 - wheelW/2, y + h * 0.15, wheelW, wheelH, 3); ctx.fill();
+
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.ellipse(x - w/2, y - h * 0.25, 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w/2, y - h * 0.25, 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x - w/2, y + h * 0.25, 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w/2, y + h * 0.25, 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y - h * 0.05);
+    ctx.lineTo(x, y + h * 0.38);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawPowerup(pu) {
+    pu.pulse = (pu.pulse || 0) + 0.08;
+    const scale = 1 + 0.15 * Math.sin(pu.pulse);
+    const r = pu.size * scale;
+
+    ctx.save();
+    ctx.shadowColor = '#39FF14';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.arc(pu.x, pu.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#39FF14';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `${Math.round(r * 1.1)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('❤️', pu.x, pu.y);
+    ctx.restore();
+}
+
+function drawShield(sh) {
+    sh.pulse = (sh.pulse || 0) + 0.09;
+    const scale = 1 + 0.15 * Math.sin(sh.pulse);
+    const r = sh.size * scale;
+
+    ctx.save();
+    ctx.shadowColor = '#00aaff';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = 'rgba(0,20,60,0.7)';
+    ctx.beginPath();
+    ctx.arc(sh.x, sh.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#00aaff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = `${Math.round(r * 1.1)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛡️', sh.x, sh.y);
+    ctx.restore();
+}
+
+function drawParticles(dt) {
+    particles = particles.filter(p => p.life > 0.01);
+    particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 120 * dt;
+        p.life -= p.decay * dt;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+function drawWarningText(dt) {
+    if (warningTextTimer <= 0) return;
+    warningTextTimer -= dt;
+    const alpha = Math.min(1, warningTextTimer * 2);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ff6600';
+    ctx.shadowColor = '#ff3300';
+    ctx.shadowBlur = 16;
+    ctx.fillText(warningText, W / 2, H / 2 - 60);
+    ctx.restore();
+}
+
+function drawSpeedIndicator() {
+    const speedMult = (rockSpeed / 280).toFixed(1);
+    const el = document.getElementById('speed-indicator');
+    if (el) {
+        el.textContent = `SPEED: ${speedMult}x | LVL: ${difficultyLevel + 1}`;
+        el.style.color = difficultyLevel >= 4 ? '#ff4444' : difficultyLevel >= 2 ? '#ff8800' : '#39FF14';
+    }
+}
+
+// ── Collision ─────────────────────────────────────────────────────────────────
+function rectsOverlap(ax, ay, aw, ah, bx, by, br) {
+    const nearX = Math.max(ax - aw/2, Math.min(bx, ax + aw/2));
+    const nearY = Math.max(ay - ah/2, Math.min(by, ay + ah/2));
+    const dx = nearX - bx, dy = nearY - by;
+    return dx*dx + dy*dy < br * br * 0.7;
+}
+
+function rectRectOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return Math.abs(ax - bx) < (aw + bw) / 2 * 0.85 &&
+           Math.abs(ay - by) < (ah + bh) / 2 * 0.85;
+}
+
+// ── Difficulty ────────────────────────────────────────────────────────────────
+function increaseDifficulty() {
+    difficultyLevel++;
+    rockSpawnInterval = Math.max(0.32, rockSpawnInterval - 0.07);
+    rockSpeed = Math.min(700, rockSpeed + 22);
+    // Trucks get faster too
+    truckSpawnInterval = Math.max(10, truckSpawnInterval - 1.5);
+    // Oil slicks more frequent
+    oilSpawnInterval = Math.max(12, oilSpawnInterval - 1.5);
+    // Boulder storms more frequent
+    boulderStormInterval = Math.max(14, boulderStormInterval - 2);
+
+    showWarning(`⚡ LEVEL ${difficultyLevel + 1}! FASTER!`);
+    drawSpeedIndicator();
+}
+
+// ── Game loop ─────────────────────────────────────────────────────────────────
+function update(dt) {
+    // Player movement
+    const dx = player.targetX - player.x;
+    player.x += dx * Math.min(1, dt * 12);
+
+    // Slip effect
+    if (playerSlipping) {
+        playerSlipTimer -= dt;
+        // Drift player slightly in slip direction
+        const slipDrift = playerSlipDir * 60 * dt;
+        player.x = Math.max(ROAD_LEFT + player.w/2, Math.min(ROAD_RIGHT - player.w/2, player.x + slipDrift));
+        if (playerSlipTimer <= 0) {
+            playerSlipping = false;
+            playerSlipTimer = 0;
+            // Snap back to lane
+            player.targetX = laneCenter(player.lane);
+        }
+    }
+
+    // Shield timer
+    if (playerShielded) {
+        playerShieldTimer -= dt;
+        if (playerShieldTimer <= 0) {
+            playerShielded = false;
+            playerShieldTimer = 0;
+        }
+    }
+
+    // Invincibility timer
+    if (player.invincible) {
+        player.invTimer -= dt;
+        if (player.invTimer <= 0) {
+            player.invincible = false;
+            player.invTimer = 0;
+        }
+    }
+
+    // Trees
+    treeTimer -= dt;
+    if (treeTimer <= 0) {
+        spawnTree();
+        treeTimer = 0.3 + Math.random() * 0.5;
+    }
+    trees.forEach(t => { t.y += t.speed * dt; });
+    trees = trees.filter(t => t.y < H + 100);
+
+    // Rocks
+    rockSpawnTimer -= dt;
+    if (rockSpawnTimer <= 0) {
+        spawnRock();
+        rockSpawnTimer = rockSpawnInterval * (0.7 + Math.random() * 0.6);
+    }
+    rocks.forEach(r => {
+        r.y += r.speed * dt;
+        r.rotation += r.rotSpeed * dt;
+    });
+
+    // Boulder storm
+    boulderStormTimer -= dt;
+    if (boulderStormTimer <= 0 && !boulderStormActive) {
+        boulderStormTimer = boulderStormInterval + Math.random() * 8;
+        triggerBoulderStorm();
+        showWarning('🪨 BOULDER STORM!');
+    }
+    if (boulderStormActive) {
+        boulderStormBurstTimer -= dt;
+        if (boulderStormBurstTimer <= 0 && boulderStormCount > 0) {
+            // Spawn rock in a random lane rapidly
+            const lane = Math.floor(Math.random() * NUM_LANES);
+            const size = 32 + Math.random() * 18;
+            rocks.push({
+                x: laneCenter(lane),
+                y: -size,
+                size: size,
+                lane: lane,
+                speed: rockSpeed * 1.2 + Math.random() * 40,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 5,
+                color: '#cc4400',
+                hit: false,
+                type: 'boulder',
+            });
+            boulderStormCount--;
+            boulderStormBurstTimer = 0.22;
+        }
+        if (boulderStormCount <= 0) {
+            boulderStormActive = false;
+        }
+    }
+
+    // Trucks
+    truckSpawnTimer -= dt;
+    if (truckSpawnTimer <= 0) {
+        spawnTruck();
+        truckSpawnTimer = truckSpawnInterval + Math.random() * 8;
+        showWarning('🚛 TRUCK INCOMING!');
+    }
+    trucks.forEach(t => { t.y += t.speed * dt; });
+
+    // Oil slicks
+    oilSpawnTimer -= dt;
+    if (oilSpawnTimer <= 0) {
+        spawnOilSlick();
+        oilSpawnTimer = oilSpawnInterval + Math.random() * 8;
+    }
+    oilSlicks.forEach(o => { o.y += o.speed * dt; });
+
+    // Collision: rocks
+    if (!player.invincible) {
+        rocks.forEach(r => {
+            if (r.hit) return;
+            if (rectsOverlap(player.x, player.y, player.w * 0.8, player.h * 0.8, r.x, r.y, r.size)) {
+                r.hit = true;
+                if (playerShielded) {
+                    playerShielded = false;
+                    playerShieldTimer = 0;
+                    spawnParticles(r.x, r.y, '#00aaff', 16);
+                    return;
+                }
+                lives--;
+                document.getElementById('livesVal').textContent = lives;
+                spawnParticles(player.x, player.y, '#ff4444', 18);
+                spawnParticles(r.x, r.y, '#aaaaaa', 12);
+                player.invincible = true;
+                player.invTimer = 2.0;
+                if (lives <= 0) endGame();
+            }
+        });
+    }
+    rocks = rocks.filter(r => r.y < H + 80);
+
+    // Collision: trucks
+    if (!player.invincible) {
+        trucks.forEach(t => {
+            if (t.hit) return;
+            if (rectRectOverlap(player.x, player.y, player.w * 0.85, player.h * 0.85, t.x, t.y, t.w * 0.85, t.h * 0.85)) {
+                t.hit = true;
+                if (playerShielded) {
+                    playerShielded = false;
+                    playerShieldTimer = 0;
+                    spawnParticles(t.x, t.y, '#00aaff', 20);
+                    return;
+                }
+                // Trucks deal 2 lives damage
+                lives = Math.max(0, lives - 2);
+                document.getElementById('livesVal').textContent = lives;
+                spawnParticles(player.x, player.y, '#ff4444', 28);
+                spawnParticles(t.x, t.y, '#cc6600', 20);
+                player.invincible = true;
+                player.invTimer = 2.5;
+                if (lives <= 0) endGame();
+            }
+        });
+    }
+    trucks = trucks.filter(t => t.y < H + 140);
+
+    // Collision: oil slicks
+    oilSlicks = oilSlicks.filter(o => {
+        if (o.y > H + 50) return false;
+        if (!playerSlipping && !player.invincible &&
+            rectRectOverlap(player.x, player.y, player.w * 0.9, player.h * 0.9, o.x, o.y, o.w * 0.9, o.h * 0.9)) {
+            // Trigger slip
+            playerSlipping = true;
+            playerSlipTimer = 1.4;
+            playerSlipDir = (Math.random() < 0.5 ? -1 : 1);
+            spawnParticles(o.x, o.y, '#8800cc', 10);
+            showWarning('💦 OIL SLICK!');
+            return false;
+        }
+        return true;
+    });
+
+    // Power-ups
+    puSpawnTimer -= dt;
+    if (puSpawnTimer <= 0) {
+        spawnPowerup();
+        puSpawnTimer = puSpawnInterval + Math.random() * 6;
+    }
+    powerups.forEach(pu => { pu.y += pu.speed * dt; });
+    powerups = powerups.filter(pu => {
+        if (pu.y > H + 40) return false;
+        if (rectsOverlap(player.x, player.y, player.w, player.h, pu.x, pu.y, pu.size * 1.4)) {
+            lives = Math.min(5, lives + 1);
+            document.getElementById('livesVal').textContent = lives;
+            spawnParticles(pu.x, pu.y, '#39FF14', 14);
+            return false;
+        }
+        return true;
+    });
+
+    // Shield power-ups
+    shieldSpawnTimer -= dt;
+    if (shieldSpawnTimer <= 0) {
+        spawnShield();
+        shieldSpawnTimer = shieldSpawnInterval + Math.random() * 15;
+    }
+    shields.forEach(sh => { sh.y += sh.speed * dt; });
+    shields = shields.filter(sh => {
+        if (sh.y > H + 40) return false;
+        if (rectsOverlap(player.x, player.y, player.w, player.h, sh.x, sh.y, sh.size * 1.4)) {
+            playerShielded = true;
+            playerShieldTimer = 5.0;
+            spawnParticles(sh.x, sh.y, '#00aaff', 16);
+            showWarning('🛡️ SHIELD ACTIVE!');
+            return false;
+        }
+        return true;
+    });
+
+    // Score
+    score += dt * 20;
+    document.getElementById('scoreVal').textContent = Math.floor(score);
+
+    // Difficulty
+    difficultyTimer += dt;
+    if (difficultyTimer >= 7) {
+        difficultyTimer = 0;
+        increaseDifficulty();
+    }
+}
+
+function draw(dt) {
+    ctx.clearRect(0, 0, W, H);
+    drawForestBackground(dt);
+    trees.forEach(t => drawTree(t));
+    drawRoad(dt);
+    oilSlicks.forEach(o => drawOilSlick(o));
+    rocks.forEach(r => drawRock(r));
+    trucks.forEach(t => drawTruck(t));
+    powerups.forEach(pu => drawPowerup(pu));
+    shields.forEach(sh => drawShield(sh));
+    drawPlayerCar();
+    drawParticles(dt);
+    drawWarningText(dt);
+}
+
+function gameLoop(ts) {
+    if (!gameRunning) return;
+    const dt = Math.min((ts - lastTime) / 1000, 0.05);
+    lastTime = ts;
+    update(dt);
+    draw(dt);
+    animId = requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+    if (animId) {
+        cancelAnimationFrame(animId);
+        animId = null;
+    }
+
+    score = 0;
+    lives = 3;
+    rocks = [];
+    trees = [];
+    powerups = [];
+    shields = [];
+    particles = [];
+    trucks = [];
+    oilSlicks = [];
+    rockSpawnTimer = 1.2;
+    rockSpawnInterval = 1.4;
+    rockSpeed = 280;
+    puSpawnTimer = 10;
+    shieldSpawnTimer = 20;
+    truckSpawnTimer = 14;
+    truckSpawnInterval = 18;
+    oilSpawnTimer = 16;
+    oilSpawnInterval = 20;
+    boulderStormTimer = 20;
+    boulderStormInterval = 25;
+    boulderStormActive = false;
+    boulderStormCount = 0;
+    difficultyTimer = 0;
+    difficultyLevel = 0;
+    dashOffset = 0;
+    bgOffset = 0;
+    leftHeld = false;
+    rightHeld = false;
+    playerSlipping = false;
+    playerSlipTimer = 0;
+    playerSlipDir = 0;
+    playerShielded = false;
+    playerShieldTimer = 0;
+    warningText = '';
+    warningTextTimer = 0;
+
+    player.x = W / 2;
+    player.targetX = W / 2;
+    player.lane = 1;
+    player.invincible = false;
+    player.invTimer = 0;
+
+    document.getElementById('scoreVal').textContent = '0';
+    document.getElementById('livesVal').textContent = '3';
+    document.getElementById('bestVal').textContent = best;
+    document.getElementById('menus').classList.add('hidden');
+    document.getElementById('name-overlay').classList.add('hidden');
+
+    drawSpeedIndicator();
+
+    gameRunning = true;
+    lastTime = performance.now();
+    animId = requestAnimationFrame(gameLoop);
+}
+
+function showNameEntry(finalScore) {
+    const overlay = document.getElementById('name-overlay');
+    const scoreDisplay = document.getElementById('name-score-display');
+    const nameInput = document.getElementById('name-input');
+    scoreDisplay.innerHTML = `You scored <b style="color:#39FF14;font-size:22px">${finalScore}</b> points — a new leaderboard entry!`;
+    nameInput.value = '';
+    overlay.classList.remove('hidden');
+    setTimeout(() => { nameInput.focus(); }, 100);
+}
+
+function submitNameEntry() {
+    const finalScore = Math.floor(score);
+    const nameInput = document.getElementById('name-input');
+    const name = nameInput.value.trim() || 'Anonymous';
+    addLeaderboardEntry(name, finalScore);
+    document.getElementById('name-overlay').classList.add('hidden');
+    showGameOverMenu(finalScore);
+}
+
+function showGameOverMenu(finalScore) {
+    const title = document.getElementById('menu-title');
+    const desc  = document.getElementById('menu-desc');
+    const btn   = document.getElementById('start-btn');
+
+    if (title) title.textContent = '💥 GAME OVER';
+    if (desc)  desc.innerHTML = `You scored <b style="color:#39FF14;font-size:28px">${finalScore}</b> points!<br><br>Best: ${best}<br><br>Dodge rocks, trucks, and oil slicks to survive longer!<br>Collect 🛡️ shields to block one hit!`;
+    if (btn)   btn.textContent = 'TRY AGAIN';
+
+    renderLeaderboard(finalScore);
+    document.getElementById('menus').classList.remove('hidden');
+}
+
+function endGame() {
+    gameRunning = false;
+    if (animId) {
+        cancelAnimationFrame(animId);
+        animId = null;
+    }
+
+    const finalScore = Math.floor(score);
+    if (finalScore > best) best = finalScore;
+    document.getElementById('bestVal').textContent = best;
+
+    if (isLeaderboardQualifying(finalScore)) {
+        showNameEntry(finalScore);
+    } else {
+        showGameOverMenu(finalScore);
+    }
+}
+
+// Name submit button
+document.getElementById('name-submit-btn').addEventListener('click', submitNameEntry);
+document.getElementById('name-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitNameEntry();
+});
+
+// Clear leaderboard button
+document.getElementById('lb-clear-btn').addEventListener('click', function() {
+    saveLeaderboard([]);
+    renderLeaderboard();
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+
+// Initial leaderboard render
+renderLeaderboard();
+
+// Draw idle frame
+(function idleFrame() {
+    ctx.clearRect(0, 0, W, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0a1f0a');
+    sky.addColorStop(1, '#1a3a1a');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#0d2b0d';
+    ctx.fillRect(0, 0, ROAD_LEFT, H);
+    ctx.fillRect(ROAD_RIGHT, 0, W - ROAD_RIGHT, H);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(ROAD_LEFT, 0, ROAD_W, H);
+})();
+
+})();
+</script>
+</body>
+</html>
