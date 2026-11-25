@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VR Build Lab - Sandbox Building Simulator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #1a1a2e; font-family: Arial, sans-serif; }
+canvas { display: block; }
+
+#ui-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#inventory-panel {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 30, 60, 0.85);
+  border: 2px solid rgba(100, 180, 255, 0.5);
+  border-radius: 16px;
+  padding: 15px;
+  pointer-events: all;
+  backdrop-filter: blur(10px);
+  width: 220px;
+  box-shadow: 0 0 30px rgba(50, 120, 255, 0.2);
+}
+
+#inventory-panel h2 {
+  color: #7fc8ff;
+  font-size: 16px;
+  margin-bottom: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.inv-category {
+  color: #aaa;
+  font-size: 11px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.inv-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  margin: 3px 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #ddd;
+  font-size: 13px;
+}
+
+.inv-item:hover {
+  background: rgba(100, 180, 255, 0.2);
+  border-color: rgba(100, 180, 255, 0.5);
+  transform: translateX(5px);
+}
+
+.inv-item.selected {
+  background: rgba(100, 180, 255, 0.3);
+  border-color: #7fc8ff;
+  box-shadow: 0 0 15px rgba(100, 180, 255, 0.3);
+}
+
+.inv-icon {
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+#top-bar {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  pointer-events: all;
+}
+
+.top-btn {
+  background: rgba(20, 30, 60, 0.85);
+  border: 2px solid rgba(100, 180, 255, 0.4);
+  border-radius: 12px;
+  padding: 10px 20px;
+  color: #7fc8ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.top-btn:hover {
+  background: rgba(100, 180, 255, 0.2);
+  border-color: #7fc8ff;
+}
+
+.top-btn.active {
+  background: rgba(100, 180, 255, 0.3);
+  border-color: #7fc8ff;
+}
+
+#info-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 30, 60, 0.85);
+  border: 2px solid rgba(100, 180, 255, 0.4);
+  border-radius: 12px;
+  padding: 12px 25px;
+  color: #aac8e8;
+  font-size: 13px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+#stats-panel {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(20, 30, 60, 0.85);
+  border: 2px solid rgba(100, 180, 255, 0.4);
+  border-radius: 12px;
+  padding: 12px 18px;
+  color: #7fc8ff;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+#code-panel {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(20, 30, 60, 0.92);
+  border: 2px solid rgba(100, 180, 255, 0.5);
+  border-radius: 16px;
+  padding: 15px;
+  pointer-events: all;
+  backdrop-filter: blur(10px);
+  width: 280px;
+  display: none;
+  box-shadow: 0 0 30px rgba(50, 120, 255, 0.2);
+}
+
+#code-panel h2 {
+  color: #7fc8ff;
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+#code-panel textarea {
+  width: 100%;
+  height: 150px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(100, 180, 255, 0.3);
+  border-radius: 8px;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  resize: none;
+}
+
+#code-panel .code-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 200, 100, 0.2);
+  border: 1px solid rgba(0, 200, 100, 0.5);
+  border-radius: 8px;
+  color: #0f0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#code-panel .code-btn:hover {
+  background: rgba(0, 200, 100, 0.4);
+}
+
+.code-preset {
+  padding: 6px 10px;
+  margin: 3px 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  color: #aaa;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.code-preset:hover {
+  background: rgba(0, 200, 100, 0.15);
+  color: #0f0;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+#crosshair::before, #crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(100, 200, 255, 0.7);
+}
+#crosshair::before {
+  top: 50%; left: 0;
+  width: 100%; height: 2px;
+  transform: translateY(-50%);
+}
+#crosshair::after {
+  left: 50%; top: 0;
+  height: 100%; width: 2px;
+  transform: translateX(-50%);
+}
+
+#start-screen {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 50%, #0a2a4e 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#start-screen h1 {
+  color: #7fc8ff;
+  font-size: 52px;
+  margin-bottom: 10px;
+  text-shadow: 0 0 40px rgba(100, 180, 255, 0.5);
+}
+
+#start-screen p {
+  color: #8899bb;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+#start-btn {
+  padding: 15px 50px;
+  background: linear-gradient(135deg, #2060a0, #3080d0);
+  border: 2px solid #7fc8ff;
+  border-radius: 30px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 0 30px rgba(50, 120, 255, 0.3);
+}
+
+#start-btn:hover {
+  background: linear-gradient(135deg, #3080d0, #40a0f0);
+  transform: scale(1.05);
+  box-shadow: 0 0 50px rgba(50, 120, 255, 0.5);
+}
+
+.controls-info {
+  margin-top: 30px;
+  color: #667799;
+  font-size: 12px;
+  text-align: center;
+  line-height: 2;
+}
+
+.controls-info span {
+  background: rgba(100, 180, 255, 0.15);
+  padding: 3px 10px;
+  border-radius: 5px;
+  color: #8899cc;
+  margin: 0 3px;
+}
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1>🔧 VR BUILD LAB</h1>
+  <p>Sandbox Building Simulator — Build anything you imagine</p>
+  <button id="start-btn">▶ START BUILDING</button>
+  <div class="controls-info">
+    <span>WASD</span> Move &nbsp; <span>Mouse</span> Look &nbsp; <span>Left Click</span> Place<br>
+    <span>Right Click</span> Remove &nbsp; <span>Scroll</span> Distance &nbsp; <span>R</span> Rotate<br>
+    <span>1-9</span> Quick Select &nbsp; <span>Tab</span> Toggle Code Panel &nbsp; <span>Space</span> Fly Up &nbsp; <span>Shift</span> Fly Down
+  </div>
+</div>
+
+<div id="ui-overlay">
+  <div id="crosshair"></div>
+  
+  <div id="inventory-panel">
+    <h2>🎒 Inventory</h2>
+    
+    <div class="inv-category">🏠 Structure</div>
+    <div class="inv-item selected" data-item="wood_block" data-idx="0">
+      <div class="inv-icon" style="background:#8B6914;">🪵</div>
+      Wood Block
+    </div>
+    <div class="inv-item" data-item="stone_block" data-idx="1">
+      <div class="inv-icon" style="background:#666;">🧱</div>
+      Stone Block
+    </div>
+    <div class="inv-item" data-item="metal_plate" data-idx="2">
+      <div class="inv-icon" style="background:#4477aa;">🔩</div>
+      Metal Plate
+    </div>
+    <div class="inv-item" data-item="glass_panel" data-idx="3">
+      <div class="inv-icon" style="background:rgba(100,200,255,0.3);">🪟</div>
+      Glass Panel
+    </div>
+    
+    <div class="inv-category">🚗 Vehicle</div>
+    <div class="inv-item" data-item="wheel" data-idx="4">
+      <div class="inv-icon" style="background:#333;">⚙️</div>
+      Wheel
+    </div>
+    <div class="inv-item" data-item="engine" data-idx="5">
+      <div class="inv-icon" style="background:#884422;">🔧</div>
+      Engine
+    </div>
+    <div class="inv-item" data-item="seat" data-idx="6">
+      <div class="inv-icon" style="background:#664433;">💺</div>
+      Seat
+    </div>
+    
+    <div class="inv-category">🤖 Robot</div>
+    <div class="inv-item" data-item="robot_head" data-idx="7">
+      <div class="inv-icon" style="background:#556688;">🤖</div>
+      Robot Head
+    </div>
+    <div class="inv-item" data-item="robot_arm" data-idx="8">
+      <div class="inv-icon" style="background:#445566;">🦾</div>
+      Robot Arm
+    </div>
+    <div class="inv-item" data-item="robot_body" data-idx="9">
+      <div class="inv-icon" style="background:#334455;">📦</div>
+      Robot Body
+    </div>
+    <div class="inv-item" data-item="cpu_chip" data-idx="10">
+      <div class="inv-icon" style="background:#225533;">💾</div>
+      CPU Chip
+    </div>
+    
+    <div class="inv-category">⚡ Special</div>
+    <div class="inv-item" data-item="light" data-idx="11">
+      <div class="inv-icon" style="background:#aa8800;">💡</div>
+      Light
+    </div>
+    <div class="inv-item" data-item="wire" data-idx="12">
+      <div class="inv-icon" style="background:#882222;">🔌</div>
+      Wire
+    </div>
+  </div>
+
+  <div id="top-bar">
+    <button class="top-btn active" id="btn-build">🔨 Build</button>
+    <button class="top-btn" id="btn-delete">🗑️ Delete</button>
+    <button class="top-btn" id="btn-code">💻 Code</button>
+    <button class="top-btn" id="btn-play">▶ Simulate</button>
+    <button class="top-btn" id="btn-clear">🧹 Clear All</button>
+    <button class="top-btn" id="btn-save">💾 Save</button>
+    <button class="top-btn" id="btn-load">📂 Load</button>
+  </div>
+
+  <div id="stats-panel">
+    <div>📦 Parts: <span id="part-count">0</span></div>
+    <div>🏗️ Mode: <span id="current-mode">Build</span></div>
+    <div>🧩 Selected: <span id="selected-item">Wood Block</span></div>
+  </div>
+
+  <div id="info-panel">
+    Click to place • Right-click to remove • Scroll to adjust distance • R to rotate
+  </div>
+
+  <div id="code-panel">
+    <h2>💻 Robot Code</h2>
+    <div class="code-preset" data-code="move_forward(5);\nturn_right(90);\nmove_forward(3);">📜 Patrol Square</div>
+    <div class="code-preset" data-code="loop(10) {\n  move_forward(2);\n  turn_right(36);\n}">📜 Circle Dance</div>
+    <div class="code-preset" data-code="if(detect_obstacle()) {\n  turn_right(90);\n} else {\n  move_forward(1);\n}">📜 Avoid Walls</div>
+    <div class="code-preset" data-code="wave_arm();\nspeak('Hello!');\nmove_forward(3);\nwave_arm();">📜 Friendly Bot</div>
+    <textarea id="code-editor" placeholder="Write robot commands here...
+move_forward(steps)
+turn_right(degrees)
+turn_left(degrees)
+wave_arm()
+speak(text)
+loop(n) { ... }
+if(detect_obstacle()) { ... }"></textarea>
+    <button class="code-btn" id="run-code">▶ Run Code</button>
+    <button class="code-btn" id="stop-code" style="background:rgba(200,50,50,0.2);border-color:rgba(200,50,50,0.5);color:#f66;">⏹ Stop</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/o1G7Ypkyoef10BOfyUh18icpdaR2/sessions/K5yHJu2LmP8qGhiyffKt/games/8TR2pwg7ncvIWpSqnFfX.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=H8VsVCcHiPkflY8nXpUumOs1gpgJFLT21eXK%2F5dwl54Sm3bB%2FzEgIZkQPUEgPMewNyQIDLc6bwFIh%2Fm9eqHkgj6WDOH12Dnd8dtpHnz44VrzcTA91xUci99se7PCrBxHYOq%2ByynhSOdvSc7Y%2FCKfrnjMUKR8y0M9%2BTWEqe%2FnEYPfICY0npkwQm%2BrNaXXHz4XD2YwMEO93RBF9FcSJhIqr9ZdhV01OSXjJI4jlwouFfIj2eEqsnWJwHJbCaNgycizffn67l0Y4Rs3L%2BHYuUD9TMb1Gp2DaQZrIo0R4Q%2FbPomGS8Z%2FNdcEv8%2BnuVZYIMYXq4Kdz17PSg6BcL%2F0L5nbBg%3D%3D"></script>
+</body>
+</html>
