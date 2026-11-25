@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Games Gummies - Logo Designer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+body { background: #dce6f0; font-family: Arial, Helvetica, sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+#gameContainer { width: 100vw; height: 100vh; position: relative; }
+
+/* Top Bar */
+#topBar { position: absolute; top: 0; left: 0; right: 0; height: 56px; background: linear-gradient(135deg, #2c3e6b, #1a2744); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 100; box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+#topBar .back-btn { background: none; border: none; color: white; font-size: 28px; cursor: pointer; padding: 4px 8px; }
+#topBar .level-info { display: flex; align-items: center; gap: 12px; }
+#topBar .level-label { color: white; font-weight: bold; font-size: 16px; text-transform: uppercase; letter-spacing: 2px; }
+#topBar .level-bar-wrap { width: 200px; height: 10px; background: #0d1525; border-radius: 5px; overflow: hidden; }
+#topBar .level-bar-fill { height: 100%; background: linear-gradient(90deg, #ff6bb5, #ffcc00); border-radius: 5px; transition: width 0.5s; }
+#topBar .level-btn { background: linear-gradient(135deg, #3b5998, #2c3e6b); color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
+#topBar .timer { color: #ffcc00; font-size: 18px; font-weight: bold; min-width: 60px; text-align: center; }
+
+/* Left Sidebar */
+#leftSidebar { position: absolute; top: 56px; left: 0; width: 200px; bottom: 0; background: linear-gradient(180deg, #1e2d4d, #162038); padding: 12px; overflow-y: auto; z-index: 90; }
+#leftSidebar h3 { color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; text-align: center; }
+.tool-section { margin-bottom: 16px; }
+.tool-section-title { color: #8899bb; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.tool-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.tool-item { width: 100%; aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; background: #2a3d66; position: relative; }
+.tool-item:hover { border-color: #ffcc00; transform: scale(1.05); }
+.tool-item.selected { border-color: #ff6bb5; background: #3b5080; }
+.tool-item .icon { font-size: 22px; margin-bottom: 2px; }
+.tool-item .label { font-size: 8px; color: #aabbdd; text-transform: uppercase; }
+.color-swatch { width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+.color-swatch:hover, .color-swatch.selected { border-color: white; transform: scale(1.1); }
+
+/* Canvas Area */
+#canvasArea { position: absolute; top: 56px; left: 200px; right: 240px; bottom: 0; display: flex; align-items: center; justify-content: center; background: #c8d6e5; padding: 20px; }
+#designCanvas { background: white; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); position: relative; overflow: hidden; cursor: crosshair; }
+
+/* Right Sidebar */
+#rightSidebar { position: absolute; top: 56px; right: 0; width: 240px; bottom: 0; background: linear-gradient(180deg, #1e2d4d, #162038); padding: 14px; overflow-y: auto; z-index: 90; }
+.brief-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.brief-card h4 { font-size: 14px; font-weight: bold; color: #1a2744; margin-bottom: 8px; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+.brief-card .client-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.client-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #ff6bb5, #ffcc00); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.client-name { font-size: 12px; font-weight: bold; color: #333; }
+.client-company { font-size: 10px; color: #888; }
+.brief-requirements { list-style: none; padding: 0; }
+.brief-requirements li { font-size: 11px; color: #555; padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+.brief-requirements li .check { width: 16px; height: 16px; border-radius: 4px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.brief-requirements li .check.done { background: #4cd964; border-color: #4cd964; color: white; }
+
+.score-section { margin-bottom: 14px; }
+.score-section h4 { color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.score-bar-wrap { width: 100%; height: 14px; background: #0d1525; border-radius: 7px; overflow: hidden; margin-bottom: 6px; }
+.score-bar-fill { height: 100%; border-radius: 7px; transition: width 0.5s, background 0.5s; }
+.score-value { display: flex; align-items: center; justify-content: space-between; }
+.score-value .coins { color: #ffcc00; font-size: 16px; font-weight: bold; }
+.score-value .percent { color: #aabbdd; font-size: 14px; }
+
+#submitBtn { width: 100%; padding: 14px; background: linear-gradient(135deg, #ff6bb5, #ff3d8a); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: all 0.2s; margin-top: 10px; }
+#submitBtn:hover { transform: scale(1.03); box-shadow: 0 4px 15px rgba(255,107,181,0.4); }
+#clearBtn { width: 100%; padding: 10px; background: #2a3d66; color: #aabbdd; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+#clearBtn:hover { background: #3b5080; color: white; }
+#undoBtn { width: 100%; padding: 10px; background: #2a3d66; color: #aabbdd; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; margin-top: 6px; transition: all 0.2s; }
+#undoBtn:hover { background: #3b5080; color: white; }
+
+/* Overlays */
+.overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 500; }
+.overlay-card { background: white; border-radius: 20px; padding: 40px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.overlay-card h2 { font-size: 28px; margin-bottom: 10px; }
+.overlay-card p { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.5; }
+.overlay-card .stars { font-size: 36px; margin-bottom: 16px; }
+.overlay-card .reward { font-size: 20px; color: #ffcc00; font-weight: bold; margin-bottom: 20px; }
+.overlay-btn { padding: 14px 36px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 4px; transition: all 0.2s; }
+.overlay-btn.primary { background: linear-gradient(135deg, #ff6bb5, #ff3d8a); color: white; }
+.overlay-btn.secondary { background: #2a3d66; color: white; }
+.overlay-btn:hover { transform: scale(1.05); }
+
+.hidden { display: none !important; }
+
+/* Welcome Screen */
+#welcomeScreen .overlay-card { max-width: 500px; }
+#welcomeScreen .gummy-row { font-size: 40px; margin: 16px 0; }
+#welcomeScreen h2 { background: linear-gradient(135deg, #ff6bb5, #ffcc00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 32px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  #leftSidebar { width: 150px; }
+  #canvasArea { left: 150px; right: 200px; }
+  #rightSidebar { width: 200px; }
+}
+@media (max-width: 700px) {
+  #leftSidebar { width: 60px; padding: 6px; }
+  #leftSidebar h3, .tool-section-title, .tool-item .label { display: none; }
+  .tool-grid { grid-template-columns: 1fr 1fr; gap: 4px; }
+  #canvasArea { left: 60px; right: 160px; }
+  #rightSidebar { width: 160px; padding: 8px; }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <!-- Top Bar -->
+  <div id="topBar">
+    <button class="back-btn" id="menuBtn">←</button>
+    <div class="level-info">
+      <span class="level-label">LEVEL</span>
+      <div class="level-bar-wrap"><div class="level-bar-fill" id="levelBar" style="width:0%"></div></div>
+      <span class="level-label" id="levelNum">1 / 5</span>
+    </div>
+    <div class="timer" id="timerDisplay">⏱ 90</div>
+    <button class="level-btn" id="levelBtn">LEVEL 1</button>
+  </div>
+
+  <!-- Left Sidebar -->
+  <div id="leftSidebar">
+    <h3>Drag & Drop Tools</h3>
+    
+    <div class="tool-section">
+      <div class="tool-section-title">Shapes</div>
+      <div class="tool-grid" id="shapeTools"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="tool-section-title">Icons</div>
+      <div class="tool-grid" id="iconTools"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="tool-section-title">Text</div>
+      <div class="tool-grid" id="textTools"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="tool-section-title">Colors</div>
+      <div class="tool-grid" id="colorTools"></div>
+    </div>
+
+    <div class="tool-section">
+      <div class="tool-section-title">Effects</div>
+      <div class="tool-grid" id="effectTools"></div>
+    </div>
+  </div>
+
+  <!-- Canvas Area -->
+  <div id="canvasArea">
+    <canvas id="designCanvas"></canvas>
+  </div>
+
+  <!-- Right Sidebar -->
+  <div id="rightSidebar">
+    <div class="brief-card">
+      <h4>📋 Client Brief</h4>
+      <div class="client-row">
+        <div class="client-avatar" id="clientAvatar">😊</div>
+        <div>
+          <div class="client-name" id="clientName">Loading...</div>
+          <div class="client-company" id="clientCompany">Games Gummies Inc.</div>
+        </div>
+      </div>
+      <ul class="brief-requirements" id="requirements"></ul>
+    </div>
+
+    <div class="score-section">
+      <h4>📊 Scores</h4>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="scoreBar" style="width:0%; background: linear-gradient(90deg, #ff6bb5, #ffcc00);"></div></div>
+      <div class="score-value">
+        <span class="coins" id="coinDisplay">🪙 $0</span>
+        <span class="percent" id="percentDisplay">0%</span>
+      </div>
+    </div>
+
+    <button id="submitBtn">✨ SUBMIT DESIGN</button>
+    <button id="undoBtn">↩ Undo</button>
+    <button id="clearBtn">🗑 Clear Canvas</button>
+  </div>
+
+  <!-- Welcome Screen -->
+  <div class="overlay" id="welcomeScreen">
+    <div class="overlay-card">
+      <div class="gummy-row">🐻 🍬 🎨</div>
+      <h2>Games Gummies</h2>
+      <h3 style="color:#333; margin-bottom:10px;">Logo Designer Studio</h3>
+      <p>Design professional logos for gummy-themed game products! Use shapes, colors, text, and effects to match each client's brief. Earn stars and coins!</p>
+      <button class="overlay-btn primary" id="startBtn">🎮 START DESIGNING</button>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div class="overlay hidden" id="resultScreen">
+    <div class="overlay-card">
+      <div class="stars" id="resultStars">⭐⭐⭐</div>
+      <h2 id="resultTitle">Great Design!</h2>
+      <p id="resultMsg">The client loved your logo!</p>
+      <div class="reward" id="resultReward">+$50</div>
+      <button class="overlay-btn primary" id="nextLevelBtn">▶ Next Level</button>
+      <button class="overlay-btn secondary" id="retryBtn">🔄 Retry</button>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="overlay hidden" id="gameOverScreen">
+    <div class="overlay-card">
+      <div class="gummy-row">🏆🐻🏆</div>
+      <h2 style="color:#ff6bb5;">Congratulations!</h2>
+      <p id="finalMsg">You completed all levels!</p>
+      <div class="reward" id="finalReward">Total: $0</div>
+      <button class="overlay-btn primary" id="playAgainBtn">🔄 Play Again</button>
+    </div>
+  </div>
+</div>
+
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/4q0Za1dWz6daCrbj5zkHRidIKAK2/sessions/DKNUgJe8Uu5npWaCuXKu/games/OsLz9D9cQVCRzY5BxqQb.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=hT3a%2BRa5W3kF9Nf1h91aWXhy%2Fzty%2BxiT6utqfzXxFEj7bO1PBOPvsuWGVfxuh2OKD8FrdlLhXKf9M7CVJHSCCji5qFTxCDdVYD5CMY7prTIp26XNHBwTeSKIXk3ELFfefWJDf5ZZoc3D9GkEpamsm58HMo6cs4Cq1ibdEnYxr6bdjGMfaBW5ePSf9sa3DKLjSO1jG4wlGuq%2FirHb2EiLP1t2Zis2m54XWCpzNQ6Od9Lj7wKFlZgBKCVGHJtNONLWJGS1TYUPuPiqaiiqXlfbpIeX%2FMkzCpkrY8kM1aKCKuOo6qczLs4sYiQiy4KVOi2naV%2BhyG98zOltdxV5VSu18w%3D%3D"></script>
+</body>
+</html>
