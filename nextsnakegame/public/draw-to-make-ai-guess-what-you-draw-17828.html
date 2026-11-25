@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw & Fool the AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .instructions {
+            color: #666;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        canvas {
+            background-color: white;
+            border: 3px solid #333;
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+        }
+        #finishedBtn {
+            background-color: #007bff;
+            color: white;
+            width: 200px;
+        }
+        #finishedBtn:hover {
+            background-color: #0056b3;
+        }
+        #guessArea {
+            display: none;
+            text-align: center;
+            margin: 15px 0;
+        }
+        #guessText {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .yesno {
+            display: flex;
+            gap: 20px;
+        }
+        #yesBtn {
+            background-color: #28a745;
+            color: white;
+        }
+        #noBtn {
+            background-color: #dc3545;
+            color: white;
+        }
+        #resultArea {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+        }
+        #resultText {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #drawAgainBtn {
+            background-color: #6c757d;
+            color: white;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Draw & Fool the AI</h1>
+    <p class="instructions">Draw anything on the paper. Click "Finished" when you're done.</p>
+    
+    <canvas id="canvas" width="500" height="400"></canvas>
+    
+    <div class="controls">
+        <button id="finishedBtn">Finished</button>
+        
+        <div id="guessArea">
+            <p id="guessText"></p>
+            <div class="yesno">
+                <button id="yesBtn">Yes</button>
+                <button id="noBtn">No</button>
+            </div>
+        </div>
+        
+        <div id="resultArea">
+            <p id="resultText"></p>
+            <button id="drawAgainBtn">Draw Again</button>
+        </div>
+    </div>
+
+    
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/YQHMAVXPxQVtl9fX7T4qhFNEiuE2/sessions/pM6ElCQU9eeb7YCSL0cO/games/je1cQPbIZfUOsFKmBUcn.js?GoogleAccessId=firebase-adminsdk-fbsvc%40ai-gamebuilder-acf9c.iam.gserviceaccount.com&Expires=1893456000&Signature=Q49CfCIKKjbdDxxwsbJargj%2FlhoNTHhVUFHCIRMAwsDYs806EkU0JOeVQLKwJnzFZWlML2d7FtA59LfxwNCIF%2B7EBQrsjO91VGMxq5lEF9BbCQ52D2cE9sdkWJZJZ2RURB5r3pV3AoPXrGxBg68vRipp0Rc8S0A4JlrxEVKcAEVwgwyx2QBFcpofCUVrFCDTqzvQFRq7RQSbdOlHgnbHDKDJ3M9EIdjYAFMUNtLAK%2BoGC1MI%2FFL%2FP9aArrQ140e1Ml5mS6QngwniAz7SPnQMXHsqtmtcH8AcNApFBy%2FYPyMDLsEJZw2R302tllzqIrbFHs0ua05IwzaBhsXyJZb9cQ%3D%3D"></script>
+</body>
+</html>
