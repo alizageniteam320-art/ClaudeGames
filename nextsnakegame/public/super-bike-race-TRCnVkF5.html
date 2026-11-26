@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Apex Throttle — Superbike GP</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1220;font-family:'Russo One','Trebuchet MS',sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+#game,#game canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#lines{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#vign{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,.65) 100%);opacity:.35}
+.hidden{display:none!important}
+#hud{position:fixed;inset:0;pointer-events:none}
+#posBox{position:absolute;left:clamp(8px,2vmin,20px);top:clamp(44px,8vmin,70px);text-shadow:0 3px 0 #000,0 0 12px rgba(255,106,0,.6)}
+#pos{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(34px,10vmin,84px);color:#ffb000;line-height:1}
+#posSuf{font-size:clamp(14px,3.5vmin,28px);color:#ffb000}
+#posBox .sub{font-size:clamp(11px,2.5vmin,18px);opacity:.85}
+#centerTop{position:absolute;left:50%;top:clamp(6px,1.5vmin,14px);transform:translateX(-50%);text-align:center;background:linear-gradient(180deg,rgba(10,18,36,.85),rgba(10,18,36,.55));border:2px solid rgba(0,229,255,.5);border-radius:10px;padding:4px 14px;text-shadow:0 2px 0 #000}
+#lap{font-size:clamp(12px,3vmin,22px);color:#00e5ff}
+#time{font-family:'Orbitron',sans-serif;font-weight:700;font-size:clamp(14px,3.6vmin,28px)}
+#lastLap{font-size:clamp(9px,2vmin,14px);opacity:.8;min-height:1em}
+#minimap{position:absolute;right:clamp(6px,1.5vmin,16px);top:clamp(44px,8vmin,64px);width:clamp(70px,20vmin,170px);height:clamp(70px,20vmin,170px);background:rgba(10,18,36,.55);border:2px solid rgba(255,255,255,.25);border-radius:12px}
+#speedoWrap{position:absolute;left:50%;bottom:clamp(4px,1.5vmin,14px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+#speedo{width:clamp(100px,24vmin,200px);height:clamp(100px,24vmin,200px)}
+#nitroBar{position:relative;width:clamp(100px,24vmin,200px);height:clamp(10px,2.2vmin,16px);border:2px solid #00e5ff;border-radius:8px;background:rgba(0,0,0,.5);overflow:hidden;margin-top:2px}
+#nitroFill{height:100%;width:100%;background:linear-gradient(90deg,#0077ff,#00e5ff,#bff);box-shadow:0 0 10px #00e5ff}
+#nitroBar span{position:absolute;inset:0;text-align:center;font-size:clamp(8px,1.6vmin,11px);line-height:clamp(10px,2.2vmin,16px);text-shadow:0 1px 2px #000}
+#msg{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);font-size:clamp(18px,6vmin,48px);text-align:center;text-shadow:0 4px 0 #000,0 0 18px rgba(0,0,0,.6);opacity:0;transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1);white-space:nowrap}
+#msg.show{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
+#countdown{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(60px,22vmin,200px);color:#ffb000;text-shadow:0 6px 0 #000,0 0 30px #ff6a00}
+#camLabel{position:absolute;right:clamp(6px,1.5vmin,16px);top:calc(clamp(44px,8vmin,64px) + clamp(74px,21vmin,176px));font-size:clamp(9px,1.8vmin,13px);opacity:.75;text-shadow:0 1px 2px #000}
+#topBtns{position:fixed;top:clamp(6px,1.5vmin,14px);left:clamp(6px,1.5vmin,14px);display:flex;gap:6px;z-index:20}
+#topBtns.right{left:auto}
+.ib{pointer-events:auto;width:clamp(32px,6.5vmin,46px);height:clamp(32px,6.5vmin,46px);border-radius:10px;border:2px solid rgba(255,255,255,.4);background:rgba(10,18,36,.7);color:#fff;font-size:clamp(13px,2.8vmin,20px);cursor:pointer;font-family:inherit}
+#touch{position:fixed;inset:0;pointer-events:none;z-index:10}
+.tb{position:absolute;pointer-events:auto;width:clamp(54px,15vmin,96px);height:clamp(54px,15vmin,96px);border-radius:50%;border:3px solid rgba(255,255,255,.45);background:rgba(10,18,36,.45);color:#fff;font-size:clamp(14px,4vmin,26px);display:flex;align-items:center;justify-content:center;font-family:inherit;touch-action:none}
+.tb.on{background:rgba(255,106,0,.6);border-color:#ffb000}
+#tL{left:2vmin;bottom:3vmin}#tR{left:calc(4vmin + clamp(54px,15vmin,96px));bottom:3vmin}
+#tG{right:2vmin;bottom:3vmin}#tB{right:calc(4vmin + clamp(54px,15vmin,96px));bottom:3vmin}
+#tN{right:2vmin;bottom:calc(5vmin + clamp(54px,15vmin,96px));border-color:#00e5ff;font-size:clamp(11px,2.8vmin,18px)}
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:30;padding:8px;box-sizing:border-box}
+.panel{background:linear-gradient(160deg,rgba(14,24,48,.92),rgba(30,12,30,.88));border:2px solid rgba(255,176,0,.6);border-radius:18px;padding:clamp(10px,3vmin,28px);max-width:min(860px,96vw);max-height:94vh;overflow:auto;box-sizing:border-box;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+h1{font-family:'Orbitron',sans-serif;font-weight:900;margin:0;font-size:clamp(28px,8vmin,72px);letter-spacing:2px;background:linear-gradient(180deg,#fff 10%,#ffb000 55%,#ff4d00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 #000)}
+h2{margin:0 0 8px;font-size:clamp(18px,5vmin,36px);color:#ffb000;text-shadow:0 3px 0 #000}
+.tag{color:#00e5ff;font-size:clamp(11px,2.6vmin,18px);letter-spacing:3px;margin:4px 0 12px}
+.btn{pointer-events:auto;font-family:'Russo One',sans-serif;font-size:clamp(14px,3.4vmin,22px);color:#fff;border:none;border-radius:12px;padding:clamp(8px,1.8vmin,14px) clamp(18px,4vmin,34px);margin:5px;cursor:pointer;background:linear-gradient(180deg,#ff8a00,#e63c00);box-shadow:0 5px 0 #8a2300,0 8px 18px rgba(0,0,0,.4);text-shadow:0 2px 0 rgba(0,0,0,.4);transition:transform .1s}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #8a2300}
+.btn.alt{background:linear-gradient(180deg,#2a8cff,#0050c8);box-shadow:0 5px 0 #002c70}
+.btn.ghost{background:rgba(255,255,255,.12);box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.ctrl{font-size:clamp(10px,2.3vmin,15px);opacity:.85;line-height:1.6;margin-top:10px}
+.cards{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:8px 0}
+.card{pointer-events:auto;cursor:pointer;width:clamp(120px,24vmin,220px);padding:10px;border-radius:14px;border:3px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);text-align:left;transition:transform .2s,border-color .2s}
+.card.sel{border-color:#ffb000;transform:translateY(-4px);box-shadow:0 0 20px rgba(255,176,0,.5)}
+.card .nm{font-size:clamp(12px,2.8vmin,18px)}
+.card .ds{font-size:clamp(9px,1.8vmin,12px);opacity:.75;margin-bottom:6px}
+.sw{height:8px;border-radius:4px;margin-bottom:6px}
+.st{font-size:clamp(9px,1.7vmin,11px);display:flex;align-items:center;gap:4px;margin:2px 0}
+.st b{width:52px;font-weight:normal;opacity:.8}
+.bar{flex:1;height:7px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#00e5ff,#ffb000)}
+.diffs{margin:6px 0}
+.dbtn{pointer-events:auto;font-family:inherit;font-size:clamp(12px,2.8vmin,18px);padding:6px 16px;margin:3px;border-radius:10px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:#fff;cursor:pointer}
+.dbtn.sel{background:#00a5c8;border-color:#00e5ff}
+table{border-collapse:collapse;margin:8px auto;font-size:clamp(11px,2.6vmin,17px)}
+td,th{padding:4px clamp(6px,2vmin,16px);border-bottom:1px solid rgba(255,255,255,.15)}
+tr.me td{color:#ffb000}
+.best{color:#00e5ff;font-size:clamp(11px,2.5vmin,16px)}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<canvas id="lines"></canvas>
+<div id="vign"></div>
+<div id="hud" class="hidden">
+  <div id="posBox"><span id="pos">4</span><span id="posSuf">TH</span><div class="sub">POSITION / 4</div></div>
+  <div id="centerTop"><div id="lap">LAP 1/3</div><div id="time">0:00.000</div><div id="lastLap"></div></div>
+  <canvas id="minimap" width="170" height="170"></canvas>
+  <div id="camLabel">CAM: CHASE (C)</div>
+  <div id="speedoWrap"><canvas id="speedo" width="220" height="220"></canvas><div id="nitroBar"><div id="nitroFill"></div><span>NITRO</span></div></div>
+  <div id="msg"></div>
+  <div id="countdown"></div>
+</div>
+<div id="topBtns"><button class="ib hidden" id="btnPause">❚❚</button><button class="ib hidden" id="btnCam">🎥</button><button class="ib" id="btnMute">🔊</button></div>
+<div id="touch" class="hidden">
+  <div class="tb" id="tL">◀</div><div class="tb" id="tR">▶</div>
+  <div class="tb" id="tB">BRK</div><div class="tb" id="tG">GAS</div><div class="tb" id="tN">NITRO</div>
+</div>
+
+<div id="menu" class="screen"><div class="panel">
+  <h1>APEX THROTTLE</h1>
+  <div class="tag">SUPERBIKE GRAND PRIX</div>
+  <button class="btn" id="bPlay">TAP / PRESS TO START</button>
+  <div class="ctrl">↑/W Throttle · ↓/S Brake · ←→/A D Lean · SHIFT/SPACE Nitro<br>C Camera · P/Esc Pause · M Mute<br>3 laps · 4 riders · Finish first!</div>
+  <div class="best" id="menuBest"></div>
+</div></div>
+
+<div id="select" class="screen hidden"><div class="panel">
+  <h2>CHOOSE YOUR MACHINE</h2>
+  <div class="cards" id="cards"></div>
+  <div class="diffs"><button class="dbtn" data-d="easy">EASY</button><button class="dbtn" data-d="medium">MEDIUM</button><button class="dbtn" data-d="hard">HARD</button></div>
+  <button class="btn" id="bStart">START RACE</button><button class="btn ghost" id="bBack">BACK</button>
+</div></div>
+
+<div id="pauseS" class="screen hidden"><div class="panel">
+  <h2>PAUSED</h2>
+  <button class="btn" id="bResume">RESUME</button><br>
+  <button class="btn alt" id="bRestart">RESTART</button><br>
+  <button class="btn ghost" id="bMenu">MAIN MENU</button>
+  <div class="ctrl">↑ Throttle · ↓ Brake · ←→ Lean · SHIFT Nitro · C Camera</div>
+</div></div>
+
+<div id="results" class="screen hidden"><div class="panel">
+  <h2 id="resTitle">RESULTS</h2>
+  <div id="resSub" class="tag"></div>
+  <table id="resTable"></table>
+  <div class="best" id="resBest"></div>
+  <button class="btn" id="bAgain">RACE AGAIN</button><button class="btn alt" id="bChange">CHANGE BIKE</button><button class="btn ghost" id="bMenu2">MENU</button>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/aibulider-staging.firebasestorage.app/users/AGj9m6uCQFVdhDHKVzaoVDK4RT43/sessions/51NdPkteYdEHUP4qScEo/games/TRCnVkF507OyhnwoouiA.js?GoogleAccessId=firebase-adminsdk-fbsvc%40aibulider-staging.iam.gserviceaccount.com&Expires=1893456000&Signature=JF830XBqZkHLQQPqC4rbMoSB2%2BL%2BjNSpa0I4s2NVBXkE7BjovjuYXjMVQwR%2BfNru1FhPt6K139lZsGdMazpiF00JN6e2yXaauntJ9D%2Fze1yJ%2FNnsWrIuL075Lk3q4xHFVEZCnWaAk%2F5l7HFaSZbHM7M5l%2B6y6DzaWC07Xew%2F2H1h6xROByEkK7VD7RUXxf%2B35XsQgM9jDsmEcDIeT9gyA18zAkL%2BFE30Z4dr4y6DK26uvAdt7AVmFUz7Q6Xq%2BeaqgcJpU5fJeHu4%2Bvdxlq0w3ekvZXSXWwKLdw6sN1qKST%2FTOAOn%2BruUIatvOg8DaQcIw1nEhn5qVajMeIUaP%2Fk4lw%3D%3D"></script>
+</body>
+</html>
