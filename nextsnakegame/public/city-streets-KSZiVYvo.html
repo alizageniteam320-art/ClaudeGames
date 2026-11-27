@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>City Streets: Rules of the Road</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1d232b;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Rajdhani','Trebuchet MS',sans-serif}
+#c{position:fixed;inset:0;display:block;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none}
+.panel{position:absolute;background:linear-gradient(180deg,rgba(20,24,30,.85),rgba(10,12,16,.8));border:1px solid rgba(255,255,255,.18);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.45);color:#fff}
+#cashBox{top:clamp(6px,2vmin,14px);left:clamp(6px,2vmin,14px);padding:clamp(4px,1.4vmin,10px) clamp(8px,2.4vmin,16px)}
+#cashLbl{font-size:clamp(10px,2.2vmin,14px);letter-spacing:2px;color:#aab4c0;font-weight:700}
+#cash{font-family:'Oswald',sans-serif;font-size:clamp(22px,5.5vmin,38px);font-weight:700;color:#7dff9a;text-shadow:0 2px 4px #000;transition:color .3s}
+#dist{font-size:clamp(10px,2.1vmin,14px);color:#cfd6de;font-weight:600}
+#speedBox{top:clamp(6px,2vmin,14px);right:clamp(6px,2vmin,14px);padding:4px;border-radius:50%}
+#gauge{width:clamp(96px,22vmin,170px);height:clamp(96px,22vmin,170px);display:block}
+#mute{position:absolute;top:clamp(6px,2vmin,14px);left:50%;transform:translateX(-50%);pointer-events:auto;cursor:pointer;font-size:clamp(14px,3vmin,20px);padding:4px 10px;background:rgba(10,12,16,.7);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff}
+#light{position:absolute;top:calc(clamp(6px,2vmin,14px) + clamp(30px,6vmin,40px));left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:5px 8px;background:#111;border-radius:8px;border:1px solid #444}
+#light i{width:clamp(10px,2.4vmin,16px);height:clamp(10px,2.4vmin,16px);border-radius:50%;background:#222;transition:background .3s,box-shadow .3s}
+#ticket{position:absolute;top:32%;left:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .3s;background:linear-gradient(#fff,#e8e2d0);color:#b00010;border:3px solid #b00010;border-radius:8px;padding:clamp(8px,2vmin,14px) clamp(14px,4vmin,28px);text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+#ticket.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#ticket b{display:block;font-family:'Oswald',sans-serif;font-size:clamp(20px,5.5vmin,40px)}
+#ticket span{font-size:clamp(12px,2.8vmin,18px);color:#333;font-weight:700}
+#police{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s}
+#police.on{opacity:1;animation:siren .5s steps(1) infinite}
+@keyframes siren{0%{box-shadow:inset 40px 0 50px -10px rgba(255,0,30,.85),inset -40px 0 50px -10px rgba(0,60,255,.85)}50%{box-shadow:inset 40px 0 50px -10px rgba(0,60,255,.85),inset -40px 0 50px -10px rgba(255,0,30,.85)}}
+.ctrls{position:absolute;bottom:clamp(8px,3vmin,22px);display:flex;gap:clamp(8px,2.5vmin,16px);pointer-events:auto}
+#lc{left:clamp(8px,3vmin,22px)}#rc{right:clamp(8px,3vmin,22px);align-items:flex-end}
+.cb{width:clamp(56px,14vmin,92px);height:clamp(56px,14vmin,92px);border-radius:14px;background:linear-gradient(#3a414b,#1c2027);border:2px solid #6b7480;color:#fff;font-size:clamp(22px,6vmin,38px);display:flex;align-items:center;justify-content:center;box-shadow:0 5px 0 #0b0d10,0 6px 12px rgba(0,0,0,.5);cursor:pointer;font-weight:700;transition:transform .06s}
+.cb.on{transform:translateY(4px);box-shadow:0 1px 0 #0b0d10;filter:brightness(1.4)}
+.pedal{border-radius:10px;font-size:clamp(12px,3vmin,18px);letter-spacing:1px;background:repeating-linear-gradient(180deg,#30353c 0 6px,#22262c 6px 10px)}
+#gas{height:clamp(76px,19vmin,120px);border-color:#4caf50}
+#brk{border-color:#e53935;width:clamp(64px,16vmin,104px)}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(20,26,34,.75),rgba(5,7,10,.93));color:#fff;text-align:center;z-index:10;padding:16px;box-sizing:border-box}
+.screen h1{font-family:'Oswald',sans-serif;font-size:clamp(30px,8vmin,64px);margin:0 0 6px;letter-spacing:2px;text-shadow:0 4px 0 #000,0 0 20px rgba(255,200,80,.3)}
+.screen p{font-size:clamp(13px,2.8vmin,19px);max-width:560px;margin:4px 0;color:#d6dde5;font-weight:500}
+.btn{margin-top:14px;font-family:'Oswald',sans-serif;font-size:clamp(16px,3.6vmin,24px);padding:10px 30px;border-radius:10px;border:none;background:linear-gradient(#ffcf3a,#e09a00);color:#1b1b1b;cursor:pointer;box-shadow:0 5px 0 #8a5c00;letter-spacing:1px}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #8a5c00}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="police"></div>
+<div id="hud">
+  <div id="cashBox" class="panel"><div id="cashLbl">CASH</div><div id="cash">$500</div><div id="dist">Destination: 650 m</div></div>
+  <div id="speedBox" class="panel"><canvas id="gauge" width="200" height="200"></canvas></div>
+  <div id="mute">🔊</div>
+  <div id="light"><i id="lr"></i><i id="ly"></i><i id="lg"></i></div>
+  <div id="ticket"><b>TICKET ISSUED: -$50</b><span id="treason">RED LIGHT VIOLATION</span></div>
+  <div class="ctrls" id="lc"><div class="cb" id="left">◀</div><div class="cb" id="right">▶</div></div>
+  <div class="ctrls" id="rc"><div class="cb pedal" id="brk">BRAKE<br>/REV</div><div class="cb pedal" id="gas">GAS</div></div>
+</div>
+<div class="screen" id="title">
+  <h1>CITY STREETS</h1>
+  <p>Drive to the end of Main Street with as much cash as you can keep.</p>
+  <p>Speed limit is <b>35 MPH</b>. Stop at the white line on red. Every ticket costs <b>$50</b>.</p>
+  <p style="color:#9aa6b2">Arrows / WASD to drive · or use the on-screen pedals</p>
+  <p id="best1" style="color:#ffcf3a"></p>
+  <button class="btn" id="startBtn">TAP TO START</button>
+</div>
+<div class="screen hidden" id="over">
+  <h1 id="overT">ARRIVED</h1>
+  <p id="overP"></p>
+  <p id="best2" style="color:#ffcf3a"></p>
+  <button class="btn" id="againBtn">DRIVE AGAIN</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+  <script src="https://storage.googleapis.com/ai-gamebuilder-acf9c.firebasestorage.app/users/rUmdicRbeWbMw2aqXsn1i3BeZ5s1/sessions/tCftXFL5h38eamL8lt0X/games/KSZiVYvop7qH8y18EBvW.js?GoogleAccessId=ai-gamebuilder-acf9c%40appspot.gserviceaccount.com&Expires=1893456000&Signature=CyCPW%2Ffgk%2FycDkYYuPpDrj6ADckiNlGgTYY9ecorVzfSfyTyAK8tuKpakqeIyNQNtotBjw%2FYQ%2BZKZiwQzLXm2GMxCUxy4L48yIPTijH8kq38N3RvLK0MIjSRCdS4%2FLpMmWgcyMI0Y1%2BEV3Ak2pQK9Az6CfEDAp40PjJGfjYd0fLWUBspPej15wZDhmSF1HJYvnvDn4eNgusZt8KqAt1UXXXsrxRzRU5cv5ULcZJCrRuwTDItciGzkGYR22l93UdtHVDnfBqBlezOQYIUcGSfUeCGwwrl%2B0ibJGiNnEpyHudFGPoApbJCQzwIihizQBky00WinJOE07Qg9hSz2T8V2g%3D%3D"></script>
+</body>
+</html>
